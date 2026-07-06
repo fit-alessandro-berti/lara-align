@@ -85,8 +85,21 @@ def pm4py_to_features(
     """Convert a pm4py Petri net and trace into typed tensors.
 
     The graph is represented as a single bipartite node set with places first
-    and transitions second. `edge_type=0` means place-to-transition and
-    `edge_type=1` means transition-to-place.
+    and transitions second. Arcs are materialized in both directions so that
+    message passing can propagate context forward and backward:
+
+    - `edge_type=0`: place-to-transition (consumption, along the arc);
+    - `edge_type=1`: transition-to-place (production, along the arc);
+    - `edge_type=2`: transition-to-place reversal of consumption (a place
+      hears from its consumers);
+    - `edge_type=3`: place-to-transition reversal of production (a transition
+      hears from its output places).
+
+    Without the reverse types (2 and 3), duplicate-labeled transitions with
+    symmetric presets receive provably identical embeddings regardless of
+    their downstream context, which makes label-to-transition disambiguation
+    impossible. Models trained before reverse edges existed simply ignore
+    types 2 and 3.
     """
 
     costs = cost_model or CostModel()
@@ -140,10 +153,16 @@ def pm4py_to_features(
             edge_sources.append(place_index[arc.source])
             edge_targets.append(t_node)
             edge_types.append(0)
+            edge_sources.append(t_node)
+            edge_targets.append(place_index[arc.source])
+            edge_types.append(2)
         for arc in transition.out_arcs:
             edge_sources.append(t_node)
             edge_targets.append(place_index[arc.target])
             edge_types.append(1)
+            edge_sources.append(place_index[arc.target])
+            edge_targets.append(t_node)
+            edge_types.append(3)
 
     labels = trace_labels(trace, activity_key=activity_key)
     event_label_ids = [stable_label_id(label, hash_vocab_size) for label in labels]

@@ -16,6 +16,7 @@ from lara_align.exact import Pm4PyExactAligner
 from lara_align.features import pm4py_to_features
 from lara_align.model import LARANeuralModel
 from lara_align.synthetic import (
+    generate_block_structured_example,
     make_duplicate_label_choice_net,
     make_sequence_net,
     trace_from_labels,
@@ -96,6 +97,83 @@ def test_neural_model_forward_shapes():
     assert output.transition_region_probs.shape == (features.num_transitions, 2)
     assert output.event_region_probs.shape == (3, 2)
     assert output.local_sketch_logits.shape == (2, 2)
+
+
+def test_duplicate_transitions_get_distinct_embeddings():
+    """Reverse typed edges must break the preset symmetry of duplicate labels.
+
+    Before bidirectional message passing, `t_left_A` and `t_right_A` received
+    provably identical embeddings, so the sync cross-entropy on duplicate
+    choices was frozen at log(2) regardless of training.
+    """
+
+    net, im, fm = make_duplicate_label_choice_net()
+    trace = trace_from_labels(["A", "C"])
+    features = pm4py_to_features(net, im, fm, trace)
+    # Two graph layers are the minimum for the disambiguating suffix context
+    # to reach the duplicate transitions (suffix -> shared place -> duplicate).
+    model = LARANeuralModel(
+        hidden_dim=32,
+        num_heads=4,
+        graph_layers=2,
+        trace_layers=1,
+        num_regions=2,
+        sketches_per_region=2,
+        dropout=0.0,
+    )
+    model.eval()
+
+    output = model(features)
+
+    left = features.transition_names.index("t_left_A")
+    right = features.transition_names.index("t_right_A")
+    assert not output.transition_embeddings[left].equal(
+        output.transition_embeddings[right]
+    )
+    assert output.sync_logits[0, left] != output.sync_logits[0, right]
+
+
+def test_features_include_reverse_edge_types():
+    net, im, fm = make_sequence_net(["A", "B"])
+    features = pm4py_to_features(net, im, fm, trace_from_labels(["A", "B"]))
+
+    edge_types = set(features.edge_type.tolist())
+    assert edge_types == {0, 1, 2, 3}
+    # One forward and one reverse edge per arc.
+    assert features.edge_index.shape[1] == 2 * 2 * len(net.transitions)
+
+
+def test_block_structured_example_is_exactly_alignable():
+    from random import Random
+
+    example = generate_block_structured_example(rng=Random(7), num_leaves=10)
+
+    assert example.metadata["family"] == "block_structured"
+    assert len(example.fitting_trace) > 0
+
+    fitting = Pm4PyExactAligner().align_trace(
+        example.net,
+        example.initial_marking,
+        example.final_marking,
+        example.fitting_trace,
+    )
+    assert fitting.optimal
+    assert fitting.cost == 0
+
+    deviated = Pm4PyExactAligner().align_trace(
+        example.net,
+        example.initial_marking,
+        example.final_marking,
+        example.trace,
+    )
+    assert deviated.optimal
+    assert verify_alignment(
+        deviated.alignment,
+        example.net,
+        example.initial_marking,
+        example.final_marking,
+        example.trace,
+    ).legal
 
 
 def test_certifying_system_returns_legal_certified_alignment():

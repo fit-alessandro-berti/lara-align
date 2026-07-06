@@ -52,6 +52,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--trace-layers", type=int, default=2)
     parser.add_argument("--num-regions", type=int, default=8)
     parser.add_argument("--sketches-per-region", type=int, default=6)
+    parser.add_argument("--num-edge-types", type=int, default=4)
     parser.add_argument("--dropout", type=float, default=0.25)
     parser.add_argument("--move-weight", type=float, default=1.0)
     parser.add_argument("--cost-weight", type=float, default=0.03)
@@ -393,6 +394,7 @@ def _model_config(args: argparse.Namespace) -> dict:
         "num_regions": args.num_regions,
         "sketches_per_region": args.sketches_per_region,
         "dropout": args.dropout,
+        "num_edge_types": args.num_edge_types,
     }
 
 

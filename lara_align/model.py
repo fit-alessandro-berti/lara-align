@@ -32,7 +32,7 @@ class TypedGraphTransformerLayer(nn.Module):
         self,
         hidden_dim: int,
         num_heads: int,
-        num_edge_types: int = 2,
+        num_edge_types: int = 4,
         dropout: float = 0.1,
     ) -> None:
         super().__init__()
@@ -122,6 +122,7 @@ class PetriTraceEncoder(nn.Module):
         hash_vocab_size: int = 8192,
         dropout: float = 0.1,
         max_trace_len: int = 4096,
+        num_edge_types: int = 4,
     ) -> None:
         super().__init__()
         self.hidden_dim = hidden_dim
@@ -131,7 +132,12 @@ class PetriTraceEncoder(nn.Module):
         self.node_type_embedding = nn.Embedding(2, hidden_dim)
         self.graph_layers = nn.ModuleList(
             [
-                TypedGraphTransformerLayer(hidden_dim, num_heads, dropout=dropout)
+                TypedGraphTransformerLayer(
+                    hidden_dim,
+                    num_heads,
+                    num_edge_types=num_edge_types,
+                    dropout=dropout,
+                )
                 for _ in range(graph_layers)
             ]
         )
@@ -337,6 +343,7 @@ class LARANeuralModel(nn.Module):
         sketches_per_region: int = 4,
         hash_vocab_size: int = 8192,
         dropout: float = 0.1,
+        num_edge_types: int = 4,
     ) -> None:
         super().__init__()
         self.encoder = PetriTraceEncoder(
@@ -346,6 +353,7 @@ class LARANeuralModel(nn.Module):
             trace_layers=trace_layers,
             hash_vocab_size=hash_vocab_size,
             dropout=dropout,
+            num_edge_types=num_edge_types,
         )
         self.router = LearnedRouter(hidden_dim, num_regions)
         self.local_experts = LocalAlignmentExperts(

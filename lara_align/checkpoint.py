@@ -9,7 +9,12 @@ from lara_align.model import LARANeuralModel
 
 
 def build_model(model_config: dict[str, Any]) -> LARANeuralModel:
-    return LARANeuralModel(**model_config)
+    config = dict(model_config)
+    # Checkpoints written before bidirectional arc messages were trained with
+    # forward edge types only; rebuilding them with 2 relation maps makes the
+    # model ignore the reverse edge types (2 and 3) exactly as it did then.
+    config.setdefault("num_edge_types", 2)
+    return LARANeuralModel(**config)
 
 
 def save_checkpoint(

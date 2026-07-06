@@ -49,9 +49,19 @@ in-degree, out-degree, total degree.
 synchronous-move cost, and a self-loop-context flag
 ($\bullet t \cap t\bullet \neq \emptyset$).
 
-**Typed edges**: `edge_type = 0` for place→transition arcs and `edge_type = 1`
-for transition→place arcs, so the message-passing layers can treat consumption
-and production asymmetrically.
+**Typed edges (bidirectional)**: every arc is materialized in both directions
+with four relation types — `0`: place→transition along consumption arcs, `1`:
+transition→place along production arcs, `2`: the reversal of consumption (a
+place hears from its consumers), `3`: the reversal of production (a transition
+hears from its output places). The reverse types are essential, not cosmetic:
+with forward-only messages, two duplicate-labeled transitions whose presets
+are symmetric receive *provably identical* embeddings — global attention
+cannot rescue them because their identical embeddings issue identical queries
+— so the disambiguating downstream context (which branch suffix follows) can
+never reach them, and the sync cross-entropy on such choices is frozen at
+$\log 2$ regardless of training. Bidirectional typed messages break this
+symmetry in two hops (suffix transition → shared place → duplicate
+transition).
 
 **Labels via hashing.** Activity labels are mapped into a bounded vocabulary of
 8,192 ids by a stable BLAKE2b hash (`stable_label_id`), with id 0 reserved for
@@ -78,10 +88,10 @@ model can only propose label-consistent synchronous moves.
   transitions.
 - **Typed graph transformer (3 layers).** Each `TypedGraphTransformerLayer`
   combines (i) full self-attention over all net nodes (4 heads) with (ii)
-  relation-specific message passing: per edge type, source embeddings pass
-  through a dedicated linear map and are mean-aggregated into targets. The sum
-  of attention output and typed messages enters a pre-norm residual block with
-  a 4× GELU feed-forward.
+  relation-specific message passing: per edge type (4 types, forward and
+  reverse), source embeddings pass through a dedicated linear map and are
+  mean-aggregated into targets. The sum of attention output and typed messages
+  enters a pre-norm residual block with a 4× GELU feed-forward.
 - **Trace transformer (2 layers).** Events are embedded via the shared label
   embedding plus learned positional embeddings (max length 4,096) and encoded
   by a standard Transformer encoder (4 heads, 4× GELU feed-forward).
@@ -138,19 +148,19 @@ Global move scores over the full (net, trace) pair:
 ### 3.5 Parameter Budget
 
 Default configuration (hidden 128, 4 heads, 3 graph layers, 2 trace layers,
-8 regions, 6 sketches/region):
+8 regions, 6 sketches/region, 4 edge types):
 
 | component | parameters |
 |---|---:|
-| Petri/Trace encoder | 2,797,056 |
+| Petri/Trace encoder | 2,895,360 |
 | Learned router | 2,064 |
 | Local alignment experts | 50,569 |
 | Recomposer heads | 16,642 |
-| **total** | **2,866,331** |
+| **total** | **2,964,635** |
 
 The encoder dominates; within it, the hashed label embedding
 (8,192 × 128 ≈ 1.05M) and positional embedding (4,096 × 128 ≈ 0.52M) account
-for more than half of all parameters. At ~2.9M parameters the model runs
+for more than half of all parameters. At ~3M parameters the model runs
 comfortably on CPU.
 
 ## 4. Candidate Decoding, Verification, and Certification

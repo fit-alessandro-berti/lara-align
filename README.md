@@ -238,6 +238,26 @@ Use `--run-certified` to also run the pm4py certifying layer for each test
 sample. The main learned-method metrics use fast mode because certified mode may
 repair the candidate with exact search.
 
+### 5. Scaling Benchmark
+
+```bash
+python scripts/benchmark_scaling.py \
+  --checkpoint runs/lara/best.pt \
+  --sizes 5,10,20,40,80 \
+  --deviation-rates 0.15,0.35 \
+  --samples-per-config 10 \
+  --exact-timeout 30 \
+  --output runs/lara/scaling.json
+```
+
+The benchmark generates random block-structured nets (nested sequence, choice,
+parallel, and loop blocks with duplicate labels and invisible transitions) of
+increasing size, injects deviations, and measures per trace: LARA fast-mode
+wall time, legality, and cost gap versus pm4py's exact aligner, plus exact
+wall time and timeouts. The report includes a speed/quality threshold summary
+indicating at which size (if any) the learned fast path overtakes exact
+search.
+
 ## Minimal API Example
 
 ```python
@@ -271,11 +291,15 @@ print(result.alignment.to_pm4py_label_alignment())
 - `lara_align/verify.py`: Petri-net replay and alignment legality checks.
 - `lara_align/exact.py`: pm4py exact alignment backend.
 - `lara_align/certifier.py`: fast/certified alignment wrapper.
-- `lara_align/synthetic.py`: synthetic process-model and trace generators.
+- `lara_align/synthetic.py`: synthetic process-model and trace generators,
+  including random block-structured nets with concurrency, loops, duplicate
+  labels, and invisible transitions.
 - `lara_align/training.py`: training targets and losses.
 - `scripts/init_data.py`: exact-labeled dataset creation.
 - `scripts/train_model.py`: training and validation.
 - `scripts/test_model.py`: human-readable and JSON evaluation.
+- `scripts/benchmark_scaling.py`: speed/quality scaling benchmark against the
+  exact backend on progressively larger block-structured nets.
 
 ## Current Limitations
 
