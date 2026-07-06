@@ -12,6 +12,7 @@ license = { text = "GPL-3.0-only" }
 dependencies = [
     "pm4py>=2.7",
     "torch>=2.0",
+    "tqdm>=4.66",
 ]
 
 [project.optional-dependencies]

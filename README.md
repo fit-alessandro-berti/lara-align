@@ -178,6 +178,15 @@ The script writes:
 
 - `runs/lara/best.pt`
 - `runs/lara/last.pt`
+- `runs/lara/metrics.csv`
+
+`metrics.csv` is updated once per epoch with train and validation losses,
+elapsed time, learning rate, best validation loss, and early-stopping state. Use
+`--metrics-csv PATH` to write it somewhere else.
+
+Training also displays tqdm progress bars while loading the train/validation
+split files, advancing epochs, and processing train/validation batches. Use
+`--no-progress` to disable them.
 
 On CPU, this is a research run rather than a unit test; one epoch over the
 default 2048-example training split can take a few minutes. For a quick training

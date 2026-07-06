@@ -1,3 +1,5 @@
+import csv
+
 from pm4py.objects.log.obj import Event, Trace
 
 from lara_align import Alignment, AlignmentMove, CertifyingAlignmentSystem, LARAMode
@@ -21,6 +23,7 @@ from lara_align.synthetic import (
 from lara_align.training import LARALoss, targets_from_alignment
 from lara_align.verify import verify_alignment
 from scripts.test_model import EvaluationRecord, format_human_report
+from scripts.train_model import _metrics_csv_row, _write_metrics_csv_row
 
 
 def _small_model() -> LARANeuralModel:
@@ -143,6 +146,42 @@ def test_training_loss_handles_empty_trace():
 
     assert losses["log_move"].isfinite()
     assert losses["total"].isfinite()
+
+
+def test_training_metrics_csv_writes_epoch_rows(tmp_path):
+    path = tmp_path / "nested" / "metrics.csv"
+    first_row = _metrics_csv_row(
+        epoch=1,
+        train_metrics={"total": 1.0, "move": 0.8, "samples": 2.0},
+        val_metrics={"total": 1.5, "move": 1.2, "samples": 1.0},
+        elapsed_seconds=3.25,
+        lr=5e-4,
+        best_val=1.5,
+        improved=True,
+        epochs_without_improvement=0,
+    )
+    second_row = _metrics_csv_row(
+        epoch=2,
+        train_metrics={"total": 0.9, "move": 0.7, "samples": 2.0},
+        val_metrics={"total": 1.6, "move": 1.3, "samples": 1.0},
+        elapsed_seconds=3.5,
+        lr=5e-4,
+        best_val=1.5,
+        improved=False,
+        epochs_without_improvement=1,
+    )
+
+    _write_metrics_csv_row(path, first_row, include_header=True)
+    _write_metrics_csv_row(path, second_row, include_header=False)
+
+    with path.open(newline="") as handle:
+        rows = list(csv.DictReader(handle))
+
+    assert [row["epoch"] for row in rows] == ["1", "2"]
+    assert rows[0]["improved"] == "1"
+    assert rows[1]["improved"] == "0"
+    assert rows[0]["train_total"] == "1.0"
+    assert rows[1]["val_move"] == "1.3"
 
 
 def test_fast_mode_uses_neural_decoder_and_verifier():
