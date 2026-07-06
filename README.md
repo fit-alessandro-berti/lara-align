@@ -90,6 +90,9 @@ This writes:
 - `data/lara_synthetic/test.pkl`
 - `data/lara_synthetic/metadata.pkl`
 
+The initializer generates one exact-labeled pool, then stratifies the splits by
+synthetic family and optimal-cost bucket.
+
 Train with validation checkpointing:
 
 ```bash
@@ -101,6 +104,11 @@ python scripts/train_model.py \
 
 The best validation checkpoint is written to `runs/lara/best.pt`; the latest
 epoch is written to `runs/lara/last.pt`.
+
+The default training configuration is intentionally modest for the default
+128-example synthetic training split: 64 hidden units, minibatch-style gradient
+accumulation over 8 variable-size examples, Smooth L1 cost regression, dropout,
+and patience-based early stopping.
 
 Evaluate on the held-out test split:
 

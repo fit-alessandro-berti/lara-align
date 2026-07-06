@@ -25,10 +25,11 @@ class LARALoss(nn.Module):
     def __init__(
         self,
         move_weight: float = 1.0,
-        cost_weight: float = 0.1,
+        cost_weight: float = 0.03,
         router_boundary_weight: float = 0.01,
         router_balance_weight: float = 0.01,
         router_entropy_weight: float = 0.001,
+        cost_beta: float = 1.0,
     ) -> None:
         super().__init__()
         self.move_weight = move_weight
@@ -36,6 +37,7 @@ class LARALoss(nn.Module):
         self.router_boundary_weight = router_boundary_weight
         self.router_balance_weight = router_balance_weight
         self.router_entropy_weight = router_entropy_weight
+        self.cost_beta = cost_beta
 
     def forward(
         self,
@@ -60,7 +62,11 @@ class LARALoss(nn.Module):
         if targets.optimal_cost is not None:
             predicted_cost = output.local_upper_bounds.sum()
             target_cost = targets.optimal_cost.to(predicted_cost.device).float()
-            losses["cost"] = F.mse_loss(predicted_cost, target_cost)
+            losses["cost"] = F.smooth_l1_loss(
+                predicted_cost,
+                target_cost,
+                beta=self.cost_beta,
+            )
         else:
             losses["cost"] = torch.zeros((), device=output.model_move_logits.device)
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from collections import defaultdict
 from pathlib import Path
 from random import Random
 import sys
@@ -53,9 +54,11 @@ def main() -> None:
         "val": args.val_size,
         "test": args.test_size,
     }
+    pool = _generate_pool(sum(split_sizes.values()), args, rng, exact)
+    split_samples = _stratified_split(pool, split_sizes, rng)
 
     for split in SPLITS:
-        samples = _generate_split(split, split_sizes[split], args, rng, exact)
+        samples = split_samples[split]
         save_split(args.output, split, samples)
         print(f"wrote {len(samples):4d} {split} samples to {args.output / f'{split}.pkl'}")
 
@@ -72,6 +75,7 @@ def main() -> None:
                 "deviation_rate": args.deviation_rate,
                 "duplicate_fraction": args.duplicate_fraction,
                 "exact_timeout": args.exact_timeout,
+                "stratified_by": ["family", "optimal_cost"],
             },
         ),
     )
@@ -87,8 +91,7 @@ def _prepare_output_dir(output: Path, overwrite: bool) -> None:
     output.mkdir(parents=True, exist_ok=True)
 
 
-def _generate_split(
-    split: str,
+def _generate_pool(
     target_size: int,
     args: argparse.Namespace,
     rng: Random,
@@ -123,8 +126,8 @@ def _generate_split(
         sample_index = len(samples)
         samples.append(
             AlignmentSample(
-                sample_id=f"{split}-{sample_index:06d}",
-                split=split,
+                sample_id=f"pool-{sample_index:06d}",
+                split="pool",
                 net=example.net,
                 initial_marking=example.initial_marking,
                 final_marking=example.final_marking,
@@ -141,10 +144,41 @@ def _generate_split(
 
     if len(samples) != target_size:
         raise SystemExit(
-            f"generated {len(samples)} of {target_size} requested {split} samples "
+            f"generated {len(samples)} of {target_size} requested samples "
             f"after {attempts} attempts"
         )
     return samples
+
+
+def _stratified_split(
+    samples: list[AlignmentSample],
+    split_sizes: dict[str, int],
+    rng: Random,
+) -> dict[str, list[AlignmentSample]]:
+    buckets: dict[tuple[str, int], list[AlignmentSample]] = defaultdict(list)
+    for sample in samples:
+        family = str(sample.metadata.get("family", "unknown"))
+        cost_bucket = min(int(sample.optimal_cost), 4)
+        buckets[(family, cost_bucket)].append(sample)
+
+    remaining = split_sizes.copy()
+    assigned: dict[str, list[AlignmentSample]] = {split: [] for split in SPLITS}
+    for key in sorted(buckets):
+        bucket = buckets[key]
+        rng.shuffle(bucket)
+        for sample in bucket:
+            split = max(
+                (candidate for candidate in SPLITS if remaining[candidate] > 0),
+                key=lambda candidate: remaining[candidate] / max(1, split_sizes[candidate]),
+            )
+            sample.split = split
+            sample.sample_id = f"{split}-{len(assigned[split]):06d}"
+            assigned[split].append(sample)
+            remaining[split] -= 1
+
+    if any(remaining[split] != 0 for split in SPLITS):
+        raise RuntimeError(f"stratified split failed to fill requested counts: {remaining}")
+    return assigned
 
 
 def _generate_example(args: argparse.Namespace, rng: Random):
