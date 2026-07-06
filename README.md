@@ -263,6 +263,21 @@ wall time and timeouts. The report includes a speed/quality threshold summary
 indicating at which size (if any) the learned fast path overtakes exact
 search.
 
+### 6. Real-Life Log Validation
+
+```bash
+python scripts/evaluate_real_log.py files/receipt.xes \
+  --checkpoint runs/lara/best.pt \
+  --noise-threshold 0.0 \
+  --output runs/lara/real_receipt.json
+```
+
+The script discovers a Petri net from the XES log with the inductive miner
+(`--noise-threshold` controls filtering; 0.0 yields a perfectly fitting
+model), deduplicates trace variants, and compares guided fast mode, unguided
+fast mode, and pm4py exact alignment per variant, reporting legality, optimal
+rates (per variant and trace-weighted), cost gaps, and timing.
+
 ## Minimal API Example
 
 ```python
@@ -305,6 +320,8 @@ print(result.alignment.to_pm4py_label_alignment())
 - `scripts/test_model.py`: human-readable and JSON evaluation.
 - `scripts/benchmark_scaling.py`: speed/quality scaling benchmark against the
   exact backend on progressively larger block-structured nets.
+- `scripts/evaluate_real_log.py`: zero-shot validation on real-life XES logs
+  with inductive-miner-discovered nets.
 
 ## Current Limitations
 

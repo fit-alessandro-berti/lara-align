@@ -4,8 +4,9 @@ This document defines the evaluation metrics and reports the results of the
 reference training run and the held-out test evaluation. All numbers are
 reproducible from the repository artifacts: `runs/lara_bidir/metrics.csv`
 (training), `runs/lara_bidir/best.pt` + `scripts/test_model.py` (test),
-`runs/lara_bidir/scaling.json` + `scripts/benchmark_scaling.py` (scaling), and
-the dataset described in `approach.md` §6. The test split contains 100
+`runs/lara_bidir/scaling*.json` + `scripts/benchmark_scaling.py` (scaling and
+ablation), `runs/lara_bidir/real_*.json` + `scripts/evaluate_real_log.py`
+(real-life logs), and the dataset described in `approach.md` §6. The test split contains 100
 stratified examples (82 sequence, 18 duplicate-label choice) never seen during
 training.
 
@@ -89,7 +90,7 @@ message passing (`approach.md` §2), the disambiguating suffix context reaches
 the twin transitions and the sync head resolves transition identity almost
 perfectly (RQ3). The residual errors are concentrated in longer sequence
 traces where one early greedy detour cascades (gaps 4–6), which is a
-decoding-search limitation, not a representation one (§9).
+decoding-search limitation, not a representation one (§10).
 
 ## 5. Training Dynamics
 
@@ -229,7 +230,7 @@ run pays none.
 
 The decomposition is clean: on sequence nets — where every event has at most
 one label-compatible transition — guidance changes *nothing* (86.6% either
-way; the residual errors are greedy-search myopia, §9). The model's entire
+way; the residual errors are greedy-search myopia, §10). The model's entire
 in-distribution contribution is concentrated exactly where the architecture
 predicts it should be: resolving duplicate-label transition identity, where
 guided decoding recovers +27.7 points (94.4% vs. 66.7%). Structural
@@ -273,7 +274,69 @@ into a falsifiable target: training on the block-structured family must lift
 the guided curve in §8.2 measurably above the unguided one — the metric and
 the baseline are now both in place.
 
-## 9. Qualitative Failure Analysis
+## 9. Zero-Shot Validation on Real-Life Event Logs
+
+All preceding results use synthetic data. To test external validity, we
+evaluated the same checkpoint — with no fine-tuning — on two real-life event
+logs (`scripts/evaluate_real_log.py`): the **receipt phase** log of a Dutch
+municipality's building-permit process (1,434 traces, 116 variants, 27
+activity labels, traces up to 25 events) and the **road traffic fine
+management** log sample (100 traces, 10 variants, 10 labels). For each log a
+Petri net is discovered with the inductive miner at two noise thresholds:
+0.0 (a perfectly fitting model, so every optimal cost is 0 and the task
+isolates *navigation* of the discovered net) and 0.5 (a filtered model, so
+frequent behavior fits but rarer variants genuinely deviate). Alignment is
+computed once per variant and metrics are reported both per variant and
+weighted by trace frequency. This setting is a strict zero-shot test: the
+activity labels were never seen in training (they embed via the label hash),
+and inductive-miner nets are dominated by invisible routing transitions —
+e.g., 47 invisible vs. 27 visible transitions for the fitting receipt model —
+a structure far from the training distribution.
+
+| log | noise | net (P / vis+inv T) | legal | optimal (variant) | optimal (trace-wtd) | gap mean / max | LARA med | unguided med | exact med (max) |
+|---|---:|---|---:|---:|---:|---|---:|---:|---:|
+| road traffic | 0.0 | 15 / 10+10 | 100% | 100.0% | 100.0% | 0 / 0 | 8.0 ms | 0.4 ms | 1.7 ms (62) |
+| road traffic | 0.5 | 13 / 10+7 | 100% | 70.0% | 94.0% | 0.50 / 3 | 7.9 ms | 0.4 ms | 1.3 ms (51) |
+| receipt | 0.0 | 45 / 27+47 | 100% | 50.0% | 82.6% | 0.76 / 5 | 18.5 ms | 6.1 ms | 27.4 ms (558) |
+| receipt | 0.5 | 25 / 24+19 | 100% | 55.2% | 74.6% | 0.82 / 7 | 8.9 ms | 0.6 ms | 8.1 ms (76) |
+
+Four observations.
+
+**Legality transfers perfectly.** 100% of variants (hence 100% of traces)
+yield replayable alignments on every configuration — on nets riddled with
+invisible transitions and with activity labels the model never saw. Combined
+with the synthetic results, RQ1 now holds across three distributions
+(training families, block-structured stress nets, real-life logs).
+
+**Optimality is strong on frequent behavior, weaker in the tail.**
+Trace-weighted optimal rates (74.6–100%) sit well above variant-level rates
+(50–100%): the variants that matter most align optimally, while the misses
+concentrate in rare, long variants (up to 25 events) where the greedy decoder
+occasionally pays a small detour (mean gap ≤ 0.82, max 7). On the fitting
+receipt net every optimal cost is 0, so the 82.6% trace-weighted optimal rate
+means LARA replays most real behavior through a 47-invisible-transition net
+without any deviation — and its errors are bounded upper estimates, never
+illegal answers.
+
+**The real-life speed picture matches the synthetic threshold.** On the small
+road-traffic nets, exact A* is faster — as predicted for that size class. On
+the largest discovered net (receipt, noise 0.0), LARA fast overtakes exact
+search *on a real log*: median 18.5 ms vs. 27.4 ms (1.5×) and, more
+importantly for tail latency, max 123 ms vs. 558 ms (4.5×). The unguided
+variant is faster still (median 6.1 ms, 4.5× over exact). Invisible-heavy
+discovered models are exactly the regime where the synchronous product blows
+up, and it is the regime real process discovery produces.
+
+**Guided and unguided quality are identical here — as the ablation predicts.**
+Inductive-miner nets contain no duplicate labels, which §8 identified as the
+one sub-problem where the current checkpoint's guidance pays off. Real-life
+validation therefore currently showcases the constrained decoder and the
+certification architecture; label-ambiguous real models (e.g., from region
+discovery or hand-made models with repeated activities) are where guidance
+should differentiate, and duplicate-label-rich training data remains the
+lever for the rest.
+
+## 10. Qualitative Failure Analysis
 
 The five largest-gap test cases share one pattern. Example (`test-000074`,
 gap 6): trace `A E B C D E F G` against an 8-step sequence net. The optimum
@@ -290,22 +353,24 @@ replacement of greedy decoding with neural-guided beam or A* search over the
 synchronous product, where the same learned scores rank *paths* rather than
 single moves.
 
-## 10. Summary Against the Research Questions
+## 11. Summary Against the Research Questions
 
 | RQ | question | finding |
 |---|---|---|
-| RQ1 | legality of neural-guided decoding | **100%** replayable candidates on test, and 100% at every scale of the benchmark ladder, including families never seen in training |
+| RQ1 | legality of neural-guided decoding | **100%** replayable candidates on test, at every scale of the benchmark ladder, and on both real-life logs (zero-shot, §9) — three distinct distributions |
 | RQ2 | near-optimality | **88%** exactly optimal; mean gap 0.38, p95 = 4, max 6; all gaps even (greedy-detour signature) |
 | RQ3 | duplicate labels / invisible transitions | the duplicate-label family reaches **94.4%** optimal with test sync loss ≈ 0.0001, versus 66.7% for the unguided ablation (§8) — identity resolution is essentially solved at training scale, and it is specifically the *learned* component that solves it |
-| RQ4 | generalization across families/splits | legality transfers perfectly across families, splits, and scales; *optimality* does not transfer beyond training scale (~30% at 40 activities), making broader training data the clear next step |
+| RQ4 | generalization across families/splits | legality transfers perfectly across families, splits, scales, and real logs; optimality transfers well to real frequent behavior (74.6–100% trace-weighted, §9) but not to large synthetic stress nets (~30% at 40 activities), making broader training data the clear next step |
 | RQ5 | certification | **88%** of candidates certified optimal by cost equality; 12% need exact repair; certification adds one exact call (~1 ms/trace at training scale) |
 
 **Overall:** the prototype validates the architecture's core promise — a
-learned model can produce *legal* alignments essentially always, resolve
-duplicate-label ambiguity nearly perfectly (and measurably beyond what
-unguided search achieves, §8), and attain the exact optimum in the large
-majority of in-distribution cases, with a certifying exact layer covering the
-rest. The fast path overtakes exact search at ~40 activities, where A* begins
-to time out; the remaining gap is *quality at scale*, a training-data problem
-for which the block-structured generator provides the pipeline and the
-unguided ablation provides the baseline to beat.
+learned model can produce *legal* alignments essentially always — including
+zero-shot on real-life logs — resolve duplicate-label ambiguity nearly
+perfectly (and measurably beyond what unguided search achieves, §8), and
+attain the exact optimum in the large majority of in-distribution cases, with
+a certifying exact layer covering the rest. The fast path overtakes exact
+search at ~40 activities on synthetic nets and already on the
+invisible-transition-heavy discovered model of the real receipt log (1.5×
+median, 4.5× worst-case, §9); the remaining gap is *quality at scale*, a
+training-data problem for which the block-structured generator provides the
+pipeline and the unguided ablation provides the baseline to beat.
