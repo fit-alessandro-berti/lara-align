@@ -78,7 +78,11 @@ def main() -> None:
     device = torch.device(args.device)
 
     progress_enabled = not args.no_progress
+    _progress_write(f"loading data from {args.data_dir}")
     train_samples, val_samples = _load_training_splits(args.data_dir, progress_enabled)
+    _progress_write(
+        f"loaded data: train={len(train_samples)} samples, val={len(val_samples)} samples"
+    )
     model_config = _model_config(args)
     model = build_model(model_config).to(device)
     criterion = LARALoss(
@@ -112,6 +116,7 @@ def main() -> None:
     metrics_csv_path = _metrics_csv_path(args)
     metrics_csv_initialized = False
 
+    _progress_write(f"starting training for up to {args.epochs} epochs")
     with _progress(
         range(1, args.epochs + 1),
         enabled=progress_enabled,

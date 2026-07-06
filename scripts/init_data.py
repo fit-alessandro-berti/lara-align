@@ -30,9 +30,9 @@ def parse_args() -> argparse.Namespace:
         description="Initialize exact-labeled LARA train/validation/test data."
     )
     parser.add_argument("--output", type=Path, default=Path("data/lara_synthetic"))
-    parser.add_argument("--train-size", type=int, default=2048)
-    parser.add_argument("--val-size", type=int, default=512)
-    parser.add_argument("--test-size", type=int, default=512)
+    parser.add_argument("--train-size", type=int, default=400)
+    parser.add_argument("--val-size", type=int, default=100)
+    parser.add_argument("--test-size", type=int, default=100)
     parser.add_argument("--seed", type=int, default=13)
     parser.add_argument("--min-len", type=int, default=3)
     parser.add_argument("--max-len", type=int, default=8)

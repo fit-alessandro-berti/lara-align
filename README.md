@@ -127,9 +127,9 @@ python scripts/init_data.py --overwrite
 
 Default split sizes:
 
-- train: 2048 examples
-- validation: 512 examples
-- test: 512 examples
+- train: 400 examples
+- validation: 100 examples
+- test: 100 examples
 
 The initializer generates exact-labeled synthetic Petri-net/trace pairs using
 pm4py. It currently mixes sequential nets and duplicate-label choice nets, then
@@ -189,7 +189,7 @@ split files, advancing epochs, and processing train/validation batches. Use
 `--no-progress` to disable them.
 
 On CPU, this is a research run rather than a unit test; one epoch over the
-default 2048-example training split can take a few minutes. For a quick training
+default 400-example training split can take a few minutes. For a quick training
 smoke test, use the small dataset command above and override the model size:
 
 ```bash
