@@ -1,0 +1,170 @@
+LARA Alignment Evaluation
+=========================
+split:              test
+samples:            100
+checkpoint:         runs/lara/best.pt
+checkpoint epoch:   16
+elapsed:            1.77s
+
+Replay And Optimality
+----------------------
+replayable alignments:       100.0%
+equal optimum cost:          83.0%
+exact transition sequence:   63.0%
+same label-level alignment:  63.0%
+
+Cost Gap: reconstructed cost - pm4py optimum
+---------------------------------------------
+valid gaps counted: 100
+mean / median:     0.4800 / 0.0000
+min / max:         0 / 6
+p90 / p95:         2.0000 / 4.0000
+std dev:           1.1703
+mean relative gap: 0.2850
+
+Losses
+------
+loss_cost                0.2000
+loss_log_move            0.3333
+loss_model_move          0.1795
+loss_router_balance      0.0271
+loss_router_boundary     0.0554
+loss_router_entropy      0.8208
+loss_sync_move           0.0658
+loss_total               0.5862
+
+By Family
+---------
+duplicate_label_choice   n= 18 replay=100.0% opt_cost=66.7% mean_gap=0.6667
+sequence                 n= 82 replay=100.0% opt_cost=86.6% mean_gap=0.4390
+
+Example Alignments (worst, 5 shown)
+------------------------------------------------
+
+[1] test-000074 family=sequence
+trace: A E B C D E F G
+legal=True optimal_cost=2 reconstructed_cost=8 gap=6
+exact_transition_match=False label_alignment_match=False move_count_gap=3
+pm4py optimal:
+  idx  log        model_transition        model_label  kind
+    0  A          t0_A                    A            sync
+    1  E          >>                      >>           log
+    2  B          t1_B                    B            sync
+    3  C          t2_C                    C            sync
+    4  D          t3_D                    D            sync
+    5  E          t4_E                    E            sync
+    6  F          t5_F                    F            sync
+    7  G          >>                      >>           log
+LARA reconstructed:
+  idx  log        model_transition        model_label  kind
+    0  A          t0_A                    A            sync
+    1  >>         t1_B                    B            model
+    2  >>         t2_C                    C            model
+    3  >>         t3_D                    D            model
+    4  E          t4_E                    E            sync
+    5  B          >>                      >>           log
+    6  C          >>                      >>           log
+    7  D          >>                      >>           log
+    8  E          >>                      >>           log
+    9  F          t5_F                    F            sync
+   10  G          >>                      >>           log
+
+[2] test-000040 family=sequence
+trace: A D B C D E F
+legal=True optimal_cost=1 reconstructed_cost=5 gap=4
+exact_transition_match=False label_alignment_match=False move_count_gap=2
+pm4py optimal:
+  idx  log        model_transition        model_label  kind
+    0  A          t0_A                    A            sync
+    1  D          >>                      >>           log
+    2  B          t1_B                    B            sync
+    3  C          t2_C                    C            sync
+    4  D          t3_D                    D            sync
+    5  E          t4_E                    E            sync
+    6  F          t5_F                    F            sync
+LARA reconstructed:
+  idx  log        model_transition        model_label  kind
+    0  A          t0_A                    A            sync
+    1  >>         t1_B                    B            model
+    2  >>         t2_C                    C            model
+    3  D          t3_D                    D            sync
+    4  B          >>                      >>           log
+    5  C          >>                      >>           log
+    6  D          >>                      >>           log
+    7  E          t4_E                    E            sync
+    8  F          t5_F                    F            sync
+
+[3] test-000060 family=sequence
+trace: C A B E C
+legal=True optimal_cost=2 reconstructed_cost=6 gap=4
+exact_transition_match=False label_alignment_match=False move_count_gap=2
+pm4py optimal:
+  idx  log        model_transition        model_label  kind
+    0  C          >>                      >>           log
+    1  A          t0_A                    A            sync
+    2  B          t1_B                    B            sync
+    3  E          >>                      >>           log
+    4  C          t2_C                    C            sync
+LARA reconstructed:
+  idx  log        model_transition        model_label  kind
+    0  >>         t0_A                    A            model
+    1  >>         t1_B                    B            model
+    2  C          t2_C                    C            sync
+    3  A          >>                      >>           log
+    4  B          >>                      >>           log
+    5  E          >>                      >>           log
+    6  C          >>                      >>           log
+
+[4] test-000084 family=sequence
+trace: A C B F D E F
+legal=True optimal_cost=3 reconstructed_cost=7 gap=4
+exact_transition_match=False label_alignment_match=False move_count_gap=2
+pm4py optimal:
+  idx  log        model_transition        model_label  kind
+    0  A          t0_A                    A            sync
+    1  >>         t1_B                    B            model
+    2  C          t2_C                    C            sync
+    3  B          >>                      >>           log
+    4  F          >>                      >>           log
+    5  D          t3_D                    D            sync
+    6  E          t4_E                    E            sync
+    7  F          t5_F                    F            sync
+LARA reconstructed:
+  idx  log        model_transition        model_label  kind
+    0  A          t0_A                    A            sync
+    1  >>         t1_B                    B            model
+    2  C          t2_C                    C            sync
+    3  B          >>                      >>           log
+    4  >>         t3_D                    D            model
+    5  >>         t4_E                    E            model
+    6  F          t5_F                    F            sync
+    7  D          >>                      >>           log
+    8  E          >>                      >>           log
+    9  F          >>                      >>           log
+
+[5] test-000088 family=sequence
+trace: A B E C D H E E
+legal=True optimal_cost=3 reconstructed_cost=7 gap=4
+exact_transition_match=False label_alignment_match=False move_count_gap=2
+pm4py optimal:
+  idx  log        model_transition        model_label  kind
+    0  A          t0_A                    A            sync
+    1  B          t1_B                    B            sync
+    2  E          >>                      >>           log
+    3  C          t2_C                    C            sync
+    4  D          t3_D                    D            sync
+    5  H          >>                      >>           log
+    6  E          t4_E                    E            sync
+    7  E          >>                      >>           log
+LARA reconstructed:
+  idx  log        model_transition        model_label  kind
+    0  A          t0_A                    A            sync
+    1  B          t1_B                    B            sync
+    2  >>         t2_C                    C            model
+    3  >>         t3_D                    D            model
+    4  E          t4_E                    E            sync
+    5  C          >>                      >>           log
+    6  D          >>                      >>           log
+    7  H          >>                      >>           log
+    8  E          >>                      >>           log
+    9  E          >>                      >>           log
