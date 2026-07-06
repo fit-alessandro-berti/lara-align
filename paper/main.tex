@@ -5,6 +5,7 @@
 
 \usepackage{booktabs}
 \usepackage{tikz}
+\usetikzlibrary{positioning,fit,backgrounds,arrows.meta,calc}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.16}
 
@@ -34,18 +35,38 @@
   }
 }
 
-% 16:9 image placeholder: framed box with a short description of the intended content.
-\newcommand{\figureplaceholder}[1]{%
-  \begin{center}
-  \setlength{\fboxsep}{0pt}%
-  \setlength{\fboxrule}{0.5pt}%
-  \fcolorbox{black!40}{black!4}{%
-    \begin{minipage}[c][0.349\linewidth][c]{0.62\linewidth}
-      \centering\footnotesize\itshape\color{black!65}%
-      [Image placeholder, 16:9]\\[5pt]
-      \begin{minipage}{0.88\linewidth}\centering #1\end{minipage}
-    \end{minipage}}%
-  \end{center}}
+% Shared styles for the two architecture diagrams. The learned (blue) and
+% exact (aqua) stages reuse the entity-stable series colors of the charts.
+\tikzset{
+  larabox/.style={draw, rounded corners=2.5pt, align=center, inner xsep=5pt,
+    inner ysep=4pt, minimum height=9.5mm, line width=0.7pt},
+  learnedbox/.style={larabox, draw=seriesblue!75!black, fill=seriesblue!9},
+  exactbox/.style={larabox, draw=seriesaqua!70!black, fill=seriesaqua!12},
+  iobox/.style={larabox, draw=black!55, fill=black!4},
+  stagebg/.style={rounded corners=5pt, inner sep=3mm},
+  stagelab/.style={font=\scriptsize\itshape, inner sep=1.5pt},
+  flow/.style={-{Stealth[length=2.4mm, width=2mm]}, line width=0.9pt, draw=black!60},
+  biflow/.style={{Stealth[length=2.2mm, width=1.8mm]}-{Stealth[length=2.2mm, width=1.8mm]},
+    line width=0.9pt, draw=black!60},
+  flowlab/.style={font=\scriptsize, text=black!65, align=center, inner sep=1.5pt},
+}
+% Tiny icons drawn as pics in the host picture: a place-transition-place
+% fragment and a three-event trace, both centered at the pic origin.
+\tikzset{
+  pics/pnfrag/.style={code={
+    \draw[black!70, sharp corners] (-1.9mm,-1.4mm) rectangle (-0.7mm,1.4mm);
+    \fill[black!25] (-1.9mm,-1.4mm) rectangle (-0.7mm,1.4mm);
+    \draw[black!70] (-4.4mm,0) circle (1.3mm);
+    \fill[black!70] (-4.4mm,0) circle (0.55mm);
+    \draw[black!70] (3.1mm,0) circle (1.3mm);
+    \draw[black!70, -{Stealth[length=1.1mm]}] (-3.0mm,0) -- (-2.0mm,0);
+    \draw[black!70, -{Stealth[length=1.1mm]}] (-0.6mm,0) -- (1.7mm,0);}},
+  pics/trcfrag/.style={code={
+    \foreach \i/\l in {-1/a,0/b,1/c} {
+      \draw[black!70, fill=black!8, sharp corners]
+        (\i*3.3mm-1.35mm,-1.5mm) rectangle +(2.7mm,3mm);
+      \node[font=\tiny, text=black!70, inner sep=0pt] at (\i*3.3mm,0) {$\l$};}}},
+}
 
 \acmConference[ICPM '27]{International Conference on Process Mining 2027}{TBD 2027}{TBD}
 \acmYear{2027}
@@ -110,7 +131,45 @@ This paper asks whether the tension can be dissolved instead. We present LARA (L
 The central question, can a learned model make trace alignment fast without making it less trustworthy, is refined into six research questions. \textbf{RQ1 (legality)}: are the produced alignments always legal, even on unseen nets and vocabularies? \textbf{RQ2 (near-optimality)}: how often is the exact optimal cost attained, and how large are the gaps otherwise? \textbf{RQ3 (ambiguity)}: are duplicate labels and invisible-transition routing resolved? \textbf{RQ4 (generalization)}: does performance transfer across families, scales, and to real-life logs? \textbf{RQ5 (certification)}: how often does cost equality certify the candidate, and what does repair cost otherwise? \textbf{RQ6 (attribution)}: how much quality is owed to the learned scores rather than to the constrained search around them?
 
 \begin{figure}
-\figureplaceholder{Outline of the LARA approach as a left-to-right pipeline: a Petri net and a trace enter a neural proposal stage (encoder, router, local experts, recomposer heads, greedy decoder), whose candidate alignment flows into an exact trust stage (replay verifier, exact aligner) that outputs either a certified optimal alignment or an exact repair. The proposal stage is drawn on a light background labeled ``learned, fast, uncertified'' and the trust stage on a contrasting background labeled ``exact, trusted''.}
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[font=\small, node distance=4mm and 5.5mm]
+% inputs
+\node[iobox, minimum width=24mm, minimum height=12.5mm] (net) {~\\[1.5mm] Petri net $SN$};
+\node[iobox, minimum width=24mm, minimum height=12.5mm, below=4mm of net] (trace) {~\\[1.5mm] trace $\sigma$};
+\pic at ($(net.center)+(0.6mm,2.9mm)$) {pnfrag};
+\pic at ($(trace.center)+(0,2.9mm)$) {trcfrag};
+\coordinate (inmid) at ($(net.east)!0.5!(trace.east)$);
+% learned proposal stage
+\node[learnedbox, right=9mm of inmid, anchor=west] (enc) {neural encoder\\graph $\leftrightarrow$ trace};
+\node[learnedbox, right=of enc] (heads) {router, experts,\\recomposer heads};
+\node[learnedbox, right=of heads] (dec) {constrained\\greedy decoder};
+% candidate
+\node[iobox, right=9mm of dec] (cand) {candidate $\gamma$\\fireable by\\construction};
+% exact trust stage
+\node[exactbox, right=9mm of cand] (ver) {replay verifier\\legal? cost $c(\gamma)$};
+\node[exactbox, right=of ver] (cert) {certifier +\\exact aligner};
+% outputs
+\node[iobox, right=15mm of cert, yshift=8.5mm] (opt) {certified optimal\\$c(\gamma) = \delta$};
+\node[iobox, right=15mm of cert, yshift=-8.5mm] (rep) {exact repair\\(optimal)};
+% flows
+\draw[flow] (net.east) -- ++(4.5mm,0) |- (enc.west);
+\draw[flow] (trace.east) -- ++(4.5mm,0) |- (enc.west);
+\draw[flow] (enc) -- (heads);
+\draw[flow] (heads) -- (dec);
+\draw[flow] (dec) -- (cand);
+\draw[flow] (cand) -- (ver);
+\draw[flow] (ver) -- (cert);
+\draw[flow] (cert.east) -- ++(4mm,0) |- node[flowlab, above, anchor=south east, pos=1] {cost equality~} (opt.west);
+\draw[flow] (cert.east) -- ++(4mm,0) |- node[flowlab, below, anchor=north east, pos=1] {otherwise~} (rep.west);
+% stage backgrounds
+\begin{scope}[on background layer]
+\node[stagebg, fill=seriesblue!5, draw=seriesblue!40] (learnedbg) [fit=(enc)(heads)(dec)] {};
+\node[stagebg, fill=seriesaqua!6, draw=seriesaqua!45] (exactbg) [fit=(ver)(cert)] {};
+\end{scope}
+\node[stagelab, text=seriesblue!60!black, anchor=north] at (learnedbg.south) {neural proposal: learned, fast, uncertified};
+\node[stagelab, text=seriesaqua!45!black, anchor=north] at (exactbg.south) {exact trust: verified, certified};
+\end{tikzpicture}}
 \caption{Overview of LARA. Learning proposes, exact reasoning certifies: the neural stage produces a legal candidate quickly, and the exact stage decides legality and optimality, so conformance conclusions never depend on learned output.}
 \label{fig:outline}
 \end{figure}
@@ -153,7 +212,49 @@ Section~\ref{sec:relatedWork} positions LARA in the literature, Section~\ref{sec
 LARA separates \emph{candidate generation} (learned, fast, uncertified) from \emph{certification} (exact, trusted). Figure~\ref{fig:architecture} shows the pipeline; this section walks through its stages.
 
 \begin{figure}
-\figureplaceholder{Architecture diagram of the LARA neural model and its exact envelope. Left: feature extraction turns the Petri net into a typed bipartite graph (places and transitions with feature vectors, four typed edge directions) and the trace into a hashed label sequence. Center: the typed graph transformer (3 layers) and the trace transformer (2 layers) exchange information through bidirectional cross-attention; the learned router assigns nodes and events to 8 latent regions feeding local expert heads (sketch logits, cost bounds, uncertainty), while recomposer heads emit synchronous, log, and model move scores. Right: the constrained greedy decoder, the replay verifier, and the certifier with the exact backend. Arrows are annotated with tensor shapes.}
+\centering
+\resizebox{\linewidth}{!}{%
+\begin{tikzpicture}[font=\small, node distance=4mm and 9mm]
+% --- feature extraction ---
+\node[iobox] (bip) {typed bipartite graph\\5 place / 6 transition features\\4 typed edge directions};
+\node[iobox, below=17mm of bip] (hash) {hashed label sequence\\BLAKE2b $\to$ 8{,}192 ids};
+\node[iobox, below=3.5mm of hash] (mask) {compatibility mask\\$C \in \{0,1\}^{n \times |T|}$};
+% --- neural model ---
+\node[learnedbox, right=of bip] (gt) {typed graph transformer\\3 layers: self-attention\\$+$ typed messages};
+\node[learnedbox] (tt) at (gt |- hash) {trace transformer\\2 layers $+$ positions};
+\node[learnedbox, right=of gt] (router) {learned router\\$R = 8$ soft regions};
+\node[learnedbox, below=3.5mm of router] (exp) {local experts $\times 8$\\sketches, cost bounds,\\uncertainty (diagnostic only)};
+\node[learnedbox] (rec) at (router |- tt) {recomposer heads\\sync $n {\times} |T|$ (masked by $C$),\\log $n$, model $|T|$};
+\coordinate (encmid) at ($(router.east)!0.5!(rec.east)$);
+\node[learnedbox, right=of encmid, anchor=west] (dec) {constrained greedy\\decoder: marking-tracked,\\bounded search};
+% --- exact trust ---
+\node[exactbox, right=16mm of dec] (ver) {replay verifier\\$m_0 \to m_f$, log\\projection $= \sigma$};
+\node[exactbox, below=3.5mm of ver] (cert) {certifier: fast /\\certified / anytime};
+\node[exactbox, below=3.5mm of cert] (exact) {exact backend\\A* $+$ state equation};
+\node[iobox, right=9mm of cert] (out) {certified optimal\\or exact repair};
+% --- flows ---
+\draw[flow] (bip) -- node[flowlab, above=0.5mm] {$|P| {\times} 5$\\$|T| {\times} 6$} (gt);
+\draw[flow] (hash) -- node[flowlab, above] {$n$ ids} (tt);
+\draw[biflow] (gt) -- node[flowlab, fill=white] {bidirectional\\cross-attention} (tt);
+\draw[flow] (gt) -- node[flowlab, above] {$|T| {\times} d$} (router);
+\draw[flow] (tt) -- node[flowlab, above] {$n {\times} d$} (rec);
+\draw[flow] (router) -- (exp);
+\draw[flow, dashed] (mask.east) -| node[flowlab, below, pos=0.22] {hard mask} (rec.south);
+\draw[flow] (rec.east) -| node[flowlab, below, pos=0.22] {move scores} (dec.south);
+\draw[flow] (dec) -- node[flowlab, above, xshift=-1.5mm] {candidate $\gamma$} (ver);
+\draw[flow] (ver) -- node[flowlab, left] {legal, $c(\gamma)$} (cert);
+\draw[biflow] (cert) -- node[flowlab, left] {$\delta$, repair} (exact);
+\draw[flow] (cert) -- (out);
+% --- stage backgrounds ---
+\begin{scope}[on background layer]
+\node[stagebg, fill=black!3, draw=black!30] (featbg) [fit=(bip)(hash)(mask)] {};
+\node[stagebg, fill=seriesblue!5, draw=seriesblue!40] (learnbg) [fit=(gt)(tt)(router)(exp)(rec)(dec)] {};
+\node[stagebg, fill=seriesaqua!6, draw=seriesaqua!45] (trustbg) [fit=(ver)(cert)(exact)] {};
+\end{scope}
+\node[stagelab, text=black!60, anchor=south] at (featbg.north) {feature extraction};
+\node[stagelab, text=seriesblue!60!black, anchor=south] at (learnbg.north) {neural proposal ($d = 128$, ${\approx}3$M parameters): learned, fast, uncertified};
+\node[stagelab, text=seriesaqua!45!black, anchor=south] at (trustbg.north) {exact trust: verified, certified};
+\end{tikzpicture}}
 \caption{The LARA architecture. A typed graph transformer and a trace transformer, coupled by cross-attention, feed a learned router with local experts and recomposer heads; a constrained greedy decoder emits a fireable candidate that is verified by replay and certified or repaired by the exact backend.}
 \label{fig:architecture}
 \end{figure}
