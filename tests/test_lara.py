@@ -130,6 +130,21 @@ def test_training_loss_smoke():
     assert losses["total"].ndim == 0
 
 
+def test_training_loss_handles_empty_trace():
+    net, im, fm = make_sequence_net(["A"])
+    trace = trace_from_labels([])
+    alignment = Alignment([AlignmentMove(None, "t0_A", "A")], cost=1)
+    features = pm4py_to_features(net, im, fm, trace)
+    model = _small_model()
+    output = model(features)
+    targets = targets_from_alignment(alignment, features, optimal_cost=1)
+
+    losses = LARALoss()(output, features, targets)
+
+    assert losses["log_move"].isfinite()
+    assert losses["total"].isfinite()
+
+
 def test_fast_mode_uses_neural_decoder_and_verifier():
     net, im, fm = make_sequence_net(["A", "B"])
     trace = trace_from_labels(["A", "B"])

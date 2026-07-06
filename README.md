@@ -1,28 +1,235 @@
 # lara-align
 
-Learned Adaptive Recombined Alignments: a neural-guided, certifying alignment
-prototype for Petri-net conformance checking.
+Learned Adaptive Recombined Alignments (LARA) is an experimental system for
+neural-guided, certifying Petri-net trace alignment.
 
-LARA separates candidate generation from certification:
+## Abstract
 
-- `LARANeuralModel` encodes a pm4py Petri net plus trace with PyTorch, learns
-  trace-dependent latent regions, scores local alignment sketches, and produces
-  move logits for recomposition.
-- `GreedyCandidateDecoder` turns those scores into a concrete alignment by
-  replaying enabled transitions and bounded model-prefix repairs.
-- `verify_alignment` simulates the decoded model projection and checks that the
-  log projection reconstructs the trace exactly.
-- `CertifyingAlignmentSystem` uses pm4py's exact Petri-net alignment backend as
-  the certifying layer. Learned scores can rank candidates, but only pm4py's
-  exact result certifies optimality.
+Alignment-based conformance checking compares an observed event trace with the
+behavior allowed by a process model. For Petri nets, the standard formulation is
+a shortest-path problem over a synchronous product: synchronous moves, log-only
+moves, and model-only moves are assigned costs, and the optimal alignment is the
+minimum-cost path. Exact methods are trustworthy, but their search space can grow
+quickly in the presence of concurrency, loops, duplicate labels, and invisible
+transitions.
 
-## Install
+This repository studies a hybrid alternative. LARA trains a PyTorch model to
+encode a Petri net and trace, predict trace-dependent latent regions, score local
+alignment sketches, and produce a strong legal candidate. A pm4py-based exact
+layer remains responsible for legality checks, repair, and optimality
+certification. The neural model is therefore used as guidance, not as an
+uncertified replacement for exact conformance checking.
+
+## Problem
+
+Given a Petri net
+
+```text
+N = (P, T, F, lambda, m0, mf)
+```
+
+and an observed trace
+
+```text
+sigma = <a1, ..., an>
+```
+
+the task is to construct an alignment
+
+```text
+gamma = <(x1, y1), ..., (xk, yk)>
+```
+
+where each move is one of:
+
+- synchronous: `(a, t)`
+- log-only: `(a, >>)`
+- model-only: `(>>, t)`
+
+The log projection must reconstruct the trace exactly, and the model projection
+must be fireable from the initial marking `m0` to the final marking `mf`.
+
+## Hypothesis
+
+The central hypothesis is that a learned model can reduce the practical burden
+of exact alignment search by learning:
+
+- which duplicate-labeled transition is likely intended;
+- where invisible transitions are needed;
+- where local deviations are likely;
+- which regions of the net and trace should be considered together;
+- which candidate alignments are promising enough to verify first.
+
+Correctness is preserved by keeping exact Petri-net simulation and pm4py
+alignment in the loop. Learned scores may rank candidates, but they are not used
+as admissible lower bounds.
+
+## Proposed Solution
+
+LARA separates candidate generation from certification.
+
+1. `LARANeuralModel` encodes a typed Petri-net graph and event sequence.
+2. A learned router assigns transitions and events to latent regions.
+3. Local expert heads score alignment sketches, lower/upper cost estimates, and
+   uncertainty.
+4. A recomposer head scores synchronous/log/model moves.
+5. `GreedyCandidateDecoder` builds a replayable candidate when possible.
+6. `verify_alignment` simulates the transition projection and checks trace
+   reconstruction.
+7. `CertifyingAlignmentSystem` compares the candidate with pm4py's exact
+   state-equation A* alignment and certifies optimality when costs match.
+
+The important design constraint is that neural output is never trusted as a
+certificate. Fast mode evaluates the learned candidate. Certified mode invokes
+pm4py and returns an exact repair if the candidate is not already optimal.
+
+## Research Questions
+
+This prototype is organized around the following research questions.
+
+**RQ1. Legality**
+Can a neural-guided decoder produce alignments whose model projection can be
+replayed and whose log projection exactly reconstructs the trace?
+
+**RQ2. Near-optimality**
+How often does the reconstructed alignment have the same cost as pm4py's exact
+optimal alignment, and what is the distribution of cost gaps when it does not?
+
+**RQ3. Ambiguity**
+How well does transition-identity decoding handle duplicate labels and invisible
+transitions compared with label-only decoding?
+
+**RQ4. Generalization**
+How does performance change across synthetic families, deviation types, and
+held-out train/validation/test splits?
+
+**RQ5. Certification**
+When the learned candidate is legal, how often can it be certified optimal by
+cost equality against the exact backend, and when does exact repair remain
+necessary?
+
+## Experimental Protocol
+
+The default experiment is intentionally larger than a smoke test while still
+being small enough to run on a workstation.
+
+### 1. Install
 
 ```bash
 pip install -e ".[dev]"
 ```
 
-## Minimal Usage
+### 2. Initialize Data
+
+```bash
+python scripts/init_data.py --overwrite
+```
+
+Default split sizes:
+
+- train: 2048 examples
+- validation: 512 examples
+- test: 512 examples
+
+The initializer generates exact-labeled synthetic Petri-net/trace pairs using
+pm4py. It currently mixes sequential nets and duplicate-label choice nets, then
+injects controlled deviations. A single exact-labeled pool is stratified by
+synthetic family and optimal-cost bucket before writing:
+
+- `data/lara_synthetic/train.pkl`
+- `data/lara_synthetic/val.pkl`
+- `data/lara_synthetic/test.pkl`
+- `data/lara_synthetic/metadata.pkl`
+
+For a quick smoke dataset:
+
+```bash
+python scripts/init_data.py \
+  --output /tmp/lara_smoke_data \
+  --train-size 32 \
+  --val-size 8 \
+  --test-size 8 \
+  --overwrite
+```
+
+### 3. Train
+
+```bash
+python scripts/train_model.py
+```
+
+Default training configuration:
+
+- epochs: 50
+- hidden dimension: 128
+- graph transformer layers: 3
+- trace transformer layers: 2
+- latent regions: 8
+- local sketches per region: 6
+- gradient-accumulation batch size: 16
+- optimizer: AdamW
+- learning rate: `5e-4`
+- weight decay: `1e-3`
+- dropout: `0.25`
+- validation-plateau learning-rate scheduler
+- early stopping patience: 8 epochs
+
+The script writes:
+
+- `runs/lara/best.pt`
+- `runs/lara/last.pt`
+
+On CPU, this is a research run rather than a unit test; one epoch over the
+default 2048-example training split can take a few minutes. For a quick training
+smoke test, use the small dataset command above and override the model size:
+
+```bash
+python scripts/train_model.py \
+  --data-dir /tmp/lara_smoke_data \
+  --output-dir /tmp/lara_smoke_run \
+  --epochs 2 \
+  --hidden-dim 32 \
+  --graph-layers 1 \
+  --trace-layers 1 \
+  --num-regions 2 \
+  --sketches-per-region 2 \
+  --batch-size 4
+```
+
+### 4. Evaluate
+
+```bash
+python scripts/test_model.py \
+  --data-dir data/lara_synthetic \
+  --checkpoint runs/lara/best.pt \
+  --split test \
+  --num-examples 5
+```
+
+The evaluator prints a human-readable report containing:
+
+- replayable alignment rate;
+- optimal-cost rate against the pm4py label;
+- exact transition-sequence match rate;
+- label-level alignment match rate;
+- mean, median, min, max, p90, p95, and standard deviation of cost gaps;
+- per-family legality and optimality metrics;
+- example traces with side-by-side pm4py optimal and LARA reconstructed
+  alignments.
+
+Machine-readable output is also available:
+
+```bash
+python scripts/test_model.py \
+  --format json \
+  --metrics-output runs/lara/test_metrics.json
+```
+
+Use `--run-certified` to also run the pm4py certifying layer for each test
+sample. The main learned-method metrics use fast mode because certified mode may
+repair the candidate with exact search.
+
+## Minimal API Example
 
 ```python
 from pm4py.objects.log.obj import Event, Trace
@@ -46,95 +253,25 @@ print(result.cost)
 print(result.alignment.to_pm4py_label_alignment())
 ```
 
-## Modes
+## Package Map
 
-- `fast`: return the neural/greedy candidate after legality verification. If the
-  candidate is illegal, the result is marked illegal.
-- `certified`: run pm4py's exact state-equation A* backend. If the legal neural
-  candidate has the exact optimal cost, return it with `certified_optimal=True`;
-  otherwise return the exact repair.
-- `anytime`: currently uses the same exact backend with optional pm4py timeout.
-  If exact search does not return an alignment, LARA reports the legal candidate
-  with a trivial lower bound.
+- `lara_align/features.py`: typed pm4py-to-tensor conversion.
+- `lara_align/model.py`: graph/trace encoder, learned router, local experts,
+  and recomposer heads.
+- `lara_align/decode.py`: constrained greedy candidate decoder.
+- `lara_align/verify.py`: Petri-net replay and alignment legality checks.
+- `lara_align/exact.py`: pm4py exact alignment backend.
+- `lara_align/certifier.py`: fast/certified alignment wrapper.
+- `lara_align/synthetic.py`: synthetic process-model and trace generators.
+- `lara_align/training.py`: training targets and losses.
+- `scripts/init_data.py`: exact-labeled dataset creation.
+- `scripts/train_model.py`: training and validation.
+- `scripts/test_model.py`: human-readable and JSON evaluation.
 
-## Training Hooks
+## Current Limitations
 
-The package includes:
-
-- `pm4py_to_features` for typed graph-plus-sequence tensors.
-- `LARALoss` for move imitation, cost shaping, and router regularization.
-- `targets_from_alignment` for converting exact alignments into supervision.
-- `synthetic.generate_sequence_example` plus small Petri-net generators for
-  smoke tests and curriculum scaffolding.
-
-This is a foundation implementation: the neural model is trainable, but the
-default instance is randomly initialized. Use certified mode for trustworthy
-alignments unless you have trained weights.
-
-## Data, Training, And Test Scripts
-
-Initialize exact-labeled synthetic data split into train/validation/test:
-
-```bash
-python scripts/init_data.py \
-  --output data/lara_synthetic \
-  --train-size 128 \
-  --val-size 32 \
-  --test-size 32
-```
-
-This writes:
-
-- `data/lara_synthetic/train.pkl`
-- `data/lara_synthetic/val.pkl`
-- `data/lara_synthetic/test.pkl`
-- `data/lara_synthetic/metadata.pkl`
-
-The initializer generates one exact-labeled pool, then stratifies the splits by
-synthetic family and optimal-cost bucket.
-
-Train with validation checkpointing:
-
-```bash
-python scripts/train_model.py \
-  --data-dir data/lara_synthetic \
-  --output-dir runs/lara \
-  --epochs 15
-```
-
-The best validation checkpoint is written to `runs/lara/best.pt`; the latest
-epoch is written to `runs/lara/last.pt`.
-
-The default training configuration is intentionally modest for the default
-128-example synthetic training split: 64 hidden units, minibatch-style gradient
-accumulation over 8 variable-size examples, Smooth L1 cost regression, moderate
-dropout/weight decay, validation-plateau learning-rate reduction, and
-patience-based early stopping.
-
-Evaluate on the held-out test split:
-
-```bash
-python scripts/test_model.py \
-  --data-dir data/lara_synthetic \
-  --checkpoint runs/lara/best.pt \
-  --split test \
-  --num-examples 5
-```
-
-The test script prints a human-readable report by default. It compares pm4py's
-stored optimal alignment with LARA's fast reconstructed alignment for a few
-examples, then reports replayable alignment rate, optimal-cost rate, exact
-transition-sequence match rate, label-level alignment match rate, cost-gap
-statistics, losses, and per-family metrics.
-
-Useful evaluation options:
-
-```bash
-python scripts/test_model.py --format json --metrics-output runs/lara/test_metrics.json
-python scripts/test_model.py --example-selection first --num-examples 10
-python scripts/test_model.py --run-certified
-```
-
-`--run-certified` also runs the pm4py certifying layer for every sample. For
-judging the learned method itself, the main report uses fast mode, because
-certified mode may repair the candidate with exact pm4py search.
+This is a research prototype. The synthetic generator is still small compared
+with the process-model diversity required for a foundation model, and the fast
+decoder is a constrained greedy decoder rather than a full neural-guided A*
+implementation. The exact pm4py backend remains the source of truth for
+optimality certification.

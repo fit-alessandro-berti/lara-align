@@ -22,7 +22,7 @@ from lara_align.synthetic import (  # noqa: E402
     make_duplicate_label_choice_net,
     trace_from_labels,
 )
-from lara_align.verify import verify_alignment  # noqa: E402
+from lara_align.verify import trace_labels, verify_alignment  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -30,15 +30,16 @@ def parse_args() -> argparse.Namespace:
         description="Initialize exact-labeled LARA train/validation/test data."
     )
     parser.add_argument("--output", type=Path, default=Path("data/lara_synthetic"))
-    parser.add_argument("--train-size", type=int, default=128)
-    parser.add_argument("--val-size", type=int, default=32)
-    parser.add_argument("--test-size", type=int, default=32)
+    parser.add_argument("--train-size", type=int, default=2048)
+    parser.add_argument("--val-size", type=int, default=512)
+    parser.add_argument("--test-size", type=int, default=512)
     parser.add_argument("--seed", type=int, default=13)
     parser.add_argument("--min-len", type=int, default=3)
     parser.add_argument("--max-len", type=int, default=8)
     parser.add_argument("--deviation-rate", type=float, default=0.25)
     parser.add_argument("--duplicate-fraction", type=float, default=0.2)
     parser.add_argument("--exact-timeout", type=float, default=None)
+    parser.add_argument("--progress-every", type=int, default=250)
     parser.add_argument("--overwrite", action="store_true")
     return parser.parse_args()
 
@@ -75,6 +76,7 @@ def main() -> None:
                 "deviation_rate": args.deviation_rate,
                 "duplicate_fraction": args.duplicate_fraction,
                 "exact_timeout": args.exact_timeout,
+                "progress_every": args.progress_every,
                 "stratified_by": ["family", "optimal_cost"],
             },
         ),
@@ -104,6 +106,8 @@ def _generate_pool(
     while len(samples) < target_size and attempts < max_attempts:
         attempts += 1
         example = _generate_example(args, rng)
+        if not trace_labels(example.trace):
+            continue
         result = exact.align_trace(
             example.net,
             example.initial_marking,
@@ -141,6 +145,8 @@ def _generate_pool(
                 },
             )
         )
+        if args.progress_every > 0 and len(samples) % args.progress_every == 0:
+            print(f"generated {len(samples):5d}/{target_size} exact-labeled samples")
 
     if len(samples) != target_size:
         raise SystemExit(

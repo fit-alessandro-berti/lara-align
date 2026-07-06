@@ -51,14 +51,14 @@ class LARALoss(nn.Module):
         losses["sync_move"] = _sync_cross_entropy(
             output.sync_logits, targets.sync_transition_targets
         )
-        losses["log_move"] = F.binary_cross_entropy_with_logits(
+        losses["log_move"] = _binary_cross_entropy_with_optional_empty_logits(
             output.log_move_logits,
             _smooth_binary_targets(
                 targets.log_move_targets.to(output.log_move_logits.device).float(),
                 self.bce_label_smoothing,
             ),
         )
-        losses["model_move"] = F.binary_cross_entropy_with_logits(
+        losses["model_move"] = _binary_cross_entropy_with_optional_empty_logits(
             output.model_move_logits,
             _smooth_binary_targets(
                 targets.model_move_targets.to(output.model_move_logits.device).float(),
@@ -198,3 +198,12 @@ def _smooth_binary_targets(targets: torch.Tensor, smoothing: float) -> torch.Ten
     if smoothing >= 0.5:
         raise ValueError("bce_label_smoothing must be in [0, 0.5)")
     return targets * (1.0 - 2.0 * smoothing) + smoothing
+
+
+def _binary_cross_entropy_with_optional_empty_logits(
+    logits: torch.Tensor,
+    targets: torch.Tensor,
+) -> torch.Tensor:
+    if logits.numel() == 0:
+        return torch.zeros((), dtype=logits.dtype, device=logits.device)
+    return F.binary_cross_entropy_with_logits(logits, targets)
