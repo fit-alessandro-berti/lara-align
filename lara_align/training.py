@@ -30,6 +30,7 @@ class LARALoss(nn.Module):
         router_balance_weight: float = 0.01,
         router_entropy_weight: float = 0.001,
         cost_beta: float = 1.0,
+        bce_label_smoothing: float = 0.0,
     ) -> None:
         super().__init__()
         self.move_weight = move_weight
@@ -38,6 +39,7 @@ class LARALoss(nn.Module):
         self.router_balance_weight = router_balance_weight
         self.router_entropy_weight = router_entropy_weight
         self.cost_beta = cost_beta
+        self.bce_label_smoothing = bce_label_smoothing
 
     def forward(
         self,
@@ -51,11 +53,17 @@ class LARALoss(nn.Module):
         )
         losses["log_move"] = F.binary_cross_entropy_with_logits(
             output.log_move_logits,
-            targets.log_move_targets.to(output.log_move_logits.device).float(),
+            _smooth_binary_targets(
+                targets.log_move_targets.to(output.log_move_logits.device).float(),
+                self.bce_label_smoothing,
+            ),
         )
         losses["model_move"] = F.binary_cross_entropy_with_logits(
             output.model_move_logits,
-            targets.model_move_targets.to(output.model_move_logits.device).float(),
+            _smooth_binary_targets(
+                targets.model_move_targets.to(output.model_move_logits.device).float(),
+                self.bce_label_smoothing,
+            ),
         )
         move_loss = losses["sync_move"] + losses["log_move"] + losses["model_move"]
 
@@ -182,3 +190,11 @@ def _boundary_cut_penalty(
 
 def _entropy(probs: torch.Tensor) -> torch.Tensor:
     return -(probs * probs.clamp_min(1e-8).log()).sum(dim=-1).mean()
+
+
+def _smooth_binary_targets(targets: torch.Tensor, smoothing: float) -> torch.Tensor:
+    if smoothing <= 0:
+        return targets
+    if smoothing >= 0.5:
+        raise ValueError("bce_label_smoothing must be in [0, 0.5)")
+    return targets * (1.0 - 2.0 * smoothing) + smoothing

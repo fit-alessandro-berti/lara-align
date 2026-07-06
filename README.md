@@ -99,7 +99,7 @@ Train with validation checkpointing:
 python scripts/train_model.py \
   --data-dir data/lara_synthetic \
   --output-dir runs/lara \
-  --epochs 10
+  --epochs 15
 ```
 
 The best validation checkpoint is written to `runs/lara/best.pt`; the latest
@@ -107,8 +107,9 @@ epoch is written to `runs/lara/last.pt`.
 
 The default training configuration is intentionally modest for the default
 128-example synthetic training split: 64 hidden units, minibatch-style gradient
-accumulation over 8 variable-size examples, Smooth L1 cost regression, dropout,
-and patience-based early stopping.
+accumulation over 8 variable-size examples, Smooth L1 cost regression, moderate
+dropout/weight decay, validation-plateau learning-rate reduction, and
+patience-based early stopping.
 
 Evaluate on the held-out test split:
 

@@ -20,9 +20,9 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Train the LARA neural model.")
     parser.add_argument("--data-dir", type=Path, default=Path("data/lara_synthetic"))
     parser.add_argument("--output-dir", type=Path, default=Path("runs/lara"))
-    parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--lr", type=float, default=1e-3)
-    parser.add_argument("--weight-decay", type=float, default=1e-4)
+    parser.add_argument("--epochs", type=int, default=15)
+    parser.add_argument("--lr", type=float, default=7e-4)
+    parser.add_argument("--weight-decay", type=float, default=5e-4)
     parser.add_argument("--seed", type=int, default=13)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--batch-size", type=int, default=8)
@@ -35,13 +35,17 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--trace-layers", type=int, default=1)
     parser.add_argument("--num-regions", type=int, default=4)
     parser.add_argument("--sketches-per-region", type=int, default=4)
-    parser.add_argument("--dropout", type=float, default=0.2)
+    parser.add_argument("--dropout", type=float, default=0.25)
     parser.add_argument("--move-weight", type=float, default=1.0)
     parser.add_argument("--cost-weight", type=float, default=0.03)
     parser.add_argument("--cost-beta", type=float, default=1.0)
+    parser.add_argument("--bce-label-smoothing", type=float, default=0.0)
     parser.add_argument("--router-boundary-weight", type=float, default=0.01)
     parser.add_argument("--router-balance-weight", type=float, default=0.01)
     parser.add_argument("--router-entropy-weight", type=float, default=0.001)
+    parser.add_argument("--plateau-factor", type=float, default=0.5)
+    parser.add_argument("--plateau-patience", type=int, default=1)
+    parser.add_argument("--min-lr", type=float, default=1e-5)
     return parser.parse_args()
 
 
@@ -62,11 +66,20 @@ def main() -> None:
         router_balance_weight=args.router_balance_weight,
         router_entropy_weight=args.router_entropy_weight,
         cost_beta=args.cost_beta,
+        bce_label_smoothing=args.bce_label_smoothing,
     )
     optimizer = torch.optim.AdamW(
         model.parameters(),
         lr=args.lr,
         weight_decay=args.weight_decay,
+    )
+    scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
+        optimizer,
+        mode="min",
+        factor=args.plateau_factor,
+        patience=args.plateau_patience,
+        threshold=args.min_delta,
+        min_lr=args.min_lr,
     )
 
     best_val = float("inf")
@@ -113,6 +126,7 @@ def main() -> None:
             save_checkpoint(best_path, model, model_config, epoch, metrics)
         else:
             epochs_without_improvement += 1
+        scheduler.step(val_metrics["total"])
 
         print(
             f"epoch {epoch:03d} "
@@ -122,6 +136,7 @@ def main() -> None:
             f"val_cost={val_metrics['cost']:.4f} "
             f"val_log={val_metrics['log_move']:.4f} "
             f"val_model={val_metrics['model_move']:.4f} "
+            f"lr={optimizer.param_groups[0]['lr']:.2e} "
             f"best_val={best_val:.4f} "
             f"time={elapsed:.1f}s"
         )
