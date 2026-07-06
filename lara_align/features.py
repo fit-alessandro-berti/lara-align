@@ -166,12 +166,20 @@ def pm4py_to_features(
 
     labels = trace_labels(trace, activity_key=activity_key)
     event_label_ids = [stable_label_id(label, hash_vocab_size) for label in labels]
-    compatibility = torch.zeros((len(labels), len(transitions)), dtype=torch.bool)
-    for event_index, event_label in enumerate(labels):
-        for t_index, transition_label in enumerate(transition_labels):
-            compatibility[event_index, t_index] = (
-                transition_label is not None and transition_label == event_label
-            )
+    # Vectorized exact label equality: distinct labels get distinct dense ids,
+    # invisible transitions get -1 and never match an event.
+    dense_ids: dict[str, int] = {}
+    event_dense = [dense_ids.setdefault(label, len(dense_ids)) for label in labels]
+    transition_dense = [
+        -1 if label is None else dense_ids.setdefault(label, len(dense_ids))
+        for label in transition_labels
+    ]
+    if labels and transitions:
+        compatibility = torch.tensor(event_dense, dtype=torch.long).unsqueeze(
+            1
+        ) == torch.tensor(transition_dense, dtype=torch.long).unsqueeze(0)
+    else:
+        compatibility = torch.zeros((len(labels), len(transitions)), dtype=torch.bool)
 
     place_features = torch.tensor(place_rows, dtype=torch.float32).reshape(len(places), 5)
     transition_features = torch.tensor(transition_rows, dtype=torch.float32).reshape(

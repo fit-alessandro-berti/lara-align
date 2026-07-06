@@ -178,6 +178,12 @@ move is fireable by construction:
 3. Otherwise emit a log move for $a_i$.
 4. After the last event, search a model-move path to $m_f$ (depth ≤ 32).
 
+For speed, the decoder precomputes a per-net runtime before the walk: indexed
+presets/postsets, place-to-consumer lists (so only transitions consuming from
+marked places are tested for enabledness), zero-free dict markings, and neural
+scores extracted once into Python floats. This keeps the search cost mild in
+net size and is semantics-preserving (see `assessment.md` §7.1).
+
 **Verifier** (`verify_alignment`). Replays the transition projection from
 $m_0$, checks that $m_f$ is reached and that the log projection reconstructs
 $\sigma$ exactly, and computes the candidate's cost under the unit cost model.
@@ -277,10 +283,13 @@ cost, router boundary/balance/entropy, aggregate move loss, total), epoch wall
 time, current learning rate, best validation loss, and the early-stopping
 counter. These per-epoch curves are analyzed in `assessment.md`.
 
-**Reference run.** The checkpoint evaluated in the paper (`runs/lara/best.pt`)
-comes from a run of 16 recorded epochs at ~32 s/epoch on CPU (≈ 8.7 minutes
-total); the best validation total loss, 0.5364, was reached at epoch 16, with
-validation loss still improving (no early stop triggered).
+**Reference run.** The checkpoint evaluated in the paper
+(`runs/lara_bidir/best.pt`) comes from a run of 22 recorded epochs at
+~32 s/epoch on CPU with bidirectional typed edges; the best validation total
+loss, 0.4614, was reached at epoch 18 (the run was stopped manually before
+the early-stopping criterion fired). An earlier run of the forward-only
+architecture (`runs/lara/best.pt`, best val 0.5364 at epoch 16) is retained
+for the ablation discussed in `assessment.md` §5.
 
 ## 8. Design Rationale
 

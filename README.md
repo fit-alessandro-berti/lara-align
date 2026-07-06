@@ -243,7 +243,7 @@ repair the candidate with exact search.
 ```bash
 python scripts/benchmark_scaling.py \
   --checkpoint runs/lara/best.pt \
-  --sizes 5,10,20,40,80 \
+  --sizes 5,10,20,40 \
   --deviation-rates 0.15,0.35 \
   --samples-per-config 10 \
   --exact-timeout 30 \

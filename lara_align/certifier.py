@@ -10,7 +10,7 @@ from lara_align.decode import GreedyCandidateDecoder
 from lara_align.exact import Pm4PyExactAligner
 from lara_align.features import pm4py_to_features
 from lara_align.model import LARANeuralModel
-from lara_align.types import Alignment, CostModel, LARAResult
+from lara_align.types import Alignment, CostModel, LARAResult, VerificationResult
 from lara_align.verify import verify_alignment
 
 
@@ -60,15 +60,17 @@ class CertifyingAlignmentSystem:
             trace,
             activity_key=activity_key,
         )
-        candidate_verification = verify_alignment(
-            candidate,
-            net,
-            initial_marking,
-            final_marking,
-            trace,
-            self.cost_model,
-            activity_key=activity_key,
-        )
+        candidate_verification = candidate.metadata.get("verification")
+        if not isinstance(candidate_verification, VerificationResult):
+            candidate_verification = verify_alignment(
+                candidate,
+                net,
+                initial_marking,
+                final_marking,
+                trace,
+                self.cost_model,
+                activity_key=activity_key,
+            )
         if candidate_verification.legal:
             candidate.cost = candidate_verification.cost
 
@@ -173,7 +175,7 @@ class CertifyingAlignmentSystem:
             activity_key=activity_key,
         ).to(self.device)
         self.model.eval()
-        with torch.no_grad():
+        with torch.inference_mode():
             output = self.model(features)
         return self.decoder.decode(
             net,

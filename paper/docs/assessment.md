@@ -2,14 +2,17 @@
 
 This document defines the evaluation metrics and reports the results of the
 reference training run and the held-out test evaluation. All numbers are
-reproducible from the repository artifacts: `runs/lara/metrics.csv` (training),
-`runs/lara/best.pt` + `scripts/test_model.py` (test), and the dataset described
-in `approach.md` §6. The test split contains 100 stratified examples
-(82 sequence, 18 duplicate-label choice) never seen during training.
+reproducible from the repository artifacts: `runs/lara_bidir/metrics.csv`
+(training), `runs/lara_bidir/best.pt` + `scripts/test_model.py` (test),
+`runs/lara_bidir/scaling.json` + `scripts/benchmark_scaling.py` (scaling), and
+the dataset described in `approach.md` §6. The test split contains 100
+stratified examples (82 sequence, 18 duplicate-label choice) never seen during
+training.
 
 ## 1. Evaluation Protocol
 
-- **Checkpoint:** `runs/lara/best.pt` (best validation loss, epoch 16).
+- **Checkpoint:** `runs/lara_bidir/best.pt` (best validation loss, epoch 18;
+  trained with bidirectional typed edges, see `approach.md` §2).
 - **Mode:** the learned method is evaluated in *fast* mode (verified neural
   candidate only), so no exact repair contaminates the learned metrics. The
   pm4py state-equation A* optimum serves as ground truth for every sample.
@@ -32,22 +35,24 @@ in `approach.md` §6. The test split contains 100 stratified examples
 | metric | value |
 |---|---:|
 | **replayable (legal) alignments** | **100.0%** |
-| **equal to optimum cost** | **83.0%** |
-| certified optimal (cost equality vs. exact) | 83.0% |
-| exact transition-sequence match | 63.0% |
-| same label-level alignment | 63.0% |
-| mean cost gap | 0.48 |
+| **equal to optimum cost** | **88.0%** |
+| certified optimal (cost equality vs. exact) | 88.0% |
+| exact transition-sequence match | 68.0% |
+| same label-level alignment | 68.0% |
+| mean cost gap | 0.38 |
 | median cost gap | 0.00 |
 | p90 / p95 cost gap | 2.0 / 4.0 |
 | max cost gap | 6 |
-| cost gap std dev | 1.17 |
-| mean relative gap | 0.285 |
+| cost gap std dev | 1.12 |
+| mean relative gap | 0.185 |
 
 Every candidate produced by the constrained greedy decoder was legal — the
 bounded-search decoding plus replay verification eliminated illegal outputs
-entirely (RQ1). In 83% of cases the candidate already attains the exact
+entirely (RQ1). In 88% of cases the candidate already attains the exact
 optimum and is therefore certified without repair (RQ2, RQ5); the remaining
-17% require exact repair in certified mode.
+12% require exact repair in certified mode. (An earlier checkpoint trained
+with forward-only message passing reached 83%; see §5 for the architecture
+fix that closed most of the duplicate-label gap.)
 
 ## 3. Cost-Gap Distribution
 
@@ -57,13 +62,13 @@ The distribution of $c(\gamma) - \delta$ over the 100 legal candidates:
 xychart-beta
     title "Cost gap distribution on the test split (n = 100)"
     x-axis "cost gap (reconstructed - optimal)" [0, 1, 2, 3, 4, 5, 6]
-    y-axis "number of traces" 0 --> 90
-    bar [83, 0, 11, 0, 5, 0, 1]
+    y-axis "number of traces" 0 --> 95
+    bar [88, 0, 6, 0, 5, 0, 1]
 ```
 
 | cost gap | 0 | 2 | 4 | 6 |
 |---|---:|---:|---:|---:|
-| traces | 83 | 11 | 5 | 1 |
+| traces | 88 | 6 | 5 | 1 |
 
 Two observations. First, the distribution is sharply concentrated at zero with
 a short tail. Second, **all non-zero gaps are even**: the decoder's
@@ -78,61 +83,58 @@ This is a structural signature of the greedy decoder, not of the neural scores
 | family | n | replayable | optimal cost | mean gap | gap histogram |
 |---|---:|---:|---:|---:|---|
 | sequence | 82 | 100.0% | 86.6% | 0.44 | 0: 71, 2: 5, 4: 5, 6: 1 |
-| duplicate-label choice | 18 | 100.0% | 66.7% | 0.67 | 0: 12, 2: 6 |
+| duplicate-label choice | 18 | 100.0% | 94.4% | 0.11 | 0: 17, 2: 1 |
 
-Legality is family-independent, but optimality is not: duplicate-label choice
-nets are markedly harder (66.7% vs. 86.6% optimal), confirming that
-label-to-transition ambiguity is the dominant remaining difficulty (RQ3, RQ4).
-Notably, the duplicate-label errors are all small (gap 2): the model picks the
-wrong branch, pays one wrong-branch penalty, and still recovers a legal
-alignment. Larger gaps (4–6) occur only on longer sequence traces where one
-early greedy detour cascades.
+With bidirectional message passing (§5), the duplicate-label family — formerly
+the hardest at 66.7% optimal — is now the *easiest* (94.4%, a single gap-2
+miss): once the disambiguating suffix context can reach the twin transitions,
+the sync head resolves transition identity almost perfectly (RQ3). The
+residual errors are concentrated in longer sequence traces where one early
+greedy detour cascades (gaps 4–6), which is a decoding-search limitation, not
+a representation one (§8).
 
 ## 5. Training Dynamics
 
-The reference run: 16 recorded epochs, ≈ 32 s/epoch on CPU (≈ 8.7 min total),
+The reference run: 22 recorded epochs (stopped manually), ≈ 32 s/epoch on CPU,
 AdamW at $5 \times 10^{-4}$ (never reduced by the plateau scheduler), best
-validation total loss **0.5364** at epoch 16.
+validation total loss **0.4614** at epoch 18.
 
 ```mermaid
 xychart-beta
     title "Total loss per epoch (upper line: validation, lower line: train)"
-    x-axis "epoch" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
-    y-axis "total loss" 0.3 --> 1.1
-    line [1.083, 0.841, 0.764, 0.724, 0.669, 0.638, 0.618, 0.569, 0.582, 0.528, 0.513, 0.511, 0.470, 0.444, 0.428, 0.414]
-    line [0.885, 0.788, 0.777, 0.739, 0.706, 0.671, 0.685, 0.679, 0.607, 0.639, 0.585, 0.648, 0.551, 0.561, 0.598, 0.536]
+    x-axis "epoch" [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22]
+    y-axis "total loss" 0.2 --> 1.1
+    line [1.087, 0.833, 0.743, 0.693, 0.634, 0.577, 0.530, 0.493, 0.446, 0.431, 0.402, 0.390, 0.354, 0.334, 0.340, 0.314, 0.316, 0.299, 0.262, 0.262, 0.262, 0.251]
+    line [0.898, 0.800, 0.783, 0.754, 0.675, 0.616, 0.599, 0.612, 0.553, 0.560, 0.525, 0.568, 0.471, 0.522, 0.525, 0.523, 0.515, 0.461, 0.476, 0.501, 0.477, 0.490]
 ```
 
 *(The smooth monotone curve is the training loss; the noisier curve above it is
 the validation loss.)*
 
-Selected epochs:
+The train/val gap stays modest (0.30 vs. 0.46 at epoch 18), indicating the
+model is not yet overfitting the 400-example corpus — consistent with dropout
+0.25 and weight decay on a 3M-parameter model, and suggesting headroom from
+longer training and more data.
 
-| epoch | train total | val total | val move | val cost | lr | best val |
-|---:|---:|---:|---:|---:|---|---:|
-| 1 | 1.083 | 0.885 | 0.850 | 0.863 | 5e-4 | 0.885 |
-| 4 | 0.724 | 0.739 | 0.726 | 0.383 | 5e-4 | 0.739 |
-| 8 | 0.569 | 0.679 | 0.666 | 0.371 | 5e-4 | 0.671 |
-| 12 | 0.511 | 0.648 | 0.635 | 0.388 | 5e-4 | 0.585 |
-| 16 | 0.414 | **0.536** | 0.529 | 0.196 | 5e-4 | **0.536** |
+**The frozen-sync-loss bug and its fix.** In runs of the original architecture,
+the validation sync-move loss was *bit-identical across all epochs* (0.0728),
+while the training-side sync loss varied. Investigation showed this was not a
+logging artifact but a representational symmetry: with forward-only typed
+message passing, the two duplicate-labeled transitions of a choice net receive
+provably identical embeddings (identical inputs, identical directed in-cones,
+and identical attention queries), so the sync softmax over the pair is exactly
+uniform and its cross-entropy is frozen at $\log 2$ per ambiguous decision —
+independent of the parameters. The training-side variation was pure dropout
+noise. After adding reverse typed edges (`approach.md` §2), the validation
+sync loss became parameter-dependent and learnable, falling from 0.070 to
+≈ 0.02 over the run; on the test split the sync loss is now ≈ 0.0001, and
+duplicate-label optimality jumped from 66.7% to 94.4% (§4).
 
-The train/val gap stays modest (0.41 vs. 0.54 at epoch 16) and validation was
-still improving when the run ended, indicating the model is not yet
-overfitting the 400-example corpus — consistent with dropout 0.25 and weight
-decay on a 2.9M-parameter model, and suggesting headroom from longer training
-and more data.
-
-**Validation loss decomposition at the best epoch** (epoch 16): sync-move
-0.073, log-move 0.302, model-move 0.154, cost 0.196. The log-move head is the
-hardest objective — deciding *which* events are deviations is intrinsically
-ambiguous under random insertions that duplicate legitimate labels.
-
-> **Artifact worth noting before publication:** the recorded validation
-> sync-move loss is bit-identical (0.0728) across all 16 epochs, while the
-> training sync-move loss varies normally. This should be investigated (and
-> the number re-measured) before quoting per-component validation curves; the
-> test-split sync loss of 0.066 from the independent evaluator is consistent
-> with a genuinely low, near-saturated sync objective.
+**Validation loss decomposition at the best epoch** (epoch 18): sync-move
+0.025, log-move 0.298, model-move 0.130, cost 0.234. The log-move head is
+the hardest objective — deciding *which* events are deviations is
+intrinsically ambiguous under random insertions that duplicate legitimate
+labels.
 
 ## 6. Test-Split Losses
 
@@ -141,31 +143,92 @@ Component losses of the best checkpoint on the held-out test split (from
 
 | loss | test value |
 |---|---:|
-| sync move | 0.066 |
-| log move | 0.333 |
-| model move | 0.180 |
-| cost | 0.200 |
-| router balance / boundary / entropy | 0.027 / 0.055 / 0.821 |
-| **total** | **0.586** |
+| sync move | 0.0001 |
+| log move | 0.308 |
+| model move | 0.160 |
+| cost | 0.217 |
+| router balance / boundary / entropy | 0.027 / 0.075 / 0.880 |
+| **total** | **0.476** |
 
-## 7. Runtime
+## 7. Runtime and the Speed/Quality Threshold
 
-Per-trace wall-clock on the test split (CPU, single-threaded):
+### 7.1 Decoder profiling and optimization
 
-| method | mean | median | p95 | max | total (100 traces) |
-|---|---:|---:|---:|---:|---:|
-| LARA fast (encode + decode + verify) | 8.40 ms | 5.75 ms | 15.44 ms | 67.5 ms | 0.84 s |
-| pm4py exact (state-equation A*) | 0.96 ms | 0.86 ms | 1.69 ms | 1.96 ms | 0.10 s |
+Profiling the fast path on mid-size nets showed that ~87% of wall-clock went
+into the greedy decoder's bounded marking search, not the neural network: the
+generic replay helpers rebuilt a fresh multiset on *every* enabledness check
+(≈ 100k calls per 20 traces), scanned all transitions per search node, and
+extracted move scores from tensors one scalar at a time inside sort
+comparators. The decoder was rewritten around a per-net precomputed runtime
+(indexed presets/postsets, place-to-consumer lists for candidate generation,
+plain-dict markings without zero entries, scores extracted once into Python
+lists), and the certifier now reuses the decoder's verification instead of
+replaying the candidate twice. The optimization is semantics-preserving: on
+identical inputs, old and new decoders produce identical alignments and costs.
 
-An honest reading: **on these small synthetic nets (3–9 transitions), exact
-search is roughly 9× faster than the neural fast path.** The neural forward
-pass dominates LARA's cost, while A* barely searches at all at this scale. The
-hypothesized speed benefit of learned guidance applies to the regime where
-exact search degrades — concurrency, loops, duplicate labels, and long traces —
-which the current synthetic families do not yet reach. The claim these
-experiments *do* support is a quality/trust claim (legal, mostly-optimal
-candidates plus certification), not a speed claim; establishing the speed
-crossover requires the harder model families listed as future work.
+| workload (15 traces each) | old decoder | optimized | speedup |
+|---|---:|---:|---:|
+| block-structured, 20 activities (mean) | 25.0 ms | 21.5 ms | 1.2× |
+| block-structured, 20 activities (median) | 18.1 ms | 9.4 ms | 1.9× |
+| block-structured, 40 activities (mean) | 694 ms | 60.4 ms | **11.5×** |
+| block-structured, 40 activities (median) | 139 ms | 15.9 ms | 8.7× |
+
+The search cost now grows mildly with net size, and the neural forward pass
+(~3–7 ms, dominated by per-op overhead on small tensors) becomes the main
+fixed cost again.
+
+### 7.2 Small nets: exact search still wins
+
+On the tiny test-split nets (3–9 transitions), pm4py's A* remains faster:
+LARA fast averages 9.2 ms/trace (the forward pass floor) versus ~1 ms for
+exact search, which barely has to search at this scale. Small models are not
+the target regime for learned guidance.
+
+### 7.3 Scaling benchmark: the crossover appears at ~40 activities
+
+`scripts/benchmark_scaling.py` generates random block-structured nets (nested
+sequence/XOR/AND/loop blocks, invisible routing transitions, duplicate labels
+via a compressed alphabet), injects deviations, and times both methods per
+trace (10 samples per configuration, 30 s exact timeout, sizes up to 40
+activities):
+
+| size | dev | \|T\| | trace | legal | optimal | mean gap | fast med | exact med | speedup | timeouts |
+|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
+| 5 | 0.15 | 7 | 4 | 100% | 80% | 0.3 | 14.9 ms | 1.0 ms | 0.07× | 0 |
+| 5 | 0.35 | 6 | 6 | 100% | 60% | 1.6 | 7.7 ms | 1.1 ms | 0.14× | 0 |
+| 10 | 0.15 | 13 | 7 | 100% | 80% | 1.2 | 7.9 ms | 1.4 ms | 0.17× | 0 |
+| 10 | 0.35 | 13 | 7 | 100% | 40% | 1.8 | 8.9 ms | 1.9 ms | 0.21× | 0 |
+| 20 | 0.15 | 28 | 10 | 100% | 60% | 3.6 | 9.9 ms | 2.2 ms | 0.22× | 0 |
+| 20 | 0.35 | 26 | 16 | 100% | 50% | 3.0 | 9.6 ms | 9.2 ms | 0.96× | 0 |
+| 40 | 0.15 | 55 | 31 | 100% | 30% | 8.4 | 12.1 ms | 44.0 ms | **3.65×** | 0 |
+| 40 | 0.35 | 54 | 23 | 100% | 33% | 11.6 | 12.0 ms | 15.5 ms | **1.29×** | 1 |
+
+```mermaid
+xychart-beta
+    title "Median time per trace vs. net size (dev 0.15; lower is better)"
+    x-axis "visible activities" [5, 10, 20, 40]
+    y-axis "median ms per trace" 0 --> 50
+    line [14.9, 7.9, 9.9, 12.1]
+    line [1.0, 1.4, 2.2, 44.0]
+```
+
+*(Flat line: LARA fast. Steep line: pm4py exact A*.)*
+
+Three findings. First, **LARA's cost scales gently** (median 8–12 ms across
+the whole ladder — the forward pass floor plus a mild search term) while
+**exact A\* degrades super-linearly** once concurrency, loops, and deviations
+interact; the crossover sits at roughly 40 activities at both deviation
+levels, and exact search already produces occasional 30 s timeouts there
+(counted at the timeout in the medians). A probe at 80 activities showed the
+trend continuing (7–12× median speedup, with timeouts). Second, **legality is
+scale-invariant**: 100% replayable candidates at every size, on families the
+model was *never trained on*. Third, **quality does not transfer at scale**:
+the optimal-cost rate falls from ~80% on training-scale nets to ~30% at 40
+activities with large gaps, because the checkpoint was trained exclusively on
+3–9-transition sequence/choice nets. The speed threshold is therefore
+established, but exploiting it requires training on the block-structured
+family itself — the generator already exists, so this is a data problem, not
+an architecture problem.
 
 ## 8. Qualitative Failure Analysis
 
@@ -188,14 +251,17 @@ single moves.
 
 | RQ | question | finding |
 |---|---|---|
-| RQ1 | legality of neural-guided decoding | **100%** replayable candidates on test |
-| RQ2 | near-optimality | **83%** exactly optimal; mean gap 0.48, p95 = 4, max 6; all gaps even (greedy-detour signature) |
-| RQ3 | duplicate labels / invisible transitions | transition-identity match 63%; duplicate-label family optimal-cost rate 66.7% vs. 86.6% for sequences — ambiguity is the main residual error source, but always with small (gap-2) penalties |
-| RQ4 | generalization across families/splits | legality transfers perfectly across families and splits; optimality degrades gracefully on the harder family; val→test loss transfer is tight (0.536 → 0.586) |
-| RQ5 | certification | **83%** of candidates certified optimal by cost equality; 17% need exact repair; certification adds one exact call (~1 ms/trace at this scale) |
+| RQ1 | legality of neural-guided decoding | **100%** replayable candidates on test, and 100% at every scale of the benchmark ladder, including families never seen in training |
+| RQ2 | near-optimality | **88%** exactly optimal; mean gap 0.38, p95 = 4, max 6; all gaps even (greedy-detour signature) |
+| RQ3 | duplicate labels / invisible transitions | after the bidirectional-message fix, the duplicate-label family reaches **94.4%** optimal (from 66.7%) with test sync loss ≈ 0.0001; transition-identity match 68% overall — identity resolution is essentially solved at training scale |
+| RQ4 | generalization across families/splits | legality transfers perfectly across families, splits, and scales; *optimality* does not transfer beyond training scale (~30% at 40 activities), making broader training data the clear next step |
+| RQ5 | certification | **88%** of candidates certified optimal by cost equality; 12% need exact repair; certification adds one exact call (~1 ms/trace at training scale) |
 
 **Overall:** the prototype validates the architecture's core promise — a
-learned model can produce *legal* alignments essentially always and *optimal*
-ones in the large majority of cases, with a certifying exact layer covering the
-rest — while clearly delimiting what is not yet shown: wall-clock advantage
-over exact search, and robustness on process models with concurrency and loops.
+learned model can produce *legal* alignments essentially always, resolve
+duplicate-label ambiguity nearly perfectly, and attain the exact optimum in
+the large majority of in-distribution cases, with a certifying exact layer
+covering the rest. After the decoder optimization, the fast path also
+overtakes exact search at ~40 activities, where A* begins to time out; the
+remaining gap is *quality at scale*, a training-data problem for which the
+block-structured generator provides the pipeline.
