@@ -4,7 +4,7 @@ split:              test
 samples:            100
 checkpoint:         runs/lara/best.pt
 checkpoint epoch:   16
-elapsed:            1.77s
+elapsed:            1.68s
 
 Replay And Optimality
 ----------------------
