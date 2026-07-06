@@ -34,6 +34,7 @@ class CertifyingAlignmentSystem:
         exact_aligner: Pm4PyExactAligner | None = None,
         cost_model: CostModel | None = None,
         device: torch.device | str = "cpu",
+        use_guidance: bool = True,
     ) -> None:
         self.model = model or LARANeuralModel()
         self.decoder = decoder or GreedyCandidateDecoder()
@@ -41,6 +42,9 @@ class CertifyingAlignmentSystem:
         self.cost_model = cost_model or CostModel()
         self.device = torch.device(device)
         self.model.to(self.device)
+        # With use_guidance=False the decoder runs on structural heuristics
+        # only (no neural forward pass); used for guidance ablations.
+        self.use_guidance = use_guidance
 
     def align(
         self,
@@ -174,9 +178,12 @@ class CertifyingAlignmentSystem:
             cost_model=self.cost_model,
             activity_key=activity_key,
         ).to(self.device)
-        self.model.eval()
-        with torch.inference_mode():
-            output = self.model(features)
+        if self.use_guidance:
+            self.model.eval()
+            with torch.inference_mode():
+                output = self.model(features)
+        else:
+            output = None
         return self.decoder.decode(
             net,
             initial_marking,

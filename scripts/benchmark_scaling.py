@@ -78,6 +78,14 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional path for machine-readable JSON results.",
     )
+    parser.add_argument(
+        "--no-guidance",
+        action="store_true",
+        help=(
+            "Ablation: decode without neural move scores (structural "
+            "heuristics only)."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -94,12 +102,18 @@ def main() -> None:
         max_prefix_model_depth=args.max_prefix_depth,
         max_final_model_depth=args.max_final_depth,
     )
-    system = CertifyingAlignmentSystem(model=model, decoder=decoder, device=device)
+    system = CertifyingAlignmentSystem(
+        model=model,
+        decoder=decoder,
+        device=device,
+        use_guidance=not args.no_guidance,
+    )
     exact = Pm4PyExactAligner()
 
     print("LARA Scaling Benchmark")
     print("=" * 22)
     print(f"checkpoint:        {args.checkpoint} (epoch {checkpoint.get('epoch')})")
+    print(f"neural guidance:   {'on' if not args.no_guidance else 'off (ablation)'}")
     print(f"sizes:             {sizes}")
     print(f"deviation rates:   {deviation_rates}")
     print(f"samples/config:    {args.samples_per_config}")
@@ -130,6 +144,7 @@ def main() -> None:
         payload = {
             "checkpoint": str(args.checkpoint),
             "checkpoint_epoch": checkpoint.get("epoch"),
+            "guidance": not args.no_guidance,
             "config": {
                 "sizes": sizes,
                 "deviation_rates": deviation_rates,

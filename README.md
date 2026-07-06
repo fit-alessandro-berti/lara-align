@@ -238,6 +238,11 @@ Use `--run-certified` to also run the pm4py certifying layer for each test
 sample. The main learned-method metrics use fast mode because certified mode may
 repair the candidate with exact search.
 
+Use `--no-guidance` to run the guidance ablation: the decoder receives no
+neural move scores and falls back to structural heuristics only, isolating
+the learned model's contribution. The same flag is available in
+`scripts/benchmark_scaling.py`.
+
 ### 5. Scaling Benchmark
 
 ```bash

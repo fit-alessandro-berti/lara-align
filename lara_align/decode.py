@@ -225,7 +225,10 @@ class GreedyCandidateDecoder:
             moves.append(_model_move(transition))
             marking = runtime.fire(transition, marking)
 
-        alignment = Alignment(moves=moves, source="neural_greedy")
+        alignment = Alignment(
+            moves=moves,
+            source="neural_greedy" if output is not None else "unguided_greedy",
+        )
         verification = verify_alignment(
             alignment,
             net,

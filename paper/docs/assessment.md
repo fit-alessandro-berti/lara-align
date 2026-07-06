@@ -89,7 +89,7 @@ message passing (`approach.md` §2), the disambiguating suffix context reaches
 the twin transitions and the sync head resolves transition identity almost
 perfectly (RQ3). The residual errors are concentrated in longer sequence
 traces where one early greedy detour cascades (gaps 4–6), which is a
-decoding-search limitation, not a representation one (§8).
+decoding-search limitation, not a representation one (§9).
 
 ## 5. Training Dynamics
 
@@ -203,7 +203,77 @@ established, but exploiting it requires training on the block-structured
 family itself — the generator already exists, so this is a data problem, not
 an architecture problem.
 
-## 8. Qualitative Failure Analysis
+## 8. Ablation: How Much Does Neural Guidance Contribute?
+
+Because the decoder guarantees legality by construction, a natural question is
+whether the *learned* component matters at all, or whether the constrained
+greedy search is doing all the work. We therefore re-ran both evaluations with
+neural guidance disabled (`--no-guidance` in `scripts/test_model.py` and
+`scripts/benchmark_scaling.py`): the decoder receives no sync/model-move
+scores and falls back to purely structural heuristics (prefer invisible
+transitions, then deterministic name order). Both variants see identical
+inputs; the guided run pays one neural forward pass per trace, the unguided
+run pays none.
+
+### 8.1 In distribution (test split, n = 100)
+
+| metric | unguided | guided | Δ |
+|---|---:|---:|---:|
+| replayable | 100.0% | 100.0% | — |
+| equal to optimum cost | 83.0% | **88.0%** | +5.0 |
+| exact transition-sequence match | 63.0% | **68.0%** | +5.0 |
+| mean cost gap | 0.48 | **0.38** | −0.10 |
+| sequence family, optimal | 86.6% | 86.6% | 0.0 |
+| duplicate-label family, optimal | 66.7% | **94.4%** | **+27.7** |
+| evaluation time (100 traces) | 1.0 s | 1.9 s | +0.9 s |
+
+The decomposition is clean: on sequence nets — where every event has at most
+one label-compatible transition — guidance changes *nothing* (86.6% either
+way; the residual errors are greedy-search myopia, §9). The model's entire
+in-distribution contribution is concentrated exactly where the architecture
+predicts it should be: resolving duplicate-label transition identity, where
+guided decoding recovers +27.7 points (94.4% vs. 66.7%). Structural
+tie-breaking cannot know which branch the trace suffix implies; the sync head
+can, and almost perfectly.
+
+### 8.2 Out of distribution (scaling benchmark, same generator seeds)
+
+| size | dev | optimal (unguided) | optimal (guided) | fast med (unguided) | fast med (guided) |
+|---:|---:|---:|---:|---:|---:|
+| 5 | 0.15 | 90% | 80% | 0.2 ms | 14.9 ms |
+| 10 | 0.15 | 80% | 80% | 0.3 ms | 7.9 ms |
+| 20 | 0.15 | 50% | 60% | 0.4 ms | 9.9 ms |
+| 40 | 0.15 | 30% | 30% | 1.1 ms | 12.1 ms |
+| 5 | 0.35 | 60% | 60% | 0.2 ms | 7.7 ms |
+| 10 | 0.35 | 50% | 40% | 0.3 ms | 8.9 ms |
+| 20 | 0.35 | 60% | 50% | 0.6 ms | 9.6 ms |
+| 40 | 0.35 | 44% | 33% | 1.0 ms | 12.0 ms |
+
+On the block-structured family — which the checkpoint never saw in training —
+guidance provides *no measurable quality benefit*: per-configuration
+differences are within sampling noise at $n = 10$ (one trace = 10 points),
+and both variants are 100% legal everywhere. Meanwhile the unguided decoder
+skips the neural forward pass, which is the entire fast-path floor, and runs
+at 0.2–1.1 ms/trace — overtaking exact search at *every* tested size (up to
+34× at size 40) rather than only beyond the ~40-activity crossover.
+
+### 8.3 Implications
+
+The ablation sharpens the paper's claims in three ways. First, the learned
+model's contribution is real, targeted, and architecturally explainable —
+duplicate-label identity resolution, the hardest sub-problem for classical
+heuristics — rather than a diffuse improvement that might be an artifact of
+the search. Second, it exposes the honest baseline for the speed argument:
+the constrained greedy decoder *alone* is already a legal, fast, surprisingly
+strong heuristic aligner, so the neural model must justify its ~8–12 ms
+forward pass by quality it uniquely provides. In distribution it does (on
+duplicate labels); out of distribution it does not yet, because nothing in
+the training data resembles those nets. Third, it turns the future-work claim
+into a falsifiable target: training on the block-structured family must lift
+the guided curve in §8.2 measurably above the unguided one — the metric and
+the baseline are now both in place.
+
+## 9. Qualitative Failure Analysis
 
 The five largest-gap test cases share one pattern. Example (`test-000074`,
 gap 6): trace `A E B C D E F G` against an 8-step sequence net. The optimum
@@ -220,21 +290,22 @@ replacement of greedy decoding with neural-guided beam or A* search over the
 synchronous product, where the same learned scores rank *paths* rather than
 single moves.
 
-## 9. Summary Against the Research Questions
+## 10. Summary Against the Research Questions
 
 | RQ | question | finding |
 |---|---|---|
 | RQ1 | legality of neural-guided decoding | **100%** replayable candidates on test, and 100% at every scale of the benchmark ladder, including families never seen in training |
 | RQ2 | near-optimality | **88%** exactly optimal; mean gap 0.38, p95 = 4, max 6; all gaps even (greedy-detour signature) |
-| RQ3 | duplicate labels / invisible transitions | the duplicate-label family reaches **94.4%** optimal with test sync loss ≈ 0.0001; transition-identity match 68% overall — identity resolution is essentially solved at training scale |
+| RQ3 | duplicate labels / invisible transitions | the duplicate-label family reaches **94.4%** optimal with test sync loss ≈ 0.0001, versus 66.7% for the unguided ablation (§8) — identity resolution is essentially solved at training scale, and it is specifically the *learned* component that solves it |
 | RQ4 | generalization across families/splits | legality transfers perfectly across families, splits, and scales; *optimality* does not transfer beyond training scale (~30% at 40 activities), making broader training data the clear next step |
 | RQ5 | certification | **88%** of candidates certified optimal by cost equality; 12% need exact repair; certification adds one exact call (~1 ms/trace at training scale) |
 
 **Overall:** the prototype validates the architecture's core promise — a
 learned model can produce *legal* alignments essentially always, resolve
-duplicate-label ambiguity nearly perfectly, and attain the exact optimum in
-the large majority of in-distribution cases, with a certifying exact layer
-covering the rest. The fast path overtakes exact search at ~40 activities,
-where A* begins to time out; the remaining gap is *quality at scale*, a
-training-data problem for which the block-structured generator provides the
-pipeline.
+duplicate-label ambiguity nearly perfectly (and measurably beyond what
+unguided search achieves, §8), and attain the exact optimum in the large
+majority of in-distribution cases, with a certifying exact layer covering the
+rest. The fast path overtakes exact search at ~40 activities, where A* begins
+to time out; the remaining gap is *quality at scale*, a training-data problem
+for which the block-structured generator provides the pipeline and the
+unguided ablation provides the baseline to beat.

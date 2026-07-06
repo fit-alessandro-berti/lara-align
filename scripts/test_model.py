@@ -81,6 +81,14 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Also run certified mode through pm4py for each sample.",
     )
+    parser.add_argument(
+        "--no-guidance",
+        action="store_true",
+        help=(
+            "Ablation: decode without neural move scores (structural "
+            "heuristics only) to isolate the learned model's contribution."
+        ),
+    )
     return parser.parse_args()
 
 
@@ -98,11 +106,13 @@ def main() -> None:
         criterion,
         device,
         run_certified=args.run_certified,
+        use_guidance=not args.no_guidance,
     )
     metrics["elapsed_seconds"] = perf_counter() - start
     metrics["split"] = args.split
     metrics["checkpoint"] = str(args.checkpoint)
     metrics["checkpoint_epoch"] = checkpoint.get("epoch")
+    metrics["guidance"] = not args.no_guidance
 
     payload = {
         "metrics": metrics,
@@ -125,9 +135,12 @@ def evaluate_model(
     criterion: LARALoss,
     device: torch.device,
     run_certified: bool = False,
+    use_guidance: bool = True,
 ) -> tuple[dict[str, Any], list[EvaluationRecord]]:
     model.eval()
-    system = CertifyingAlignmentSystem(model=model, device=device)
+    system = CertifyingAlignmentSystem(
+        model=model, device=device, use_guidance=use_guidance
+    )
 
     loss_totals: dict[str, float] = {}
     certified_optimal = 0
@@ -185,6 +198,9 @@ def format_human_report(
     lines.append(f"samples:            {metrics['samples']}")
     lines.append(f"checkpoint:         {metrics['checkpoint']}")
     lines.append(f"checkpoint epoch:   {metrics['checkpoint_epoch']}")
+    lines.append(
+        f"neural guidance:    {'on' if metrics.get('guidance', True) else 'off (ablation)'}"
+    )
     lines.append(f"elapsed:            {metrics['elapsed_seconds']:.2f}s")
     lines.append("")
     lines.append("Replay And Optimality")

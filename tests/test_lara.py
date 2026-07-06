@@ -277,6 +277,18 @@ def test_fast_mode_uses_neural_decoder_and_verifier():
     assert not result.certified_optimal
 
 
+def test_unguided_ablation_mode_skips_neural_scores():
+    net, im, fm = make_sequence_net(["A", "B"])
+    trace = trace_from_labels(["A", "X", "B"])
+    lara = CertifyingAlignmentSystem(model=_small_model(), use_guidance=False)
+
+    result = lara.align(net, im, fm, trace, mode=LARAMode.FAST)
+
+    assert result.legal
+    assert result.alignment.source == "unguided_greedy"
+    assert result.cost == 1
+
+
 def test_dataset_split_roundtrip(tmp_path):
     net, im, fm = make_sequence_net(["A", "B"])
     trace = trace_from_labels(["A", "B"])
