@@ -117,10 +117,24 @@ Evaluate on the held-out test split:
 python scripts/test_model.py \
   --data-dir data/lara_synthetic \
   --checkpoint runs/lara/best.pt \
-  --split test
+  --split test \
+  --num-examples 5
 ```
 
-The test script reports held-out loss, fast-mode legal alignment rate,
-fast-mode optimal-cost rate against the stored exact label, and mean cost gap
-over legal fast-mode candidates. Add `--run-certified` if you also want to run
-the pm4py certifying layer for every test sample.
+The test script prints a human-readable report by default. It compares pm4py's
+stored optimal alignment with LARA's fast reconstructed alignment for a few
+examples, then reports replayable alignment rate, optimal-cost rate, exact
+transition-sequence match rate, label-level alignment match rate, cost-gap
+statistics, losses, and per-family metrics.
+
+Useful evaluation options:
+
+```bash
+python scripts/test_model.py --format json --metrics-output runs/lara/test_metrics.json
+python scripts/test_model.py --example-selection first --num-examples 10
+python scripts/test_model.py --run-certified
+```
+
+`--run-certified` also runs the pm4py certifying layer for every sample. For
+judging the learned method itself, the main report uses fast mode, because
+certified mode may repair the candidate with exact pm4py search.

@@ -20,6 +20,7 @@ from lara_align.synthetic import (
 )
 from lara_align.training import LARALoss, targets_from_alignment
 from lara_align.verify import verify_alignment
+from scripts.test_model import EvaluationRecord, format_human_report
 
 
 def _small_model() -> LARANeuralModel:
@@ -184,3 +185,79 @@ def test_dataset_split_roundtrip(tmp_path):
         loaded[0].final_marking,
         loaded[0].trace,
     ).legal
+
+
+def test_human_evaluation_report_contains_alignment_examples():
+    optimal = Alignment(
+        [
+            AlignmentMove("A", "t0_A", "A"),
+            AlignmentMove("B", "t1_B", "B"),
+        ],
+        cost=0,
+        source="pm4py_exact",
+    )
+    predicted = Alignment(
+        [
+            AlignmentMove("A", "t0_A", "A"),
+            AlignmentMove("B", "t1_B", "B"),
+        ],
+        cost=0,
+        source="neural_greedy",
+    )
+    record = EvaluationRecord(
+        sample_id="test-000000",
+        family="sequence",
+        trace=["A", "B"],
+        optimal_alignment=optimal,
+        predicted_alignment=predicted,
+        optimal_cost=0,
+        predicted_cost=0,
+        legal=True,
+        failure_reason=None,
+        exact_alignment_match=True,
+        label_alignment_match=True,
+        move_count_gap=0,
+    )
+    metrics = {
+        "split": "test",
+        "samples": 1,
+        "checkpoint": "runs/lara/best.pt",
+        "checkpoint_epoch": 1,
+        "elapsed_seconds": 0.1,
+        "legal_rate": 1.0,
+        "optimal_cost_rate": 1.0,
+        "exact_alignment_match_rate": 1.0,
+        "label_alignment_match_rate": 1.0,
+        "certified_optimal_rate": None,
+        "legal_gap_count": 1,
+        "gap_mean": 0.0,
+        "gap_median": 0.0,
+        "gap_min": 0,
+        "gap_max": 0,
+        "gap_p90": 0.0,
+        "gap_p95": 0.0,
+        "gap_std": 0.0,
+        "gap_relative_mean": 0.0,
+        "loss_total": 0.0,
+        "by_family": {
+            "sequence": {
+                "samples": 1,
+                "legal_rate": 1.0,
+                "optimal_cost_rate": 1.0,
+                "gap_mean": 0.0,
+            }
+        },
+    }
+
+    class Args:
+        num_examples = 1
+        example_selection = "first"
+        max_moves = 10
+
+    report = format_human_report(metrics, [record], Args())
+
+    assert "Replay And Optimality" in report
+    assert "pm4py optimal:" in report
+    assert "LARA reconstructed:" in report
+    assert "replayable alignments:" in report
+    assert "equal optimum cost:" in report
