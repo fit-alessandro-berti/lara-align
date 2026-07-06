@@ -9,3 +9,13 @@ dist/
 *.egg-info/
 data/
 runs/
+
+*.bbl
+*.aux
+*.blg
+*.out
+*.pdf
+*.fls
+*.log
+*.fdb*
+
