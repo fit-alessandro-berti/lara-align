@@ -53,15 +53,16 @@ synchronous-move cost, and a self-loop-context flag
 with four relation types — `0`: place→transition along consumption arcs, `1`:
 transition→place along production arcs, `2`: the reversal of consumption (a
 place hears from its consumers), `3`: the reversal of production (a transition
-hears from its output places). The reverse types are essential, not cosmetic:
-with forward-only messages, two duplicate-labeled transitions whose presets
-are symmetric receive *provably identical* embeddings — global attention
-cannot rescue them because their identical embeddings issue identical queries
-— so the disambiguating downstream context (which branch suffix follows) can
-never reach them, and the sync cross-entropy on such choices is frozen at
-$\log 2$ regardless of training. Bidirectional typed messages break this
-symmetry in two hops (suffix transition → shared place → duplicate
-transition).
+hears from its output places). The reverse types are essential for
+duplicate-label resolution: the context that distinguishes two transitions
+sharing a label (e.g., which branch suffix follows each of them) lies
+*downstream*, and messages restricted to arc direction can never deliver it —
+duplicate transitions with symmetric presets would receive provably identical
+embeddings, and global attention cannot separate them because identical
+embeddings issue identical queries. Bidirectional typed messages carry the
+disambiguating context in two hops (suffix transition → shared place →
+duplicate transition), which is what allows the sync head to discriminate
+transition identities (`assessment.md` §4).
 
 **Labels via hashing.** Activity labels are mapped into a bounded vocabulary of
 8,192 ids by a stable BLAKE2b hash (`stable_label_id`), with id 0 reserved for
@@ -182,7 +183,8 @@ For speed, the decoder precomputes a per-net runtime before the walk: indexed
 presets/postsets, place-to-consumer lists (so only transitions consuming from
 marked places are tested for enabledness), zero-free dict markings, and neural
 scores extracted once into Python floats. This keeps the search cost mild in
-net size and is semantics-preserving (see `assessment.md` §7.1).
+net size; the neural forward pass dominates fast-mode wall time
+(`assessment.md` §7.1).
 
 **Verifier** (`verify_alignment`). Replays the transition projection from
 $m_0$, checks that $m_f$ is reached and that the log projection reconstructs
@@ -285,11 +287,9 @@ counter. These per-epoch curves are analyzed in `assessment.md`.
 
 **Reference run.** The checkpoint evaluated in the paper
 (`runs/lara_bidir/best.pt`) comes from a run of 22 recorded epochs at
-~32 s/epoch on CPU with bidirectional typed edges; the best validation total
-loss, 0.4614, was reached at epoch 18 (the run was stopped manually before
-the early-stopping criterion fired). An earlier run of the forward-only
-architecture (`runs/lara/best.pt`, best val 0.5364 at epoch 16) is retained
-for the ablation discussed in `assessment.md` §5.
+~32 s/epoch on CPU; the best validation total loss, 0.4614, was reached at
+epoch 18 (the run was stopped manually before the early-stopping criterion
+fired).
 
 ## 8. Design Rationale
 

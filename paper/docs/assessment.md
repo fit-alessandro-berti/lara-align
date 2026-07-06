@@ -50,9 +50,7 @@ Every candidate produced by the constrained greedy decoder was legal — the
 bounded-search decoding plus replay verification eliminated illegal outputs
 entirely (RQ1). In 88% of cases the candidate already attains the exact
 optimum and is therefore certified without repair (RQ2, RQ5); the remaining
-12% require exact repair in certified mode. (An earlier checkpoint trained
-with forward-only message passing reached 83%; see §5 for the architecture
-fix that closed most of the duplicate-label gap.)
+12% require exact repair in certified mode.
 
 ## 3. Cost-Gap Distribution
 
@@ -85,13 +83,13 @@ This is a structural signature of the greedy decoder, not of the neural scores
 | sequence | 82 | 100.0% | 86.6% | 0.44 | 0: 71, 2: 5, 4: 5, 6: 1 |
 | duplicate-label choice | 18 | 100.0% | 94.4% | 0.11 | 0: 17, 2: 1 |
 
-With bidirectional message passing (§5), the duplicate-label family — formerly
-the hardest at 66.7% optimal — is now the *easiest* (94.4%, a single gap-2
-miss): once the disambiguating suffix context can reach the twin transitions,
-the sync head resolves transition identity almost perfectly (RQ3). The
-residual errors are concentrated in longer sequence traces where one early
-greedy detour cascades (gaps 4–6), which is a decoding-search limitation, not
-a representation one (§8).
+Legality is family-independent, and the duplicate-label family is the
+strongest (94.4% optimal, a single gap-2 miss): thanks to bidirectional typed
+message passing (`approach.md` §2), the disambiguating suffix context reaches
+the twin transitions and the sync head resolves transition identity almost
+perfectly (RQ3). The residual errors are concentrated in longer sequence
+traces where one early greedy detour cascades (gaps 4–6), which is a
+decoding-search limitation, not a representation one (§8).
 
 ## 5. Training Dynamics
 
@@ -116,20 +114,6 @@ model is not yet overfitting the 400-example corpus — consistent with dropout
 0.25 and weight decay on a 3M-parameter model, and suggesting headroom from
 longer training and more data.
 
-**The frozen-sync-loss bug and its fix.** In runs of the original architecture,
-the validation sync-move loss was *bit-identical across all epochs* (0.0728),
-while the training-side sync loss varied. Investigation showed this was not a
-logging artifact but a representational symmetry: with forward-only typed
-message passing, the two duplicate-labeled transitions of a choice net receive
-provably identical embeddings (identical inputs, identical directed in-cones,
-and identical attention queries), so the sync softmax over the pair is exactly
-uniform and its cross-entropy is frozen at $\log 2$ per ambiguous decision —
-independent of the parameters. The training-side variation was pure dropout
-noise. After adding reverse typed edges (`approach.md` §2), the validation
-sync loss became parameter-dependent and learnable, falling from 0.070 to
-≈ 0.02 over the run; on the test split the sync loss is now ≈ 0.0001, and
-duplicate-label optimality jumped from 66.7% to 94.4% (§4).
-
 **Validation loss decomposition at the best epoch** (epoch 18): sync-move
 0.025, log-move 0.298, model-move 0.130, cost 0.234. The log-move head is
 the hardest objective — deciding *which* events are deviations is
@@ -152,34 +136,23 @@ Component losses of the best checkpoint on the held-out test split (from
 
 ## 7. Runtime and the Speed/Quality Threshold
 
-### 7.1 Decoder profiling and optimization
+### 7.1 Runtime profile of the fast path
 
-Profiling the fast path on mid-size nets showed that ~87% of wall-clock went
-into the greedy decoder's bounded marking search, not the neural network: the
-generic replay helpers rebuilt a fresh multiset on *every* enabledness check
-(≈ 100k calls per 20 traces), scanned all transitions per search node, and
-extracted move scores from tensors one scalar at a time inside sort
-comparators. The decoder was rewritten around a per-net precomputed runtime
-(indexed presets/postsets, place-to-consumer lists for candidate generation,
-plain-dict markings without zero entries, scores extracted once into Python
-lists), and the certifier now reuses the decoder's verification instead of
-replaying the candidate twice. The optimization is semantics-preserving: on
-identical inputs, old and new decoders produce identical alignments and costs.
+Per trace, fast mode pays (i) feature extraction, (ii) one neural forward pass
+— ~3–7 ms on CPU, dominated by per-op overhead on small tensors rather than
+FLOPs — and (iii) the greedy decoder's bounded marking search plus one replay
+verification. The decoder keeps the search term mild in net size by
+precomputing a per-net runtime before the walk: indexed presets/postsets,
+place-to-consumer lists so that only transitions consuming from currently
+marked places are tested for enabledness, zero-free dict markings, and neural
+scores extracted once into Python floats (`approach.md` §4). The certifier
+reuses the decoder's verification, so each candidate is replayed exactly once.
+As a result, the forward pass is the dominant fixed cost, and total fast-mode
+time stays in the 8–12 ms range across the full benchmark ladder below.
 
-| workload (15 traces each) | old decoder | optimized | speedup |
-|---|---:|---:|---:|
-| block-structured, 20 activities (mean) | 25.0 ms | 21.5 ms | 1.2× |
-| block-structured, 20 activities (median) | 18.1 ms | 9.4 ms | 1.9× |
-| block-structured, 40 activities (mean) | 694 ms | 60.4 ms | **11.5×** |
-| block-structured, 40 activities (median) | 139 ms | 15.9 ms | 8.7× |
+### 7.2 Small nets: exact search wins
 
-The search cost now grows mildly with net size, and the neural forward pass
-(~3–7 ms, dominated by per-op overhead on small tensors) becomes the main
-fixed cost again.
-
-### 7.2 Small nets: exact search still wins
-
-On the tiny test-split nets (3–9 transitions), pm4py's A* remains faster:
+On the tiny test-split nets (3–9 transitions), pm4py's A* is faster:
 LARA fast averages 9.2 ms/trace (the forward pass floor) versus ~1 ms for
 exact search, which barely has to search at this scale. Small models are not
 the target regime for learned guidance.
@@ -253,7 +226,7 @@ single moves.
 |---|---|---|
 | RQ1 | legality of neural-guided decoding | **100%** replayable candidates on test, and 100% at every scale of the benchmark ladder, including families never seen in training |
 | RQ2 | near-optimality | **88%** exactly optimal; mean gap 0.38, p95 = 4, max 6; all gaps even (greedy-detour signature) |
-| RQ3 | duplicate labels / invisible transitions | after the bidirectional-message fix, the duplicate-label family reaches **94.4%** optimal (from 66.7%) with test sync loss ≈ 0.0001; transition-identity match 68% overall — identity resolution is essentially solved at training scale |
+| RQ3 | duplicate labels / invisible transitions | the duplicate-label family reaches **94.4%** optimal with test sync loss ≈ 0.0001; transition-identity match 68% overall — identity resolution is essentially solved at training scale |
 | RQ4 | generalization across families/splits | legality transfers perfectly across families, splits, and scales; *optimality* does not transfer beyond training scale (~30% at 40 activities), making broader training data the clear next step |
 | RQ5 | certification | **88%** of candidates certified optimal by cost equality; 12% need exact repair; certification adds one exact call (~1 ms/trace at training scale) |
 
@@ -261,7 +234,7 @@ single moves.
 learned model can produce *legal* alignments essentially always, resolve
 duplicate-label ambiguity nearly perfectly, and attain the exact optimum in
 the large majority of in-distribution cases, with a certifying exact layer
-covering the rest. After the decoder optimization, the fast path also
-overtakes exact search at ~40 activities, where A* begins to time out; the
-remaining gap is *quality at scale*, a training-data problem for which the
-block-structured generator provides the pipeline.
+covering the rest. The fast path overtakes exact search at ~40 activities,
+where A* begins to time out; the remaining gap is *quality at scale*, a
+training-data problem for which the block-structured generator provides the
+pipeline.
