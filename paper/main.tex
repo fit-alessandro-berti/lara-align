@@ -455,6 +455,8 @@ LARA is implemented in Python on top of PyTorch and PM4Py \cite{Berti2023} and i
 Table~\ref{tab:headline} reports the held-out test split (100 stratified examples never seen in training). Every candidate was legal: bounded-search decoding plus replay verification eliminated illegal outputs (RQ1). In 88\% of cases the candidate already attains the exact optimum and is certified without repair (RQ2, RQ5); the remaining 12\% require exact repair in certified mode.
 
 \begin{table}
+\begin{minipage}[t]{0.46\textwidth}
+\centering
 \caption{Headline results on the held-out test split ($n = 100$).}
 \label{tab:headline}
 \small
@@ -471,6 +473,27 @@ mean / median cost gap & 0.38 / 0.00 \\
 p90 / p95 / max cost gap & 2.0 / 4.0 / 6.0 \\
 \bottomrule
 \end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.52\textwidth}
+\centering
+\caption{Guidance ablation on the test split ($n = 100$).}
+\label{tab:ablation}
+\small
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{lrrr}
+\toprule
+metric & unguided & guided & $\Delta$ \\
+\midrule
+replayable & 100.0\% & 100.0\% & 0.0 \\
+equal to optimum cost & 83.0\% & \textbf{88.0\%} & +5.0 \\
+exact transition-sequence match & 63.0\% & \textbf{68.0\%} & +5.0 \\
+mean cost gap & 0.48 & \textbf{0.38} & $-$0.10 \\
+sequence family, optimal ($n = 82$) & 86.6\% & 86.6\% & 0.0 \\
+duplicate-label family, optimal ($n = 18$) & 66.7\% & \textbf{94.4\%} & \textbf{+27.7} \\
+evaluation time (100 traces) & 1.0 s & 1.9 s & +0.9 s \\
+\bottomrule
+\end{tabular}
+\end{minipage}
 \end{table}
 
 \begin{figure}
@@ -524,25 +547,6 @@ The cost-gap distribution (Figure~\ref{fig:panels}, right) is sharply concentrat
 
 Does the learned component matter, or does constrained search do all the work (RQ6)? We re-ran the evaluation with neural guidance disabled: the decoder receives no move scores and falls back to structural heuristics only (prefer invisible transitions, then deterministic name order), on identical inputs.
 
-\begin{table}
-\caption{Guidance ablation on the test split ($n = 100$).}
-\label{tab:ablation}
-\small
-\begin{tabular}{lrrr}
-\toprule
-metric & unguided & guided & $\Delta$ \\
-\midrule
-replayable & 100.0\% & 100.0\% & 0.0 \\
-equal to optimum cost & 83.0\% & \textbf{88.0\%} & +5.0 \\
-exact transition-sequence match & 63.0\% & \textbf{68.0\%} & +5.0 \\
-mean cost gap & 0.48 & \textbf{0.38} & $-$0.10 \\
-sequence family, optimal ($n = 82$) & 86.6\% & 86.6\% & 0.0 \\
-duplicate-label family, optimal ($n = 18$) & 66.7\% & \textbf{94.4\%} & \textbf{+27.7} \\
-evaluation time (100 traces) & 1.0 s & 1.9 s & +0.9 s \\
-\bottomrule
-\end{tabular}
-\end{table}
-
 Table~\ref{tab:ablation} shows a clean decomposition. On sequence nets, where every event has at most one label-compatible transition, guidance changes nothing; the entire in-distribution contribution sits exactly where the mechanism of Figure~\ref{fig:decoding} predicts, duplicate-label transition identity, where guided decoding recovers 27.7 points. Structural tie-breaking cannot know which branch the trace suffix implies; the synchronous head can (RQ3).
 \subsection{Scaling Benchmark: The Speed and Quality Threshold}
 \label{sec:scaling}
@@ -550,9 +554,12 @@ Table~\ref{tab:ablation} shows a clean decomposition. On sequence nets, where ev
 To locate the regime where learned decoding pays off, a scaling benchmark generates random block-structured nets (nested sequence, choice, parallel, and loop blocks with duplicate labels and invisible routing transitions) of increasing size, injects deviations at rates 0.15 and 0.35, and times both methods per trace (10 samples per configuration, 30-second exact timeout). This family was \emph{never seen in training}.
 
 \begin{table}
+\begin{minipage}[t]{0.58\textwidth}
+\centering
 \caption{Scaling benchmark on random block-structured nets (10 samples per configuration; exact timeout 30 s, timeouts counted at the timeout).}
 \label{tab:scaling}
-\small
+\footnotesize
+\setlength{\tabcolsep}{3pt}
 \begin{tabular}{rrrrrrrrrr}
 \toprule
 size & dev.\ & $|T|$ & legal & optimal & mean gap & fast med. & exact med. & speedup & t/o \\
@@ -567,20 +574,22 @@ size & dev.\ & $|T|$ & legal & optimal & mean gap & fast med. & exact med. & spe
 40 & 0.35 & 54 & 100\% & 33\% & 11.6 & 12.0 ms & 15.5 ms & \textbf{1.29$\times$} & 1 \\
 \bottomrule
 \end{tabular}
-\end{table}
-
-\begin{figure}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.38\textwidth}
+\vspace{0pt}
 \centering
 \begin{tikzpicture}
 \begin{axis}[
   larachart,
+  width=\linewidth,
+  height=0.72\linewidth,
   xlabel={visible activities},
   ylabel={median ms per trace},
   xmode=log, log ticks with fixed point,
   xtick={5,10,20,40},
   ymode=log, log ticks with fixed point,
   ytick={1,2,5,10,20,50},
-  legend pos=outer north east,
+  legend style={at={(0.5,1.04)}, anchor=south, legend columns=2, font=\scriptsize},
 ]
 \addplot[seriesblue, mark=*, mark size=1.5pt] coordinates {(5,14.9)(10,7.9)(20,9.9)(40,12.1)};
 \addlegendentry{LARA fast, dev.\ 0.15}
@@ -592,9 +601,10 @@ size & dev.\ & $|T|$ & legal & optimal & mean gap & fast med. & exact med. & spe
 \addlegendentry{exact A*, dev.\ 0.35}
 \end{axis}
 \end{tikzpicture}
-\caption{Median alignment time per trace versus net size on block-structured nets (log-log). LARA stays at the forward-pass floor; exact A* degrades super-linearly, with first timeouts at size 40.}
+\captionof{figure}{Median alignment time per trace versus net size on block-structured nets (log-log). LARA stays at the forward-pass floor; exact A* degrades super-linearly, with first timeouts at size 40.}
 \label{fig:scaling}
-\end{figure}
+\end{minipage}
+\end{table}
 
 Three findings emerge from Table~\ref{tab:scaling} and Figure~\ref{fig:scaling}. First, LARA scales gently: the median stays at 8 to 12 ms across the ladder (the forward-pass floor plus a mild search term), while exact A* degrades super-linearly, with the crossover at roughly 40 activities and first 30-second timeouts there; a probe at 80 activities showed 7 to 12 times median speedups. Second, legality is scale-invariant: 100\% replayable candidates at every size, on a family never seen in training. Third, quality does not transfer at scale: the optimal-cost rate falls from about 80\% at training scale to about 30\% at 40 activities, and an unguided rerun shows why: out of distribution, guidance adds no measurable quality, while the unguided decoder, skipping the forward pass, runs at 0.2 to 1.1 ms per trace and overtakes exact search at every tested size.
 \subsection{Zero-Shot Validation on Real-Life Logs}
