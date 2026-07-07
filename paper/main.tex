@@ -441,6 +441,50 @@ The three move terms are the three alignment questions in loss form. $\mathcal{L
 
 The procedure is computationally modest, which matters for a foundation model that is trained once and then reused: AdamW with dropout, gradient accumulation and clipping, a plateau scheduler, and early stopping (all hyperparameters in the repository, Section~\ref{sec:implementation}); the reference run needs 22 epochs of roughly 32 seconds each on a single CPU, under fifteen minutes in total, reaching its best validation loss (0.4614) at epoch 18 (Figure~\ref{fig:panels}, left), and the moderate train-validation gap shows the 3M-parameter model does not yet overfit the corpus. The loss curves admit a process mining interpretation: the synchronous head converges to a near-zero loss, so the question which transition explains an event is learnable from structure alone, while the log-move head remains the hardest, since deciding whether an event is a deviation is intrinsically ambiguous when a random insertion duplicates a legitimate label.
 
+\begin{figure}
+\centering
+\begin{minipage}[t]{0.48\linewidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  larapanel,
+  xlabel={epoch},
+  ylabel={total loss},
+  xmin=1, xmax=22,
+  ymin=0.2, ymax=1.15,
+  legend pos=north east,
+]
+\addplot[seriesaqua] coordinates {(1,0.898)(2,0.800)(3,0.783)(4,0.754)(5,0.675)(6,0.616)(7,0.599)(8,0.612)(9,0.553)(10,0.560)(11,0.525)(12,0.568)(13,0.471)(14,0.522)(15,0.525)(16,0.523)(17,0.515)(18,0.461)(19,0.476)(20,0.501)(21,0.477)(22,0.490)};
+\addlegendentry{validation}
+\addplot[seriesblue] coordinates {(1,1.087)(2,0.833)(3,0.743)(4,0.693)(5,0.634)(6,0.577)(7,0.530)(8,0.493)(9,0.446)(10,0.431)(11,0.402)(12,0.390)(13,0.354)(14,0.334)(15,0.340)(16,0.314)(17,0.316)(18,0.299)(19,0.262)(20,0.262)(21,0.262)(22,0.251)};
+\addlegendentry{train}
+\addplot[black!50, dashed, line width=0.7pt] coordinates {(18,0.2)(18,1.15)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.48\linewidth}
+\centering
+\begin{tikzpicture}
+\begin{axis}[
+  larapanel,
+  ybar,
+  bar width=9pt,
+  xlabel={cost gap (candidate minus optimal)},
+  ylabel={number of traces},
+  xmin=-0.7, xmax=6.7,
+  ymin=0, ymax=100,
+  xtick={0,1,2,3,4,5,6},
+  nodes near coords,
+  every node near coord/.append style={font=\footnotesize, color=black!70},
+]
+\addplot[fill=seriesblue, draw=none] coordinates {(0,88)(2,6)(4,5)(6,1)};
+\end{axis}
+\end{tikzpicture}
+\end{minipage}
+\caption{Left: total loss per epoch of the reference run (dashed line: best validation epoch 18). Right: cost-gap distribution on the test split ($n = 100$); all non-zero gaps are even, the signature of greedy model-move detours.}
+\label{fig:panels}
+\end{figure}
+
 \section{Implementation and Assessment}
 \label{sec:assessment}
 
@@ -497,50 +541,6 @@ evaluation time (100 traces) & 1.0 s & 1.9 s & +0.9 s \\
 \end{tabular}
 \end{minipage}
 \end{table}
-
-\begin{figure}
-\centering
-\begin{minipage}[t]{0.48\linewidth}
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-  larapanel,
-  xlabel={epoch},
-  ylabel={total loss},
-  xmin=1, xmax=22,
-  ymin=0.2, ymax=1.15,
-  legend pos=north east,
-]
-\addplot[seriesaqua] coordinates {(1,0.898)(2,0.800)(3,0.783)(4,0.754)(5,0.675)(6,0.616)(7,0.599)(8,0.612)(9,0.553)(10,0.560)(11,0.525)(12,0.568)(13,0.471)(14,0.522)(15,0.525)(16,0.523)(17,0.515)(18,0.461)(19,0.476)(20,0.501)(21,0.477)(22,0.490)};
-\addlegendentry{validation}
-\addplot[seriesblue] coordinates {(1,1.087)(2,0.833)(3,0.743)(4,0.693)(5,0.634)(6,0.577)(7,0.530)(8,0.493)(9,0.446)(10,0.431)(11,0.402)(12,0.390)(13,0.354)(14,0.334)(15,0.340)(16,0.314)(17,0.316)(18,0.299)(19,0.262)(20,0.262)(21,0.262)(22,0.251)};
-\addlegendentry{train}
-\addplot[black!50, dashed, line width=0.7pt] coordinates {(18,0.2)(18,1.15)};
-\end{axis}
-\end{tikzpicture}
-\end{minipage}\hfill
-\begin{minipage}[t]{0.48\linewidth}
-\centering
-\begin{tikzpicture}
-\begin{axis}[
-  larapanel,
-  ybar,
-  bar width=9pt,
-  xlabel={cost gap (candidate minus optimal)},
-  ylabel={number of traces},
-  xmin=-0.7, xmax=6.7,
-  ymin=0, ymax=100,
-  xtick={0,1,2,3,4,5,6},
-  nodes near coords,
-  every node near coord/.append style={font=\footnotesize, color=black!70},
-]
-\addplot[fill=seriesblue, draw=none] coordinates {(0,88)(2,6)(4,5)(6,1)};
-\end{axis}
-\end{tikzpicture}
-\end{minipage}
-\caption{Left: total loss per epoch of the reference run (dashed line: best validation epoch 18). Right: cost-gap distribution on the test split ($n = 100$); all non-zero gaps are even, the signature of greedy model-move detours.}
-\label{fig:panels}
-\end{figure}
 
 The cost-gap distribution (Figure~\ref{fig:panels}, right) is sharply concentrated at zero, and all non-zero gaps are even, a structural signature of the greedy decoder rather than of the neural scores: its characteristic error converts $k$ zero-cost synchronous moves into $k$ model moves plus $k$ log moves, a penalty of exactly $2k$ (Section~\ref{sec:failure}).
 
@@ -614,6 +614,8 @@ Three findings emerge from Table~\ref{tab:scaling} and Figure~\ref{fig:scaling}.
 
 To test external validity, the same checkpoint was evaluated without any fine-tuning on two real-life logs: the receipt phase of a Dutch municipality's building-permit process \cite{ReceiptLog} (1{,}434 traces, 116 variants, 27 activity labels) and a road traffic fine management sample \cite{RoadTrafficLog} (100 traces, 10 variants, 10 labels). For each log a Petri net is discovered with the inductive miner \cite{Leemans2013} at noise thresholds 0.0 (perfectly fitting, so every optimal cost is 0) and 0.5 (filtered, so rarer variants genuinely deviate). The test is strictly zero-shot: the labels were never seen in training and embed only via the hash, and inductive-miner nets are dominated by invisible routing transitions (47 invisible versus 27 visible for the fitting receipt model), far from the training distribution.
 
+Table~\ref{tab:reallife} supports four observations. \emph{Legality transfers perfectly}: 100\% replayable alignments in every configuration, so RQ1 holds across three distributions. \emph{Optimality is strong on frequent behavior, weaker in the tail}: trace-weighted optimal rates (74.6 to 100\%) sit well above variant-level rates because misses concentrate in rare, long variants; on the fitting receipt net, 82.6\% trace-weighted optimality means most real behavior is replayed without any deviation, and every miss remains a bounded upper estimate. \emph{The speed picture matches the synthetic threshold}: exact A* wins on the small road-traffic nets, but on the largest discovered net LARA fast overtakes exact search on a real log (median 18.5 versus 27.4 ms; maximum 123 versus 558 ms), and invisible-heavy discovered models are exactly where the synchronous product blows up. \emph{Guided and unguided quality are identical here}, as the ablation predicts: inductive-miner nets contain no duplicate labels, the one sub-problem where the current checkpoint's guidance pays off.
+
 \begin{table}
 \caption{Zero-shot results on real-life logs with inductive-miner models (per variant; trace-wtd.\ weights variants by frequency).}
 \label{tab:reallife}
@@ -630,8 +632,6 @@ receipt      & 0.5 & 25 / 24+19 & 100\% &  55.2\% &  74.6\% & 0.82 / 7 & 8.9 / 8
 \bottomrule
 \end{tabular}
 \end{table}
-
-Table~\ref{tab:reallife} supports four observations. \emph{Legality transfers perfectly}: 100\% replayable alignments in every configuration, so RQ1 holds across three distributions. \emph{Optimality is strong on frequent behavior, weaker in the tail}: trace-weighted optimal rates (74.6 to 100\%) sit well above variant-level rates because misses concentrate in rare, long variants; on the fitting receipt net, 82.6\% trace-weighted optimality means most real behavior is replayed without any deviation, and every miss remains a bounded upper estimate. \emph{The speed picture matches the synthetic threshold}: exact A* wins on the small road-traffic nets, but on the largest discovered net LARA fast overtakes exact search on a real log (median 18.5 versus 27.4 ms; maximum 123 versus 558 ms), and invisible-heavy discovered models are exactly where the synchronous product blows up. \emph{Guided and unguided quality are identical here}, as the ablation predicts: inductive-miner nets contain no duplicate labels, the one sub-problem where the current checkpoint's guidance pays off.
 
 \subsection{Qualitative Failure Analysis}
 \label{sec:failure}
