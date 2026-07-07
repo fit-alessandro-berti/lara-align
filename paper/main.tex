@@ -17,7 +17,7 @@
 \pgfplotsset{
   larachart/.style={
     width=0.54\linewidth,
-    height=0.33\linewidth,
+    height=0.30\linewidth,
     axis lines=left,
     axis line style={black!45},
     tick style={black!45},
@@ -31,7 +31,7 @@
   larapanel/.style={
     larachart,
     width=\linewidth,
-    height=0.50\linewidth,
+    height=0.46\linewidth,
   }
 }
 
@@ -172,7 +172,7 @@ The central question, can a learned model make trace alignment fast without maki
 \node[stagelab, text=seriesblue!60!black, anchor=north] at (learnedbg.south) {neural proposal: learned, fast, uncertified};
 \node[stagelab, text=seriesaqua!45!black, anchor=north] at (exactbg.south) {exact trust: verified, certified};
 \end{tikzpicture}}
-\caption{Overview of LARA. Learning proposes, exact reasoning certifies: the neural stage produces a legal candidate quickly, and the exact stage decides legality and optimality, so conformance conclusions never depend on learned output.}
+\caption{Overview of LARA: learning proposes a legal candidate quickly, exact reasoning decides legality and optimality, so conformance conclusions never depend on learned output.}
 \label{fig:outline}
 \end{figure}
 
@@ -256,7 +256,7 @@ LARA separates \emph{candidate generation} (learned, fast, uncertified) from \em
 \node[stagelab, text=seriesblue!60!black, anchor=south] at (learnbg.north) {neural proposal ($d = 128$, ${\approx}3$M parameters): learned, fast, uncertified};
 \node[stagelab, text=seriesaqua!45!black, anchor=south] at (trustbg.north) {exact trust: verified, certified};
 \end{tikzpicture}}
-\caption{The LARA architecture. A typed graph transformer and a trace transformer, coupled by cross-attention, feed a learned router with local experts and recomposer heads; a constrained greedy decoder emits a fireable candidate that is verified by replay and certified or repaired by the exact backend.}
+\caption{The LARA architecture: coupled net and trace encoders feed the scoring heads; a constrained greedy decoder emits a fireable candidate that is verified by replay and certified or repaired by the exact backend.}
 \label{fig:architecture}
 \end{figure}
 
@@ -380,7 +380,7 @@ p90 / p95 / max cost gap & 2.0 / 4.0 / 6.0 \\
 \end{axis}
 \end{tikzpicture}
 \end{minipage}
-\caption{Left: total loss per epoch of the reference run; the dashed line marks epoch 18, where the best validation loss (0.4614) is reached. Right: cost-gap distribution on the test split ($n = 100$); the distribution concentrates at zero, and all non-zero gaps are even, the signature of greedy model-move detours.}
+\caption{Left: total loss per epoch of the reference run (dashed line: best validation epoch 18). Right: cost-gap distribution on the test split ($n = 100$); all non-zero gaps are even, the signature of greedy model-move detours.}
 \label{fig:panels}
 \end{figure}
 
@@ -418,6 +418,7 @@ To locate the regime where learned decoding pays off, a scaling benchmark genera
 \begin{table}
 \caption{Scaling benchmark on random block-structured nets (10 samples per configuration; exact timeout 30 s, timeouts counted at the timeout).}
 \label{tab:scaling}
+\small
 \begin{tabular}{rrrrrrrrrr}
 \toprule
 size & dev.\ & $|T|$ & legal & optimal & mean gap & fast med. & exact med. & speedup & t/o \\
@@ -457,7 +458,7 @@ size & dev.\ & $|T|$ & legal & optimal & mean gap & fast med. & exact med. & spe
 \addlegendentry{exact A*, dev.\ 0.35}
 \end{axis}
 \end{tikzpicture}
-\caption{Median alignment time per trace versus net size on block-structured nets (log-log). LARA's cost is dominated by the fixed neural forward pass and stays between 8 and 15 ms; exact A* degrades super-linearly once concurrency, loops, and deviations interact, with first timeouts at size 40.}
+\caption{Median alignment time per trace versus net size on block-structured nets (log-log). LARA stays at the forward-pass floor; exact A* degrades super-linearly, with first timeouts at size 40.}
 \label{fig:scaling}
 \end{figure}
 
@@ -470,6 +471,7 @@ To test external validity, the same checkpoint was evaluated without any fine-tu
 \begin{table}
 \caption{Zero-shot results on real-life logs with inductive-miner models (per variant; trace-wtd.\ weights variants by frequency). Legality is 100\% everywhere; on the largest net (receipt, noise 0.0) the learned fast path overtakes exact search.}
 \label{tab:reallife}
+\small
 \begin{tabular}{llrrrrrr}
 \toprule
 log & noise & net ($|P|$ / $|T_v|{+}|T_\tau|$) & legal & \multicolumn{2}{c}{optimal} & gap & \multicolumn{1}{c}{median time} \\
