@@ -263,7 +263,7 @@ LARA separates \emph{candidate generation} (learned, fast, uncertified) from \em
 \subsection{Input Encoding: Reading the Net and the Trace}
 \label{sec:encoding}
 
-\emph{Input:} a system net $SN = (N, m_0, m_f)$ and a trace $\sigma$ of length $n$. \emph{Output:} a graph view of the net, the trace as a sequence of label identifiers, and a compatibility mask $C$ recording which event and transition pairs share a label. The encoding must preserve exactly the structure that alignment decisions depend on: markings, routing, and label (non-)uniqueness.
+\emph{Input:} a system net $SN = (N, m_0, m_f)$ and a trace $\sigma$ of length $n$. \emph{Output:} a graph view of the net, the trace as a sequence of label identifiers, and a compatibility mask $C$ recording which event and transition pairs share a label.
 
 \textbf{The net as a typed graph.} The net becomes a bipartite graph whose nodes carry structural attributes (marking tokens and degrees per place; invisibility, degrees, move costs, and self-loop context per transition). Every arc is materialized in \emph{both} directions, with the direction kept as a type. The reverse direction matters for a genuinely process-oriented reason: what distinguishes two transitions sharing a label is typically \emph{downstream} of them, for example which branch suffix follows each. Information flowing only along arc direction can never deliver this context, so two duplicate transitions with symmetric presets would end up with provably identical representations. With bidirectional messages the disambiguating suffix reaches each duplicate in two hops, which is what later lets the model tell duplicates apart (Section~\ref{sec:ablation}).
 
@@ -313,7 +313,7 @@ Training uses AdamW with dropout, gradient accumulation, gradient clipping, a pl
 \subsection{Implementation and Reproducibility}
 \label{sec:implementation}
 
-LARA is implemented in Python on top of PyTorch and PM4Py \cite{Berti2023} and is available as open source at \url{https://github.com/fit-alessandro-berti/lara-align}. The repository contains the complete pipeline behind every number in this section: \texttt{scripts/init\_data.py} generates the exact-labeled corpus of Section~\ref{sec:data}, \texttt{scripts/train\_model.py} trains a checkpoint, and \texttt{scripts/test\_model.py}, \texttt{scripts/benchmark\_scaling.py}, and \texttt{scripts/evaluate\_real\_log.py} reproduce the in-distribution, scaling, and real-life evaluations, with a \texttt{--no-guidance} switch for the ablation of Section~\ref{sec:ablation}. For direct use on own data, \texttt{scripts/align\_log.py} aligns an XES event log against a PNML net with a trained checkpoint in any of the three modes; programmatically, \texttt{CertifyingAlignmentSystem().align(net, im, fm, trace, mode)} accepts PM4Py objects and returns the alignment together with its cost, bounds, and certification status. The evaluated checkpoint and all result artifacts are committed alongside the code.
+LARA is implemented in Python on top of PyTorch and PM4Py \cite{Berti2023} and is available as open source at \url{https://github.com/fit-alessandro-berti/lara-align}. The repository contains the complete pipeline behind every number in this section: \texttt{scripts/init\_data.py} generates the exact-labeled corpus of Section~\ref{sec:data}, \texttt{scripts/train\_model.py} trains a checkpoint, and \texttt{scripts/test\_model.py}, \texttt{scripts/benchmark\_scaling.py}, and \texttt{scripts/evaluate\_real\_log.py} reproduce the in-distribution, scaling, and real-life evaluations, with a \texttt{--no-guidance} switch for the ablation of Section~\ref{sec:ablation}. For use on own data, \texttt{scripts/align\_log.py} aligns an XES event log against a PNML net with a trained checkpoint in any of the three modes; the Python API \texttt{CertifyingAlignmentSystem().align(net, im, fm, trace, mode)} accepts PM4Py objects and returns the alignment with its cost, bounds, and certification status. The evaluated checkpoint and all result artifacts are committed alongside the code.
 
 \textbf{Protocol.} All experiments run on a single CPU. The learned method is always evaluated in \emph{fast} mode (verified neural candidate only), so no exact repair contaminates learned metrics; the exact optimum of the PM4Py state-equation A* aligner serves as ground truth for every sample. The metrics instantiate the research questions: the replayable (legal) rate (RQ1), the optimal-cost rate and the cost-gap distribution $c(\gamma) - \delta$ (RQ2), transition-sequence and label-level match rates (RQ3), per-family, scaling, and real-life breakdowns (RQ4), the certified-optimal rate (RQ5), and the guidance ablation (RQ6).
 
@@ -389,7 +389,7 @@ The cost-gap distribution (Figure~\ref{fig:panels}, right) is sharply concentrat
 \subsection{Guidance Ablation: What Does Learning Contribute?}
 \label{sec:ablation}
 
-Does the learned component matter, or does constrained search do all the work (RQ6)? We re-ran the evaluation with neural guidance disabled: the decoder receives no move scores and falls back to structural heuristics only (prefer invisible transitions, then deterministic name order). Both variants see identical inputs; only the guided run pays the neural forward pass.
+Does the learned component matter, or does constrained search do all the work (RQ6)? We re-ran the evaluation with neural guidance disabled: the decoder receives no move scores and falls back to structural heuristics only (prefer invisible transitions, then deterministic name order), on identical inputs.
 
 \begin{table}
 \caption{Guidance ablation on the test split ($n = 100$). Guidance leaves sequence nets unchanged and lifts the duplicate-label family by 27.7 points: the learned contribution is concentrated exactly where local heuristics are blind.}
@@ -409,7 +409,7 @@ evaluation time (100 traces) & 1.0 s & 1.9 s & +0.9 s \\
 \end{tabular}
 \end{table}
 
-Table~\ref{tab:ablation} shows a clean decomposition. On sequence nets, where every event has at most one label-compatible transition, guidance changes nothing (86.6\% either way; the residual errors are greedy-search myopia). The in-distribution contribution concentrates exactly where the architecture predicts: resolving duplicate-label transition identity, where guided decoding recovers 27.7 points (94.4\% versus 66.7\%). Structural tie-breaking cannot know which branch the trace suffix implies; the synchronous head can, consistent with its near-zero test loss (RQ3).
+Table~\ref{tab:ablation} shows a clean decomposition. On sequence nets, where every event has at most one label-compatible transition, guidance changes nothing and the residual errors are greedy-search myopia; the entire in-distribution contribution sits where the architecture predicts, duplicate-label transition identity, where guided decoding recovers 27.7 points. Structural tie-breaking cannot know which branch the trace suffix implies; the synchronous head can, consistent with its near-zero test loss (RQ3).
 \subsection{Scaling Benchmark: The Speed and Quality Threshold}
 \label{sec:scaling}
 
