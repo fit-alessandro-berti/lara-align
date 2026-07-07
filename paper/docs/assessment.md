@@ -374,3 +374,13 @@ invisible-transition-heavy discovered model of the real receipt log (1.5×
 median, 4.5× worst-case, §9); the remaining gap is *quality at scale*, a
 training-data problem for which the block-structured generator provides the
 pipeline and the unguided ablation provides the baseline to beat.
+
+## Cost-estimate evaluation (added 2026-07-07)
+
+`scripts/evaluate_cost_estimate.py --checkpoint runs/lara_bidir/best.pt` on the
+held-out test split (n = 100); artifact: `runs/lara_bidir/cost_estimate_test.json`.
+Summed regional upper bounds vs. exact optimal cost: MAE 0.495, mean signed
+error -0.271 (slight underestimation), Pearson r 0.888. Interval
+[sum lower, sum upper]: mean width 0.468, coverage of the true optimum 22%.
+Mean estimate 0.195 on fitting traces (delta = 0) vs. 1.726 on deviating ones;
+thresholding the estimate at 0.5 classifies "trace deviates" with 93% accuracy.

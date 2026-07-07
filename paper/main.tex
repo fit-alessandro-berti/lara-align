@@ -552,6 +552,11 @@ The cost-gap distribution (Figure~\ref{fig:panels}, right) is sharply concentrat
 Does the learned component matter, or does constrained search do all the work (RQ6)? We re-ran the evaluation with neural guidance disabled: the decoder receives no move scores and falls back to structural heuristics only (prefer invisible transitions, then deterministic name order), on identical inputs.
 
 Table~\ref{tab:ablation} shows a clean decomposition. On sequence nets, where every event has at most one label-compatible transition, guidance changes nothing; the entire in-distribution contribution sits exactly where the mechanism of Figure~\ref{fig:decoding} predicts, duplicate-label transition identity, where guided decoding recovers 27.7 points. Structural tie-breaking cannot know which branch the trace suffix implies; the synchronous head can (RQ3).
+\subsection{Quality of the Learned Cost Estimate}
+\label{sec:costest}
+
+The diagnostic branch of Section~\ref{sec:architecture} is trained but, unlike the moves, never verified at alignment time, so its usefulness must be established empirically; \texttt{scripts/evaluate\_cost\_estimate.py} compares its output with the exact optimum on the same held-out split. As a point estimate, the summed upper bounds track the optimal cost closely: mean absolute error 0.50 cost units, Pearson $r = 0.89$, with a slight bias toward underestimation ($-0.27$ on average). The estimate also separates fitting from deviating traces reliably, averaging 0.20 on traces with $\delta = 0$ against 1.73 on deviating ones, and thresholding it at 0.5 decides whether a trace deviates at all with 93\% accuracy. As an \emph{interval}, however, the branch is overconfident: the predicted range between summed lower and upper bounds is only 0.47 wide on average and contains the true optimum for 22\% of traces. The practical reading is that the learned estimate is a useful screening diagnostic, for example to rank traces by expected deviation before any alignment is computed, while its miscalibrated intervals confirm the design decision of Section~\ref{sec:architecture}: learned bounds inform the analyst and never enter the search.
+
 \subsection{Scaling Benchmark: The Speed and Quality Threshold}
 \label{sec:scaling}
 
