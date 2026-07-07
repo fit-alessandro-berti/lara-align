@@ -167,7 +167,7 @@ The central question, can a learned model make trace alignment fast without maki
 
 \begin{figure}
 \centering
-\resizebox{\linewidth}{!}{%
+\resizebox{0.88\textwidth}{!}{%
 \begin{tikzpicture}[font=\small, node distance=4mm and 6mm]
 % inputs
 \node[iobox, minimum width=24mm, minimum height=12.5mm] (net) {~\\[1.5mm] Petri net $SN$};
@@ -244,7 +244,7 @@ LARA separates \emph{candidate generation} (learned, fast, uncertified) from \em
 
 \begin{figure}
 \centering
-\resizebox{\linewidth}{!}{%
+\resizebox{0.88\textwidth}{!}{%
 \begin{tikzpicture}[font=\small, node distance=4mm and 9mm]
 % --- feature extraction ---
 \node[iobox] (bip) {typed bipartite graph\\5 place / 6 transition features\\4 typed edge directions};
@@ -312,6 +312,7 @@ LARA separates \emph{candidate generation} (learned, fast, uncertified) from \em
 
 \begin{figure}
 \centering
+\resizebox{0.68\textwidth}{!}{%
 \begin{tikzpicture}[font=\small]
 % the net, colored by the latent regions predicted for this trace
 \node[place] (p0) at (0,0) {};
@@ -359,7 +360,7 @@ LARA separates \emph{candidate generation} (learned, fast, uncertified) from \em
 \draw[flow, dashed] (r2.east) -- (e2.west);
 \draw[flow, dashed] (r3.east) to[out=-25,in=180] (e3.west);
 \draw[flow] (e3.south) -- node[flowlab, right] {$\Sigma$ bounds} (sum.north);
-\end{tikzpicture}
+\end{tikzpicture}}
 \caption{The diagnostic decomposition branch on a small duplicate-label choice net, for a trace $\sigma'$ that skips event $b$: the learned router partitions the net into latent regions (three of $R = 8$ shown), local experts predict deviation sketches and cost bounds, and the summed bounds estimate the alignment cost; all outputs are diagnostic only and never reach the decoder or exact search.}
 \label{fig:regions}
 \end{figure}
@@ -371,6 +372,7 @@ LARA separates \emph{candidate generation} (learned, fast, uncertified) from \em
 
 \begin{figure}
 \centering
+\resizebox{0.68\textwidth}{!}{%
 \begin{tikzpicture}[font=\small]
 % the system net: a duplicate-label choice net with an invisible join
 \node[place] (p0) at (0,0) {};
@@ -421,7 +423,7 @@ LARA separates \emph{candidate generation} (learned, fast, uncertified) from \em
 % the tracked marking
 \node[font=\scriptsize, text=black!55, anchor=west] at (3.15,-3.15)
   {tracked marking: $[p_0] \xrightarrow{t_a} [p_1] \xrightarrow{t_1} [p_2] \xrightarrow{t_c} [p_4] \xrightarrow{\tau} [p_5] = m_f$};
-\end{tikzpicture}
+\end{tikzpicture}}
 \caption{Scoring and greedy decoding on the net of Figure~\ref{fig:regions} for the fitting trace $\sigma = \langle a, b, c \rangle$: at event $b$ two enabled transitions carry the label, so the synchronous scores, informed by the suffix through cross-attention, select $t_1$; the final bounded search reaches $m_f$ through the invisible transition. Every move fires on the tracked marking, so the candidate is fireable by construction.}
 \label{fig:decoding}
 \end{figure}
