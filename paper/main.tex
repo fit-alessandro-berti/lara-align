@@ -153,7 +153,7 @@ The guarantee of optimality is also the burden of the technique. Optimal alignme
 
 Machine learning promises speed, and neural models have been applied successfully to event data for predictive monitoring and discovery \cite{Tax2017,Bukhsh2021,Sommers2021}. However, a purely learned aligner is unusable for conformance checking: a predicted alignment may be \emph{illegal}, meaning its model projection cannot be replayed from the initial to the final marking, or it may be silently suboptimal, and any conformance verdict built on it inherits this uncertainty. The tension is between trust and tractability.
 
-This paper asks whether the tension can be dissolved instead. We present LARA (Learned Adaptive Recombined Alignments), a neural-guided alignment system built around one invariant: \emph{neural output is never trusted as a certificate}. A learned model scores alignment decisions; a constrained greedy decoder turns the scores into a candidate whose model moves are fireable by construction; an exact replay verifier decides legality; and an exact alignment backend remains the sole authority on optimality, certifying the candidate by cost equality or repairing it. Speed comes from the model, but correctness never depends on it: the system degrades from certified optimal to a safe upper bound, never to wrong. Figure~\ref{fig:outline} summarizes the approach.
+This paper asks whether the tension can be dissolved instead. We present LARA (Learned Adaptive Recombined Alignments), a neural-guided alignment system built around one invariant: \emph{neural output is never trusted as a certificate}. A learned model scores alignment decisions; a constrained greedy decoder turns the scores into a candidate whose model moves are fireable by construction; an exact replay verifier decides legality; and an exact alignment backend remains the sole authority on optimality, certifying the candidate by cost equality or repairing it. Speed comes from the model, but correctness never depends on it: the system degrades from certified optimal to a safe upper bound, never to wrong. Figure~\ref{fig:outline} summarizes the learned core of the approach and the outputs it offers.
 
 For the user of conformance checking, this design is interesting for three reasons. First, the neural component is a small \emph{foundation model} for alignment: trained once, offline, on synthetic data, and vocabulary-free through hashed label embeddings, it applies to any event log and any Petri net without retraining or configuration, and every improvement of the shared checkpoint benefits all future analyses. Second, its per-trace latency is dominated by a fixed forward pass, staying flat and predictable where exact search has heavy tails, which is what interactive analysis of large discovered models needs. Third, adopting it is risk-free: every answer is at least a legal alignment with a verified cost, and in certified mode exactly as trustworthy as classical alignment. The contribution decomposes into four parts:
 \begin{enumerate}
@@ -175,34 +175,26 @@ The central question, can a learned model make trace alignment fast without maki
 \pic at ($(net.center)+(0.6mm,2.9mm)$) {pnfrag};
 \pic at ($(trace.center)+(0,2.9mm)$) {trcfrag};
 \coordinate (inmid) at ($(net.east)!0.5!(trace.east)$);
-% learned proposal stage
-\node[learnedbox, right=9mm of inmid, anchor=west, minimum height=13mm] (score) {neural model\\scores moves};
-\node[learnedbox, right=of score, minimum height=13mm] (dec) {constrained\\greedy decoder};
-% candidate alignment
-\node[iobox, right=9mm of dec, minimum width=26mm, minimum height=16mm] (cand) {~\\[4.5mm] candidate $\gamma$\\fireable by construction};
-\pic at ($(cand.center)+(0,4.6mm)$) {algfrag};
-% exact trust stage
-\node[exactbox, right=9mm of cand, minimum height=13mm] (ver) {replay verifier\\$+$ exact aligner};
-% outputs
-\node[iobox, right=14mm of ver, yshift=8.5mm] (opt) {certified optimal\\$c(\gamma) = \delta$};
-\node[iobox, right=14mm of ver, yshift=-8.5mm] (rep) {exact repair\\(optimal)};
+% the foundation model
+\node[learnedbox, right=10mm of inmid, anchor=west, minimum height=19mm, inner xsep=3mm] (fm) {neural foundation model\\trained once, offline\\vocabulary-free};
+% its outputs
+\node[iobox, right=27mm of fm.east, anchor=west, yshift=14.5mm, minimum width=40mm, minimum height=11mm] (scores) {move scores\\sync / log / model moves};
+\node[iobox, right=27mm of fm.east, anchor=west, minimum width=40mm, minimum height=15.5mm] (cand) {~\\[4.5mm] candidate alignment $\gamma$\\fireable by construction};
+\pic at ($(cand.center)+(0,4.4mm)$) {algfrag};
+\node[iobox, right=27mm of fm.east, anchor=west, yshift=-14.5mm, minimum width=40mm, minimum height=11mm] (diag) {deviation diagnostics\\latent regions, cost bounds};
 % flows
-\draw[flow] (net.east) -- ++(4.5mm,0) |- (score.west);
-\draw[flow] (trace.east) -- ++(4.5mm,0) |- (score.west);
-\draw[flow] (score) -- (dec);
-\draw[flow] (dec) -- (cand);
-\draw[flow] (cand) -- (ver);
-\draw[flow] (ver.east) -- ++(4mm,0) |- node[flowlab, above, anchor=south east, pos=1] {cost equality~} (opt.west);
-\draw[flow] (ver.east) -- ++(4mm,0) |- node[flowlab, below, anchor=north east, pos=1] {otherwise~} (rep.west);
-% stage backgrounds
+\draw[flow] (net.east) -- ++(5mm,0) |- (fm.west);
+\draw[flow] (trace.east) -- ++(5mm,0) |- (fm.west);
+\draw[flow] (fm.east) -- node[flowlab, above, sloped, pos=0.62] {scoring heads} (scores.west);
+\draw[flow] (fm.east) -- node[flowlab, above, pos=0.55] {greedy decoder} (cand.west);
+\draw[flow] (fm.east) -- node[flowlab, below, sloped, pos=0.62] {router $+$ local experts} (diag.west);
+% stage background
 \begin{scope}[on background layer]
-\node[stagebg, fill=seriesblue!5, draw=seriesblue!40] (learnedbg) [fit=(score)(dec)] {};
-\node[stagebg, fill=seriesaqua!6, draw=seriesaqua!45] (exactbg) [fit=(ver)] {};
+\node[stagebg, fill=seriesblue!5, draw=seriesblue!40] (learnedbg) [fit=(fm)(scores)(cand)(diag)] {};
 \end{scope}
-\node[stagelab, text=seriesblue!60!black, anchor=north] at (learnedbg.south) {learned: fast, uncertified};
-\node[stagelab, text=seriesaqua!45!black, anchor=north] at (exactbg.south) {exact: trusted};
+\node[stagelab, text=seriesblue!60!black, anchor=north] at (learnedbg.south) {learned: one checkpoint for any log and any net; fast, uncertified};
 \end{tikzpicture}}
-\caption{Overview of LARA: a learned model scores moves and a greedy decoder builds a candidate alignment that is fireable by construction; exact replay and alignment decide legality and optimality, so conformance conclusions never depend on learned output.}
+\caption{The LARA foundation model for alignment: trained once, offline, and vocabulary-free, it maps any Petri net and trace pair to move scores, to a candidate alignment decoded greedily from the scores and fireable by construction, and to deviation diagnostics. All outputs are fast but uncertified; how the exact layer verifies, certifies, or repairs the candidate is the subject of Figure~\ref{fig:architecture}.}
 \label{fig:outline}
 \end{figure}
 
