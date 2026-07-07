@@ -360,7 +360,7 @@ LARA separates \emph{candidate generation} (learned, fast, uncertified) from \em
 \draw[flow, dashed] (r3.east) to[out=-25,in=180] (e3.west);
 \draw[flow] (e3.south) -- node[flowlab, right] {$\Sigma$ bounds} (sum.north);
 \end{tikzpicture}
-\caption{The diagnostic decomposition branch on a small duplicate-label choice net, for a trace $\sigma'$ that skips event $b$: the learned router partitions the net into latent regions (three of $R = 8$ shown), a local expert per region predicts a deviation sketch and cost bounds, and the summed bounds estimate the alignment cost. All outputs are diagnostic only and never reach the decoder or the exact search.}
+\caption{The diagnostic decomposition branch on a small duplicate-label choice net, for a trace $\sigma'$ that skips event $b$: the learned router partitions the net into latent regions (three of $R = 8$ shown), local experts predict deviation sketches and cost bounds, and the summed bounds estimate the alignment cost; all outputs are diagnostic only and never reach the decoder or exact search.}
 \label{fig:regions}
 \end{figure}
 
@@ -422,7 +422,7 @@ LARA separates \emph{candidate generation} (learned, fast, uncertified) from \em
 \node[font=\scriptsize, text=black!55, anchor=west] at (3.15,-3.15)
   {tracked marking: $[p_0] \xrightarrow{t_a} [p_1] \xrightarrow{t_1} [p_2] \xrightarrow{t_c} [p_4] \xrightarrow{\tau} [p_5] = m_f$};
 \end{tikzpicture}
-\caption{Scoring and greedy decoding on the net of Figure~\ref{fig:regions}, for the fitting trace $\sigma = \langle a, b, c \rangle$. At event $b$ two enabled transitions carry the label, so the synchronous scores decide: the cross-attended suffix ($c$ follows) lets the model prefer $t_1$. Unique matches need no learned score, and the final bounded search reaches $m_f$ through the invisible transition; since every move is fired on the tracked marking, the candidate is fireable by construction.}
+\caption{Scoring and greedy decoding on the net of Figure~\ref{fig:regions} for the fitting trace $\sigma = \langle a, b, c \rangle$: at event $b$ two enabled transitions carry the label, so the synchronous scores, informed by the suffix through cross-attention, select $t_1$; the final bounded search reaches $m_f$ through the invisible transition. Every move fires on the tracked marking, so the candidate is fireable by construction.}
 \label{fig:decoding}
 \end{figure}
 
@@ -466,6 +466,7 @@ Table~\ref{tab:headline} reports the held-out test split (100 stratified example
 \begin{table}
 \caption{Headline results on the held-out test split ($n = 100$).}
 \label{tab:headline}
+\small
 \begin{tabular}{lr}
 \toprule
 metric & value \\
@@ -535,6 +536,7 @@ Does the learned component matter, or does constrained search do all the work (R
 \begin{table}
 \caption{Guidance ablation on the test split ($n = 100$).}
 \label{tab:ablation}
+\small
 \begin{tabular}{lrrr}
 \toprule
 metric & unguided & guided & $\Delta$ \\
