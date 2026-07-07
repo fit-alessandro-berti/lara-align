@@ -66,6 +66,39 @@
       \draw[black!70, fill=black!8, sharp corners]
         (\i*3.3mm-1.35mm,-1.5mm) rectangle +(2.7mm,3mm);
       \node[font=\tiny, text=black!70, inner sep=0pt] at (\i*3.3mm,0) {$\l$};}}},
+  pics/algfrag/.style={code={
+    \foreach \i/\t/\b in {-1/$a$/$t_1$, 0/$b$/$\gg$, 1/$\gg$/$t_2$} {
+      \draw[black!70, fill=black!8, sharp corners]
+        (\i*3.3mm-1.35mm,0mm) rectangle +(2.7mm,2.8mm);
+      \draw[black!70, fill=seriesblue!12, sharp corners]
+        (\i*3.3mm-1.35mm,-2.8mm) rectangle +(2.7mm,2.8mm);
+      \node[font=\tiny, text=black!70, inner sep=0pt] at (\i*3.3mm,1.4mm) {\t};
+      \node[font=\tiny, text=black!70, inner sep=0pt] at (\i*3.3mm,-1.4mm) {\b};}}},
+}
+
+% Colors for the latent regions of the diagnostic decomposition branch
+% (distinct from the entity-stable series colors of the charts).
+\definecolor{regamber}{HTML}{D97E22}
+\definecolor{regplum}{HTML}{8E5BC0}
+\definecolor{regslate}{HTML}{5E7A8A}
+
+% Styles for the worked-example figures: Petri net elements, score badges,
+% and the two-row alignment table of the decoding example.
+\tikzset{
+  place/.style={circle, draw=black!70, minimum size=4.2mm, inner sep=0pt,
+    line width=0.6pt},
+  trans/.style={rectangle, draw=black!70, minimum width=4.8mm,
+    minimum height=4.8mm, inner sep=1pt, line width=0.6pt, font=\small},
+  invtrans/.style={trans, fill=black!75, text=white},
+  netarc/.style={-{Stealth[length=1.6mm]}, black!70, line width=0.6pt},
+  scorebadge/.style={draw=seriesblue!75!black, fill=seriesblue!12,
+    rounded corners=1.5pt, inner sep=1.8pt, font=\scriptsize},
+  scorebadgelow/.style={draw=black!45, fill=black!5, rounded corners=1.5pt,
+    inner sep=1.8pt, font=\scriptsize, text=black!60},
+  alcell/.style={rectangle, draw=black!60, minimum width=13mm,
+    minimum height=5.2mm, inner sep=1pt, font=\small},
+  regbox/.style={rounded corners=3pt, dashed, inner sep=2mm, line width=0.7pt},
+  reglab/.style={font=\scriptsize\itshape, inner sep=1pt},
 }
 
 \acmConference[ICPM '27]{International Conference on Process Mining 2027}{TBD 2027}{TBD}
@@ -135,7 +168,7 @@ The central question, can a learned model make trace alignment fast without maki
 \begin{figure}
 \centering
 \resizebox{\linewidth}{!}{%
-\begin{tikzpicture}[font=\small, node distance=4mm and 5.5mm]
+\begin{tikzpicture}[font=\small, node distance=4mm and 6mm]
 % inputs
 \node[iobox, minimum width=24mm, minimum height=12.5mm] (net) {~\\[1.5mm] Petri net $SN$};
 \node[iobox, minimum width=24mm, minimum height=12.5mm, below=4mm of net] (trace) {~\\[1.5mm] trace $\sigma$};
@@ -143,36 +176,33 @@ The central question, can a learned model make trace alignment fast without maki
 \pic at ($(trace.center)+(0,2.9mm)$) {trcfrag};
 \coordinate (inmid) at ($(net.east)!0.5!(trace.east)$);
 % learned proposal stage
-\node[learnedbox, right=9mm of inmid, anchor=west] (enc) {neural encoder\\graph $\leftrightarrow$ trace};
-\node[learnedbox, right=of enc] (heads) {router, experts,\\recomposer heads};
-\node[learnedbox, right=of heads] (dec) {constrained\\greedy decoder};
-% candidate
-\node[iobox, right=9mm of dec] (cand) {candidate $\gamma$\\fireable by\\construction};
+\node[learnedbox, right=9mm of inmid, anchor=west, minimum height=13mm] (score) {neural model\\scores moves};
+\node[learnedbox, right=of score, minimum height=13mm] (dec) {constrained\\greedy decoder};
+% candidate alignment
+\node[iobox, right=9mm of dec, minimum width=26mm, minimum height=16mm] (cand) {~\\[4.5mm] candidate $\gamma$\\fireable by construction};
+\pic at ($(cand.center)+(0,4.6mm)$) {algfrag};
 % exact trust stage
-\node[exactbox, right=9mm of cand] (ver) {replay verifier\\legal? cost $c(\gamma)$};
-\node[exactbox, right=of ver] (cert) {certifier +\\exact aligner};
+\node[exactbox, right=9mm of cand, minimum height=13mm] (ver) {replay verifier\\$+$ exact aligner};
 % outputs
-\node[iobox, right=15mm of cert, yshift=8.5mm] (opt) {certified optimal\\$c(\gamma) = \delta$};
-\node[iobox, right=15mm of cert, yshift=-8.5mm] (rep) {exact repair\\(optimal)};
+\node[iobox, right=14mm of ver, yshift=8.5mm] (opt) {certified optimal\\$c(\gamma) = \delta$};
+\node[iobox, right=14mm of ver, yshift=-8.5mm] (rep) {exact repair\\(optimal)};
 % flows
-\draw[flow] (net.east) -- ++(4.5mm,0) |- (enc.west);
-\draw[flow] (trace.east) -- ++(4.5mm,0) |- (enc.west);
-\draw[flow] (enc) -- (heads);
-\draw[flow] (heads) -- (dec);
+\draw[flow] (net.east) -- ++(4.5mm,0) |- (score.west);
+\draw[flow] (trace.east) -- ++(4.5mm,0) |- (score.west);
+\draw[flow] (score) -- (dec);
 \draw[flow] (dec) -- (cand);
 \draw[flow] (cand) -- (ver);
-\draw[flow] (ver) -- (cert);
-\draw[flow] (cert.east) -- ++(4mm,0) |- node[flowlab, above, anchor=south east, pos=1] {cost equality~} (opt.west);
-\draw[flow] (cert.east) -- ++(4mm,0) |- node[flowlab, below, anchor=north east, pos=1] {otherwise~} (rep.west);
+\draw[flow] (ver.east) -- ++(4mm,0) |- node[flowlab, above, anchor=south east, pos=1] {cost equality~} (opt.west);
+\draw[flow] (ver.east) -- ++(4mm,0) |- node[flowlab, below, anchor=north east, pos=1] {otherwise~} (rep.west);
 % stage backgrounds
 \begin{scope}[on background layer]
-\node[stagebg, fill=seriesblue!5, draw=seriesblue!40] (learnedbg) [fit=(enc)(heads)(dec)] {};
-\node[stagebg, fill=seriesaqua!6, draw=seriesaqua!45] (exactbg) [fit=(ver)(cert)] {};
+\node[stagebg, fill=seriesblue!5, draw=seriesblue!40] (learnedbg) [fit=(score)(dec)] {};
+\node[stagebg, fill=seriesaqua!6, draw=seriesaqua!45] (exactbg) [fit=(ver)] {};
 \end{scope}
-\node[stagelab, text=seriesblue!60!black, anchor=north] at (learnedbg.south) {neural proposal: learned, fast, uncertified};
-\node[stagelab, text=seriesaqua!45!black, anchor=north] at (exactbg.south) {exact trust: verified, certified};
+\node[stagelab, text=seriesblue!60!black, anchor=north] at (learnedbg.south) {learned: fast, uncertified};
+\node[stagelab, text=seriesaqua!45!black, anchor=north] at (exactbg.south) {exact: trusted};
 \end{tikzpicture}}
-\caption{Overview of LARA: learning proposes a legal candidate quickly, exact reasoning decides legality and optimality, so conformance conclusions never depend on learned output.}
+\caption{Overview of LARA: a learned model scores moves and a greedy decoder builds a candidate alignment that is fireable by construction; exact replay and alignment decide legality and optimality, so conformance conclusions never depend on learned output.}
 \label{fig:outline}
 \end{figure}
 
@@ -278,14 +308,125 @@ LARA separates \emph{candidate generation} (learned, fast, uncertified) from \em
 
 \textbf{Move-scoring heads.} The synchronous score of event $i$ and transition $j$ compares their two representations (a scaled bilinear form), hard-masked by $C$; row $i$ is the model's belief about \emph{which concrete transition} event $i$ should synchronize with, and this is where duplicate-label resolution happens. Log-move and model-move scores are read off the event and transition representations directly.
 
-\textbf{A diagnostic decomposition branch.} A learned router additionally assigns transitions and events softly to $R = 8$ latent regions, and per region a small head predicts a local deviation sketch (out of $S = 6$ patterns), lower and upper cost bounds, and an uncertainty estimate; the summed upper bounds are the model's estimate of the total alignment cost, supervised against the optimum. This branch is the learned analogue of decomposition-based conformance checking \cite{Aalst2013,Verbeek2016}: instead of a fixed structural decomposition, the partition is predicted per net and trace pair, so the same net is partitioned differently depending on where the trace deviates. To avoid a misreading: this branch is \emph{diagnostic only}. Its outputs never reach the decoder or the exact search, since a learned cost bound carries no admissibility guarantee.
+\textbf{A diagnostic decomposition branch.} A learned router additionally assigns transitions and events softly to $R = 8$ latent regions, and per region a small head predicts a local deviation sketch (out of $S = 6$ patterns), lower and upper cost bounds, and an uncertainty estimate; the summed upper bounds are the model's estimate of the total alignment cost, supervised against the optimum. Figure~\ref{fig:regions} illustrates the branch. It is the learned analogue of decomposition-based conformance checking \cite{Aalst2013,Verbeek2016}: instead of a fixed structural decomposition, the partition is predicted per net and trace pair, so the same net is partitioned differently depending on where the trace deviates. To avoid a misreading: this branch is \emph{diagnostic only}. Its outputs never reach the decoder or the exact search, since a learned cost bound carries no admissibility guarantee.
+
+\begin{figure}
+\centering
+\begin{tikzpicture}[font=\small]
+% the net, colored by the latent regions predicted for this trace
+\node[place] (p0) at (0,0) {};
+\fill[black!70] (p0.center) circle (0.7mm);
+\node[trans] (ta) at (1.2,0) {$a$};
+\node[place] (p1) at (2.4,0) {};
+\node[trans] (t1) at (3.6,0.8) {$b$};
+\node[trans] (t2) at (3.6,-0.8) {$b$};
+\node[place] (p2) at (4.8,0.8) {};
+\node[place] (p3) at (4.8,-0.8) {};
+\node[trans] (tc) at (6.0,0.8) {$c$};
+\node[trans] (td) at (6.0,-0.8) {$d$};
+\node[place] (p4) at (7.2,0) {};
+\node[invtrans] (tt) at (8.4,0) {$\tau$};
+\node[place] (p5) at (9.6,0) {};
+\draw[netarc] (p0) -- (ta); \draw[netarc] (ta) -- (p1);
+\draw[netarc] (p1) -- (t1); \draw[netarc] (p1) -- (t2);
+\draw[netarc] (t1) -- (p2); \draw[netarc] (t2) -- (p3);
+\draw[netarc] (p2) -- (tc); \draw[netarc] (p3) -- (td);
+\draw[netarc] (tc) -- (p4); \draw[netarc] (td) -- (p4);
+\draw[netarc] (p4) -- (tt); \draw[netarc] (tt) -- (p5);
+% the trace this partition was predicted for
+\node[font=\small, anchor=east] at (0.5,-1.9) {$\sigma' = $};
+\draw[black!70, fill=black!8] (0.65,-2.05) rectangle +(0.3,0.3);
+\node[font=\tiny, text=black!70] at (0.8,-1.9) {$a$};
+\draw[black!70, fill=black!8] (1.05,-2.05) rectangle +(0.3,0.3);
+\node[font=\tiny, text=black!70] at (1.2,-1.9) {$c$};
+\node[font=\scriptsize, text=black!55, anchor=west] at (1.6,-1.9)
+  {(event $b$ missing: true $\delta = 1$)};
+% latent region hulls
+\begin{scope}[on background layer]
+\node[regbox, draw=regamber!80, fill=regamber!8, fit=(p0)(ta)(p1)] (r1) {};
+\node[regbox, draw=regplum!80, fill=regplum!8, fit=(t1)(t2)(p2)(p3)(tc)(td)(p4)] (r2) {};
+\node[regbox, draw=regslate!80, fill=regslate!10, fit=(tt)(p5)] (r3) {};
+\end{scope}
+\node[reglab, text=regamber!75!black, anchor=south] at (r1.north) {region $r_1$};
+\node[reglab, text=regplum!75!black, anchor=south] at (r2.north) {region $r_2$};
+\node[reglab, text=regslate!75!black, anchor=south] at (r3.north) {region $r_3$};
+% per-region experts
+\node[larabox, draw=regamber!75!black, fill=regamber!8, font=\scriptsize, align=left] (e1) at (12.3,1.1) {expert $r_1$: fitting\\bounds $[0,0]$};
+\node[larabox, draw=regplum!75!black, fill=regplum!8, font=\scriptsize, align=left] (e2) at (12.3,0) {expert $r_2$: model move\\bounds $[1,2]$};
+\node[larabox, draw=regslate!75!black, fill=regslate!10, font=\scriptsize, align=left] (e3) at (12.3,-1.1) {expert $r_3$: fitting\\bounds $[0,0]$};
+\node[iobox, font=\scriptsize] (sum) at (12.3,-2.35) {$\hat\delta \in [1,2]$: estimated\\total alignment cost};
+\draw[flow, dashed] (r1.east) -- (e1.west);
+\draw[flow, dashed] (r2.east) -- (e2.west);
+\draw[flow, dashed] (r3.east) to[out=-25,in=180] (e3.west);
+\draw[flow] (e3.south) -- node[flowlab, right] {$\Sigma$ bounds} (sum.north);
+\end{tikzpicture}
+\caption{The diagnostic decomposition branch on a small duplicate-label choice net, for a trace $\sigma'$ that skips event $b$: the learned router partitions the net into latent regions (three of $R = 8$ shown), a local expert per region predicts a deviation sketch and cost bounds, and the summed bounds estimate the alignment cost. All outputs are diagnostic only and never reach the decoder or the exact search.}
+\label{fig:regions}
+\end{figure}
 
 \subsection{Decoding, Verification, and Certification: From Scores to a Certified Alignment}
 \label{sec:decoding}
 
 \emph{Input:} the system net, the trace $\sigma$, and the move scores of Section~\ref{sec:architecture}. \emph{Output:} a legal alignment whose guarantee depends on the chosen mode: certified optimal, exactly repaired, or a verified upper bound. The learned scores are consumed exclusively by the decoder; the verifier and certifier judge only the resulting alignment object, so the trust boundary of Figure~\ref{fig:architecture} is crossed by an alignment, never by neural output.
 
-\textbf{How the decoder uses the scores.} The decoder builds the candidate in a single left-to-right pass over the whole trace while tracking the current marking; despite the diagnostic region branch, there is no decomposition of the trace and no recombination of partial alignments at this stage. Two of the three score families are consumed, each at one specific decision point. For event $a_i$: (1) among the transitions that are \emph{enabled} in the current marking and labeled $a_i$, the decoder picks the one with the highest synchronous score; the marking already filters the candidates, so the score matters exactly when several enabled transitions share a label, i.e., the synchronous scores implement duplicate-label resolution. (2) If no such transition is enabled, the decoder looks for a short sequence of model moves that enables one: a breadth-first search over markings, bounded at depth 8, whose successors are ordered invisible-first and then by descending model-move score, i.e., the model-move scores decide which routing path through invisible or skipped transitions the model most plausibly took. On success the path is emitted as model moves followed by the synchronous move. (3) If the bounded search also fails, event $a_i$ is emitted as a log move; this fallback needs no learned score, which is why the log-move head serves training and diagnostics rather than decoding. After the last event, a final bounded search (depth at most 32) emits the model moves reaching $m_f$. Since every emitted model move is fired on the tracked marking, the candidate $\gamma$ is fireable by construction.
+\begin{figure}
+\centering
+\begin{tikzpicture}[font=\small]
+% the system net: a duplicate-label choice net with an invisible join
+\node[place] (p0) at (0,0) {};
+\fill[black!70] (p0.center) circle (0.7mm);
+\node[trans] (ta) at (1.2,0) {$a$};
+\node[place] (p1) at (2.4,0) {};
+\node[trans] (t1) at (3.6,0.8) {$b$};
+\node[trans] (t2) at (3.6,-0.8) {$b$};
+\node[place] (p2) at (4.8,0.8) {};
+\node[place] (p3) at (4.8,-0.8) {};
+\node[trans] (tc) at (6.0,0.8) {$c$};
+\node[trans] (td) at (6.0,-0.8) {$d$};
+\node[place] (p4) at (7.2,0) {};
+\node[invtrans] (tt) at (8.4,0) {$\tau$};
+\node[place] (p5) at (9.6,0) {};
+\draw[netarc] (p0) -- (ta); \draw[netarc] (ta) -- (p1);
+\draw[netarc] (p1) -- (t1); \draw[netarc] (p1) -- (t2);
+\draw[netarc] (t1) -- (p2); \draw[netarc] (t2) -- (p3);
+\draw[netarc] (p2) -- (tc); \draw[netarc] (p3) -- (td);
+\draw[netarc] (tc) -- (p4); \draw[netarc] (td) -- (p4);
+\draw[netarc] (p4) -- (tt); \draw[netarc] (tt) -- (p5);
+\node[font=\scriptsize, text=black!60, below=0.5mm of p0] {$m_0$};
+\node[font=\scriptsize, text=black!60, below=0.5mm of p5] {$m_f$};
+\node[font=\scriptsize, text=black!60, above=0.5mm of ta] {$t_a$};
+\node[font=\scriptsize, text=black!60, above=0.5mm of tc] {$t_c$};
+\node[font=\scriptsize, text=black!60, below=0.5mm of td] {$t_d$};
+% synchronous scores for the ambiguous event b
+\node[scorebadge, above=1.2mm of t1] (s1) {$t_1$: sync $0.92$};
+\node[scorebadgelow, below=1.2mm of t2] (s2) {$t_2$: sync $0.08$};
+% the trace
+\node[font=\small, anchor=east] at (0.55,-2.36) {$\sigma =$};
+\pic at (1.15,-2.36) {trcfrag};
+% the decoded candidate as a two-row alignment table
+\node[font=\small, anchor=east] at (3.05,-2.36) {$\gamma =$};
+\node[alcell, anchor=west, fill=black!4] (L0) at (3.15,-2.1) {$a$};
+\node[alcell, anchor=west, fill=black!4] (L1) at (4.45,-2.1) {$b$};
+\node[alcell, anchor=west, fill=black!4] (L2) at (5.75,-2.1) {$c$};
+\node[alcell, anchor=west, fill=black!4] (L3) at (7.05,-2.1) {$\gg$};
+\node[alcell, anchor=west, fill=seriesblue!7] (M0) at (3.15,-2.62) {$t_a$};
+\node[alcell, anchor=west, fill=seriesblue!18, draw=seriesblue!75!black] (M1) at (4.45,-2.62) {$t_1$};
+\node[alcell, anchor=west, fill=seriesblue!7] (M2) at (5.75,-2.62) {$t_c$};
+\node[alcell, anchor=west, fill=seriesblue!7] (M3) at (7.05,-2.62) {$\tau$};
+% the decoder rule applied per move
+\node[font=\scriptsize, text=black!55, anchor=south] at (3.8,-1.87) {unique match};
+\node[font=\scriptsize, text=seriesblue!70!black, anchor=south] at (5.1,-1.87) {arg\,max sync};
+\node[font=\scriptsize, text=black!55, anchor=south] at (6.4,-1.87) {unique match};
+\node[font=\scriptsize, text=black!55, anchor=south] at (7.7,-1.87) {search to $m_f$};
+% the tracked marking
+\node[font=\scriptsize, text=black!55, anchor=west] at (3.15,-3.15)
+  {tracked marking: $[p_0] \xrightarrow{t_a} [p_1] \xrightarrow{t_1} [p_2] \xrightarrow{t_c} [p_4] \xrightarrow{\tau} [p_5] = m_f$};
+\end{tikzpicture}
+\caption{Scoring and greedy decoding on the net of Figure~\ref{fig:regions}, for the fitting trace $\sigma = \langle a, b, c \rangle$. At event $b$ two enabled transitions carry the label, so the synchronous scores decide: the cross-attended suffix ($c$ follows) lets the model prefer $t_1$. Unique matches need no learned score, and the final bounded search reaches $m_f$ through the invisible transition; since every move is fired on the tracked marking, the candidate is fireable by construction.}
+\label{fig:decoding}
+\end{figure}
+
+\textbf{How the decoder uses the scores.} The decoder builds the candidate in a single left-to-right pass over the whole trace while tracking the current marking (Figure~\ref{fig:decoding}); despite the diagnostic region branch, there is no decomposition of the trace and no recombination of partial alignments at this stage. Two of the three score families are consumed, each at one specific decision point. For event $a_i$: (1) among the transitions that are \emph{enabled} in the current marking and labeled $a_i$, the decoder picks the one with the highest synchronous score; the marking already filters the candidates, so the score matters exactly when several enabled transitions share a label, i.e., the synchronous scores implement duplicate-label resolution. (2) If no such transition is enabled, the decoder looks for a short sequence of model moves that enables one: a breadth-first search over markings, bounded at depth 8, whose successors are ordered invisible-first and then by descending model-move score, i.e., the model-move scores decide which routing path through invisible or skipped transitions the model most plausibly took. On success the path is emitted as model moves followed by the synchronous move. (3) If the bounded search also fails, event $a_i$ is emitted as a log move; this fallback needs no learned score, which is why the log-move head serves training and diagnostics rather than decoding. After the last event, a final bounded search (depth at most 32) emits the model moves reaching $m_f$. Since every emitted model move is fired on the tracked marking, the candidate $\gamma$ is fireable by construction.
 
 \textbf{What the bounded search is, and is not.} The breadth-first search is not a Dijkstra or A* alignment search in miniature. Exact aligners search the reachability graph of the synchronous product, whose states pair a marking with a trace position and where all three move types are edges; they may defer or revise any decision and provably return the global cost minimum \cite{Zelst2018,Dongen2018}. The decoder's search instead explores model moves only, starts from the current marking only, stops at the \emph{first} marking enabling the next label rather than the cheapest one, and every commitment is irrevocable. It is a local fireability probe, not a shortest-path search: it guarantees that the candidate can be replayed, not that it is optimal, which is exactly the failure mode analyzed in Section~\ref{sec:failure} and the reason the exact layer stays in the loop. A precomputed per-net runtime (indexed presets and postsets, place-to-consumer lists, zero-free markings) keeps the search cheap, so the neural forward pass dominates fast-mode wall time.
 
