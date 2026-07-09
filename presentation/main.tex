@@ -1,0 +1,378 @@
+\documentclass[aspectratio=169]{beamer}
+
+% LARA: high-level presentation of the ICPM 2027 paper.
+
+\usetheme{Madrid}
+\usecolortheme{seahorse}
+\usepackage{tikz}
+\usetikzlibrary{positioning,fit,backgrounds,arrows.meta,calc}
+\usepackage{booktabs}
+
+\definecolor{larablue}{HTML}{2A78D6}
+\definecolor{laraaqua}{HTML}{1BAF7A}
+\definecolor{laraamber}{HTML}{D97E22}
+
+\setbeamercolor{structure}{fg=larablue}
+\setbeamercolor{frametitle}{bg=larablue!12, fg=larablue!50!black}
+\setbeamertemplate{navigation symbols}{}
+\setbeamertemplate{itemize items}[circle]
+
+\newcommand{\keyc}[1]{\textbf{\textcolor{larablue}{#1}}}
+\newcommand{\keyg}[1]{\textbf{\textcolor{laraaqua!70!black}{#1}}}
+\newcommand{\keya}[1]{\textbf{\textcolor{laraamber!85!black}{#1}}}
+
+\tikzset{
+  iob/.style={draw=black!55, fill=black!4, rounded corners=2.5pt, align=center,
+    inner sep=4pt, minimum height=9mm, font=\small},
+  lrn/.style={draw=larablue!75!black, fill=larablue!10, rounded corners=2.5pt,
+    align=center, inner sep=4pt, minimum height=9mm, font=\small},
+  exa/.style={draw=laraaqua!70!black, fill=laraaqua!12, rounded corners=2.5pt,
+    align=center, inner sep=4pt, minimum height=9mm, font=\small},
+  flow/.style={-{Stealth[length=2.2mm]}, line width=0.9pt, draw=black!60},
+  flab/.style={font=\scriptsize, text=black!60, align=center},
+  stbg/.style={rounded corners=5pt, inner sep=2.5mm},
+  stlab/.style={font=\scriptsize\itshape, inner sep=1.5pt},
+}
+
+\title[LARA]{\textbf{LARA}: Learned Adaptive Recombined Alignments}
+\subtitle{A Certifying Foundation Model for Petri Net Trace Alignment}
+\author[Berti, van der Aalst]{Alessandro Berti \and Wil M.P. van der Aalst}
+\institute[PADS, RWTH]{Process and Data Science (PADS), RWTH Aachen University}
+\date{ICPM 2027}
+
+\begin{document}
+
+% ---------------------------------------------------------------- 1
+\begin{frame}
+  \titlepage
+\end{frame}
+
+% ---------------------------------------------------------------- 2
+\begin{frame}{The Problem}
+  \begin{itemize}\setlength{\itemsep}{9pt}
+    \item \keyc{Alignments} explain, event by event, how a trace deviates
+      from a process model
+    \item Optimal alignments need \keya{exact shortest-path search} (A*):
+      often the \keya{bottleneck} on real discovered models
+    \item Purely \keyc{learned} aligners are fast, but may be
+      \keya{illegal} or \keya{silently suboptimal}
+  \end{itemize}
+  \vspace{5mm}
+  \begin{block}{The tension}
+    \centering \keyg{trust} (exact, slow) \quad vs.\ \quad \keyc{tractability} (learned, fast)
+  \end{block}
+\end{frame}
+
+% ---------------------------------------------------------------- 3
+\begin{frame}{The Goal}
+  \begin{block}{Fast alignments that are never less trustworthy}
+    A small neural \keyc{foundation model}, trained \keyc{once} on synthetic data,
+    scores alignment moves for \keyg{any Petri net and any log};
+    exact methods \keyg{verify, certify, or repair} every answer.
+  \end{block}
+  \vspace{4mm}
+  \begin{itemize}\setlength{\itemsep}{7pt}
+    \item One invariant: \keya{neural output is never trusted as a certificate}
+    \item Every answer is a \keyg{legal alignment with a known cost};
+      optionally a \keyg{certified optimal} one
+    \item \keyc{Vocabulary-free}: no retraining, no configuration per log
+  \end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------- 4
+\begin{frame}{The Approach at a Glance}
+  \begin{center}
+  \begin{tikzpicture}[font=\small]
+    % inputs
+    \node[iob, minimum width=22mm] (net) at (0,0.8) {\textbf{Petri net}};
+    \node[iob, minimum width=22mm] (trc) at (0,-0.8) {\textbf{trace} $\langle a,b,c\rangle$};
+    % learned stage
+    \node[lrn, minimum width=26mm] (fm) at (3.6,0) {\textbf{foundation model}\\move scores};
+    \node[lrn, minimum width=26mm] (dec) at (7.4,0) {\textbf{constrained}\\\textbf{greedy decoder}};
+    \node[iob, minimum width=24mm] (cand) at (10.9,0) {candidate $\gamma$\\\keyc{fireable}};
+    % exact stage
+    \node[exa, minimum width=22mm] (ver) at (10.9,-2.1) {\textbf{replay verifier}\\legal? cost $c(\gamma)$};
+    \node[exa, minimum width=26mm] (cert) at (6.8,-2.1) {\textbf{certifier / exact A*}\\$c(\gamma) = \delta$? else repair};
+    \node[iob, minimum width=26mm] (out) at (2.6,-2.1) {\textbf{legal alignment}\\certified optimal on demand};
+    \draw[flow] (net.east) -- (fm.west |- net.east);
+    \draw[flow] (trc.east) -- (fm.west |- trc.east);
+    \draw[flow] (fm) -- (dec);
+    \draw[flow] (dec) -- (cand);
+    \draw[flow] (cand) -- (ver);
+    \draw[flow] (ver) -- (cert);
+    \draw[flow] (cert) -- (out);
+    % backgrounds
+    \begin{scope}[on background layer]
+      \node[stbg, fill=larablue!5, draw=larablue!40, fit=(fm)(dec)] (lbg) {};
+      \node[stbg, fill=laraaqua!6, draw=laraaqua!45, fit=(ver)(cert)] (ebg) {};
+    \end{scope}
+    \node[stlab, text=larablue!60!black, anchor=south] at (lbg.north)
+      {\keyc{learned}: fast, uncertified};
+    \node[stlab, text=laraaqua!45!black, anchor=north] at (ebg.south)
+      {\keyg{exact}: verified, certified};
+  \end{tikzpicture}
+  \end{center}
+  \vspace{2mm}
+  \centering
+  Degrades from \keyg{certified optimal} to a \keyc{safe upper bound}, \keya{never to wrong}.
+\end{frame}
+
+% ---------------------------------------------------------------- 5
+\begin{frame}{Architecture of the Foundation Model}
+  \begin{center}
+  \resizebox{0.98\textwidth}{!}{%
+  \begin{tikzpicture}[font=\small]
+    % inputs
+    \node[iob, minimum width=28mm] (g) at (0,1.4) {Petri net as \textbf{typed graph}\\markings, costs, degrees};
+    \node[iob, minimum width=28mm] (h) at (0,-1.4) {trace as \textbf{hashed labels}\\no vocabulary};
+    % encoders
+    \node[lrn, minimum width=30mm] (gt) at (4.6,1.4) {\textbf{graph transformer}\\3 layers, typed edges};
+    \node[lrn, minimum width=30mm] (tt) at (4.6,-1.4) {\textbf{trace transformer}\\2 layers};
+    \draw[flow, {Stealth[length=2.2mm]}-{Stealth[length=2.2mm]}]
+      (gt) -- node[flab, fill=white] {cross-attention} (tt);
+    % heads
+    \node[lrn, minimum width=32mm] (heads) at (9.5,1.4)
+      {\textbf{scoring heads}\\one score per possible\\sync / log / model move};
+    \node[lrn, minimum width=32mm, dashed] (diag) at (9.5,-1.4)
+      {\textbf{diagnostic branch}\\deviation regions and\\estimated alignment cost};
+    \draw[flow] (g) -- (gt);
+    \draw[flow] (h) -- (tt);
+    \draw[flow] (gt) -- (heads);
+    \draw[flow] (tt) -- (heads.west |- tt) -- (heads.south west);
+    \draw[flow] (gt.east) -- (diag.north west);
+    % out
+    \node[iob, minimum width=36mm] (dec) at (14.9,1.4)
+      {\textbf{to the decoder}:\\move scores \keyc{build}\\\keyc{the alignment}};
+    \node[iob, minimum width=36mm] (ana) at (14.9,-1.4)
+      {\textbf{to the analyst}:\\\keya{information only},\\never in the search};
+    \draw[flow] (heads) -- node[flab, above] {move scores} (dec);
+    \draw[flow, dashed] (diag) -- node[flab, above] {diagnostics} (ana);
+  \end{tikzpicture}}
+  \end{center}
+  \vspace{1mm}
+  \begin{itemize}\setlength{\itemsep}{4pt}
+    \item Two outputs, two roles: the \keyc{move scores} continue down the
+      pipeline and steer the decoder; the \keyc{diagnostics} (where the trace
+      deviates, at what estimated cost) go to the \keya{analyst only}
+    \item The diagnostics carry \keya{no guarantee}, so they never influence
+      the search or the result
+    \item Small model: about \keyc{3M parameters}, runs on \keyc{CPU};
+      all scores are \keyc{trace-dependent}
+  \end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------- 6
+\begin{frame}{Training Loss: Imitating the Exact Aligner}
+  The model learns to \keyc{imitate} optimal alignments computed by exact A*:
+  \begin{equation*}
+    \mathcal{L} \;=\; \underbrace{w_m\,(\mathcal{L}_{\mathrm{sync}}
+      + \mathcal{L}_{\mathrm{log}} + \mathcal{L}_{\mathrm{model}})}_{
+      \textcolor{larablue}{\textbf{imitation of moves}},\; w_m = 1.0}
+    \;+\; \underbrace{w_c\,\mathcal{L}_{\mathrm{cost}}
+      + w_b\,\mathcal{L}_{\mathrm{bound}} + w_\ell\,\mathcal{L}_{\mathrm{bal}}
+      + w_e\,\mathcal{L}_{\mathrm{ent}}}_{
+      \textcolor{laraamber!85!black}{\textbf{diagnostic branch}},\;
+      w \le 0.03}
+  \end{equation*}
+  \vspace{1mm}
+  \begin{itemize}\setlength{\itemsep}{5pt}
+    \item $\mathcal{L}_{\mathrm{sync}}$: cross-entropy over transition
+      \keyc{identities}, not labels: which concrete transition did the optimum
+      fire? This is what teaches \keya{duplicate-label} resolution
+    \item $\mathcal{L}_{\mathrm{log}}$ / $\mathcal{L}_{\mathrm{model}}$:
+      which events did the optimum \keyc{skip}, which transitions did it fire
+      \keyc{without a matching event}?
+    \item $\mathcal{L}_{\mathrm{cost}}$: the summed regional cost bounds must
+      match the \keyg{optimal cost} $\delta$
+    \item $\mathcal{L}_{\mathrm{bound}}, \mathcal{L}_{\mathrm{bal}},
+      \mathcal{L}_{\mathrm{ent}}$: regions stay \keyc{connected},
+      \keyc{balanced} in size, and \keyc{decisive}
+  \end{itemize}
+  \vspace{1mm}
+  \centering \small
+  The weights keep \keyc{move imitation dominant}; the decomposition is a
+  regularized \keya{diagnostic}, not the primary objective.
+\end{frame}
+
+% ---------------------------------------------------------------- 7
+\begin{frame}{Where Learning Helps: Duplicate Labels}
+  \begin{columns}[T]
+  \begin{column}{0.54\textwidth}
+    \small
+    The decoder reads the trace \keyc{one event at a time}, always knowing
+    the \keyc{current marking} of the Petri net:
+    \begin{itemize}\setlength{\itemsep}{4pt}
+      \item If exactly \keyg{one} enabled transition carries the event's label,
+        the choice is \keyg{forced by the Petri net}: no learning needed
+      \item If \keyc{several} enabled transitions carry the same label,
+        the learned \keyc{synchronous score} decides which concrete
+        transition the event refers to
+      \item If \keyc{no} such transition is enabled, the \keyc{model-move
+        scores} guide a short search that lets the Petri net catch up
+      \item If even that fails, the event is a deviation:
+        it becomes a \keya{log move}
+    \end{itemize}
+  \end{column}
+  \begin{column}{0.42\textwidth}
+    \begin{center}
+    \begin{tikzpicture}[font=\small]
+      \node[iob] (p1) at (0,0) {$a$};
+      \node[lrn, draw=larablue!75!black, line width=1pt] (b1) at (1.9,0.9) {$b$};
+      \node[iob] (b2) at (1.9,-0.9) {$b$};
+      \node[iob] (c) at (3.8,0.9) {$c$};
+      \node[iob] (d) at (3.8,-0.9) {$d$};
+      \draw[flow] (p1) -- (b1); \draw[flow] (p1) -- (b2);
+      \draw[flow] (b1) -- (c); \draw[flow] (b2) -- (d);
+      \node[flab, text=larablue!70!black] at (1.9,1.85) {sync $0.92$};
+      \node[flab] at (1.9,-1.8) {sync $0.08$};
+      \node[font=\footnotesize, align=center] at (1.9,-3.0)
+        {For the trace $\langle a, b, c\rangle$, both transitions\\
+         labeled $b$ are enabled; only the \keyc{upper}\\
+         branch can continue with $c$, so the\\
+         learned score selects it.};
+    \end{tikzpicture}
+    \end{center}
+  \end{column}
+  \end{columns}
+  \vspace{1mm}
+  \centering \small
+  The candidate is always \keyg{replayable}; \keyg{optimality} is checked by the exact layer.
+\end{frame}
+
+% ---------------------------------------------------------------- 7
+\begin{frame}{Training and Validation Data}
+  \textbf{Exact-labeled synthetic pipeline} (imitation of the exact aligner):
+  \vspace{2mm}
+  \begin{enumerate}\setlength{\itemsep}{6pt}
+    \item \keyc{draw a Petri net} from a curriculum: 80\% linear workflows,
+      20\% \keya{duplicate-label} choices differing only in their suffixes
+    \item \keyc{perturb} a fitting trace with controlled deviations
+      (rate 0.25: delete, insert, duplicate, swap, append)
+    \item \keyc{label} with exact A*: optimal alignment \keyg{with transition identities},
+      replay-verified
+  \end{enumerate}
+  \vspace{4mm}
+  \begin{columns}[T]
+  \begin{column}{0.5\textwidth}
+    \begin{center}
+    \begin{tabular}{lr}
+      \toprule
+      Split & Examples \\
+      \midrule
+      \keyc{Training} & 400 \\
+      \keyc{Validation} & 100 \\
+      \keyc{Test} & 100 \\
+      \bottomrule
+    \end{tabular}
+    \end{center}
+  \end{column}
+  \begin{column}{0.46\textwidth}
+    \small
+    \keyc{Hashed labels} $\Rightarrow$ the model learns \keyg{structure},
+    never vocabulary: one checkpoint for any log.\\[2mm]
+    Training: 22 epochs, about 32 s each, \keyc{single CPU}.
+  \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 8
+\begin{frame}{Evaluation: How}
+  \small
+  \textbf{Protocol}: all runs on a \keyc{single CPU}. LARA always in
+  \keyc{fast mode}: the verified neural candidate is scored \keya{as is},
+  never repaired, so no exact result contaminates the learned metrics.
+  The \keyg{exact A* optimum} $\delta$ is the ground truth for every sample.
+  \vspace{2mm}
+  \begin{itemize}\setlength{\itemsep}{7pt}
+    \item \keyc{In-distribution quality}: 100 held-out examples from the
+      training distribution; measures whether every candidate is
+      \keyg{legal} (replayable), how often its cost \keyg{equals} the
+      optimum $\delta$, and \keyg{how far off} it is otherwise
+    \item \keyc{Guidance ablation}: identical inputs, but the neural scores are
+      replaced by fixed structural tie-breaks; isolates what \keyg{learning}
+      adds over constrained search alone
+    \item \keyc{Scaling benchmark}: random block-structured Petri nets with 5 to
+      40 activities, a family \keya{never seen in training}; locates where the
+      fast path \keyg{overtakes exact A*} in wall time
+    \item \keyc{Zero-shot real life}: two public logs (building permits,
+      road traffic fines) with Petri nets discovered by the inductive miner;
+      \keya{unseen vocabularies, no fine-tuning}; tests foundation-model
+      \keyg{transfer}
+  \end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------- 9
+\begin{frame}{Evaluation: Results}
+  \begin{columns}[T]
+  \begin{column}{0.5\textwidth}
+    \begin{center}
+    \small
+    \begin{tabular}{lr}
+      \toprule
+      In-distribution ($n = 100$) & \\
+      \midrule
+      legal alignments & \keyg{100\%} \\
+      certified optimal & \keyc{88\%} \\
+      mean cost gap & 0.38 \\
+      \bottomrule
+    \end{tabular}
+    \end{center}
+    \vspace{2mm}
+    \small Ablation: learning adds \keyc{$+$27.7 points} on the
+    \keya{duplicate-label} family (94.4\% vs.\ 66.7\%); zero elsewhere.
+  \end{column}
+  \begin{column}{0.46\textwidth}
+    \begin{itemize}\setlength{\itemsep}{6pt}
+      \item \keyg{Legality transfers everywhere}: 100\% on unseen families
+        and real logs
+      \item Fast path \keyc{overtakes exact A*} at about 40 activities
+        (3.7$\times$; 7 to 12$\times$ at 80)
+      \item Real discovered Petri net (invisible-heavy): \keyc{18.5 ms} vs.\ 27.4 ms median
+      \item But: optimal-cost rate \keya{drops to about 30\%} on large unseen Petri nets
+    \end{itemize}
+  \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- 10
+\begin{frame}{What Can Be Improved: Data}
+  \begin{itemize}\setlength{\itemsep}{9pt}
+    \item Training Petri nets are \keya{tiny} (3 to 9 transitions):
+      train on the richer \keyc{block-structured generator}
+      (loops, concurrency, invisible routing at scale)
+    \item Quality does \keya{not transfer to large Petri nets} (about 30\% optimal
+      at 40 activities): \keyc{broader training distributions} are the clear next step
+    \item Only \keya{two real-life logs} tested:
+      validate on \keyc{larger log collections}
+  \end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------- 12
+\begin{frame}{Takeaway}
+  \begin{block}{}
+    \centering \keyc{Learning proposes}, \keyg{exact reasoning certifies}:
+    the result is \keyg{never less trustworthy} than classical alignment.
+  \end{block}
+  \vspace{2mm}
+  \small
+  \begin{itemize}\setlength{\itemsep}{7pt}
+    \item \keyg{Legality is unconditional}: every produced alignment can be
+      replayed from the initial to the final marking, and this held in
+      \keyg{100\%} of the cases on synthetic families, on larger unseen
+      Petri nets, and on real-life logs alike
+    \item \keyc{88\%} of in-distribution candidates already carry the
+      \keyc{exact optimal cost}, so one cheap exact call (about 1 ms) certifies
+      them; the other 12\% are \keyg{repaired exactly}, never returned wrong
+    \item The learned scores pay off exactly on \keya{duplicate labels}:
+      \keyc{94.4\%} optimal with guidance vs.\ 66.7\% without;
+      everywhere else, constrained search alone is already strong
+    \item The fast path stays at the \keyc{forward-pass floor} (8 to 12 ms per
+      trace) and \keyc{overtakes exact A*} at about 40 activities, and already
+      on a real discovered Petri net full of invisible transitions
+  \end{itemize}
+  \vspace{2mm}
+  \centering\small Checkpoint, scripts, and results:
+  \url{https://github.com/fit-alessandro-berti/lara-align}
+\end{frame}
+
+\end{document}
