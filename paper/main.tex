@@ -8,6 +8,8 @@
 \usetikzlibrary{positioning,fit,backgrounds,arrows.meta,calc}
 \usepackage{pgfplots}
 \pgfplotsset{compat=1.16}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
 
 % Entity-stable series colors used across all charts:
 % LARA (guided fast mode) is always blue, the exact backend is always aqua.
@@ -132,7 +134,7 @@
 \renewcommand{\shortauthors}{Alessandro Berti et al.}
 
 \begin{abstract}
-Alignments explain, event by event, how an observed trace deviates from a process model. Computing an optimal alignment, however, requires exact shortest-path search over a synchronous product, which degrades with concurrency, loops, duplicate labels, and invisible transitions, precisely the ingredients of real discovered models. Purely learned aligners are fast but untrustworthy: their output may be illegal or silently suboptimal. This paper introduces LARA (Learned Adaptive Recombined Alignments), a hybrid system in which a neural model proposes and an exact layer verifies. The neural model is a small foundation model for alignment: trained once, offline, on synthetic data, it is vocabulary-free and applies to any net and any log without per-log training or configuration. Its scores drive a constrained decoder, and exact replay checks every candidate, so the output is always a legal alignment with a known cost; on demand, the exact backend upgrades it to a certified optimal one. In the assessment, every produced alignment is legal, and the large majority attains the exact optimal cost. A guidance ablation attributes the learned contribution specifically to duplicate-label resolution, the sub-problem where purely structural heuristics are blind. Legality transfers zero-shot to unseen net families and to real-life event logs, and the learned fast path overtakes exact search on larger synthetic nets and on a real discovered model dominated by invisible transitions.
+Alignments explain, event by event, how a trace deviates from a process model, but computing an optimal alignment requires exact shortest-path search, often the bottleneck on real discovered models. Purely learned aligners are fast but may return illegal or silently suboptimal alignments. LARA (Learned Adaptive Recombined Alignments) combines both: a small neural foundation model, trained once on synthetic data and applicable to any net and any log without retraining, scores alignment moves; a constrained decoder turns the scores into a candidate; exact replay verifies it; and an exact backend certifies or repairs it on demand. Every answer is therefore a legal alignment with a known cost, and optionally a certified optimal one. In the assessment, all produced alignments are legal and 88\% attain the exact optimal cost. An ablation attributes the learned contribution specifically to duplicate-label resolution, where structural heuristics are blind. Legality transfers zero-shot to unseen net families and real-life logs, and the fast path overtakes exact search on larger nets and on a real discovered model dominated by invisible transitions.
 \end{abstract}
 
 \ccsdesc[500]{Information systems~Business process management}
@@ -301,8 +303,9 @@ LARA separates \emph{candidate generation} (learned, fast, uncertified) from \em
 \textbf{A diagnostic decomposition branch.} A learned router additionally assigns transitions and events softly to $R = 8$ latent regions, and per region a small head predicts a local deviation sketch (out of $S = 6$ patterns), lower and upper cost bounds, and an uncertainty estimate; the summed upper bounds are the model's estimate of the total alignment cost, supervised against the optimum. Figure~\ref{fig:regions} illustrates the branch. It is the learned analogue of decomposition-based conformance checking \cite{Aalst2013,Verbeek2016}: the partition is predicted per net and trace pair rather than fixed structurally. This branch is \emph{diagnostic only}: its outputs never reach the decoder or the exact search, since a learned cost bound carries no admissibility guarantee.
 
 \begin{figure}
+\begin{minipage}[t]{0.505\textwidth}
 \centering
-\resizebox{0.57\textwidth}{!}{%
+\resizebox{\linewidth}{!}{%
 \begin{tikzpicture}[font=\small]
 % the net, colored by the latent regions predicted for this trace
 \node[place] (p0) at (0,0) {};
@@ -351,21 +354,12 @@ LARA separates \emph{candidate generation} (learned, fast, uncertified) from \em
 \draw[flow, dashed] (r3.east) to[out=-25,in=180] (e3.west);
 \draw[flow] (e3.south) -- node[flowlab, right] {$\Sigma$ bounds} (sum.north);
 \end{tikzpicture}}
-\caption{The diagnostic decomposition branch on a small duplicate-label choice net, for a trace $\sigma'$ that skips event $b$: the learned router partitions the net into latent regions (three of $R = 8$ shown), local experts predict deviation sketches and cost bounds, and the summed bounds estimate the alignment cost; all outputs are diagnostic only and never reach the decoder or exact search.}
+\caption{The diagnostic decomposition branch on a duplicate-label choice net, for a trace $\sigma'$ that skips event $b$: the router predicts latent regions (three of $R = 8$ shown), local experts predict sketches and cost bounds, and the summed bounds estimate the alignment cost; all outputs are diagnostic only.}
 \label{fig:regions}
-\end{figure}
-
-\subsection{Decoding, Verification, and Certification: From Scores to a Certified Alignment}
-\label{sec:decoding}
-
-\emph{Input:} the system net, the trace $\sigma$, and the move scores of Section~\ref{sec:architecture}. \emph{Output:} a legal alignment whose guarantee depends on the chosen mode: certified optimal, exactly repaired, or a verified upper bound. The learned scores are consumed exclusively by the decoder; the verifier and certifier judge only the resulting alignment object, so the trust boundary of Figure~\ref{fig:architecture} is crossed by an alignment, never by neural output.
-
-
-\textbf{Greedy decoding, guided by the scores.} The decoder walks over the trace once, left to right, and always knows the current marking of the net (Figure~\ref{fig:decoding}); the diagnostic regions of Section~\ref{sec:architecture} play no role here. For each event it must answer one question: which transition, if any, should explain this event? The marking does the coarse work, since only transitions that are enabled and carry the event's label qualify, and three cases remain. (1) Exactly one transition qualifies: it is fired as a synchronous move, and no learned knowledge is needed. (2) Several qualify, which is precisely the duplicate-label situation: the decoder fires the one with the highest synchronous score; a structural tie-break could only guess between look-alike duplicates, while the score is computed with a view of the entire trace and knows which branch the suffix supports. (3) None qualifies: the net must first catch up. A breadth-first search from the current marking, bounded at depth 8, looks for a short sequence of model moves that enables the event; invisible transitions are tried first and the model-move scores order the remaining options, so the scores again decide which routing path through the net the model most plausibly took. If the search finds nothing, the event becomes a log move, once more without any score. After the last event, a final bounded search (depth 32) appends the model moves that reach $m_f$. The marking thus forces everything that can be forced, and the learned scores settle exactly the two choices a greedy pass would otherwise have to guess: which duplicate to synchronize with and which routing path to fire. Since every move is fired on the tracked marking, the candidate $\gamma$ is fireable by construction.
-
-\begin{figure}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.465\textwidth}
 \centering
-\resizebox{0.57\textwidth}{!}{%
+\resizebox{\linewidth}{!}{%
 \begin{tikzpicture}[font=\small]
 % the system net: a duplicate-label choice net with an invisible join
 \node[place] (p0) at (0,0) {};
@@ -417,29 +411,123 @@ LARA separates \emph{candidate generation} (learned, fast, uncertified) from \em
 \node[font=\scriptsize, text=black!55, anchor=west] at (3.15,-3.15)
   {tracked marking: $[p_0] \xrightarrow{t_a} [p_1] \xrightarrow{t_1} [p_2] \xrightarrow{t_c} [p_4] \xrightarrow{\tau} [p_5] = m_f$};
 \end{tikzpicture}}
-\caption{Scoring and greedy decoding on the net of Figure~\ref{fig:regions} for the fitting trace $\sigma = \langle a, b, c \rangle$: at event $b$ two enabled transitions carry the label, so the synchronous scores, informed by the suffix through cross-attention, select $t_1$; the final bounded search reaches $m_f$ through the invisible transition. Every move fires on the tracked marking, so the candidate is fireable by construction.}
+\caption{Guided decoding on the same net for the fitting trace $\sigma = \langle a, b, c \rangle$: at event $b$ two enabled transitions carry the label, so the synchronous scores, informed by the suffix, select $t_1$; the final bounded search reaches $m_f$ through the invisible transition. Every move fires on the tracked marking.}
 \label{fig:decoding}
+\end{minipage}
 \end{figure}
 
-\textbf{Scope of the bounded search.} Exact aligners explore the synchronous product, may revise any decision, and provably return the cheapest alignment \cite{Zelst2018,Dongen2018}; the decoder's search explores model moves only, stops at the \emph{first} marking that enables the next event rather than the cheapest one, and never revisits a commitment. It guarantees that the candidate can be replayed, not that it is cheap; this is the failure mode analyzed in Section~\ref{sec:failure} and the reason the exact layer stays in the loop. A precomputed per-net runtime keeps the search cheap, so the neural forward pass dominates fast-mode wall time.
+\subsection{Decoding, Verification, and Certification: From Scores to a Certified Alignment}
+\label{sec:decoding}
 
-\textbf{Verifier and certifier.} The verifier sees only $\gamma$: it replays the model moves from $m_0$, checks that $m_f$ is reached and that the log projection equals $\sigma$, and computes $c(\gamma)$. The certifier then delivers the requested guarantee: \textsc{fast} returns the verified candidate with $c(\gamma)$ as an upper bound on $\delta$; \textsc{certified} additionally runs the exact aligner and either certifies the candidate by cost equality (Section~\ref{sec:preliminaries}) or returns the exact alignment as repair; \textsc{anytime} degrades gracefully on exact-backend timeouts, returning the best available bounds.
+\emph{Input:} the system net, the trace $\sigma$, and the move scores of Section~\ref{sec:architecture}. \emph{Output:} a legal alignment whose guarantee depends on the chosen mode: certified optimal, exactly repaired, or a verified upper bound. Algorithm~\ref{alg:decode} shows the complete procedure and Figure~\ref{fig:decoding} traces its decoding phase on the running example. The learned scores are consumed exclusively during decoding (lines 1 to 12); the verifier and certifier judge only the resulting alignment object, so the trust boundary of Figure~\ref{fig:architecture} is crossed by an alignment, never by neural output.
+
+\begin{algorithm}
+\caption{Guided greedy decoding, verification, and certification.}
+\label{alg:decode}
+\footnotesize
+\begin{algorithmic}[1]
+\Require system net $SN = (N, m_0, m_f)$, trace $\sigma = \langle a_1, \ldots, a_n \rangle$, move scores of Section~\ref{sec:architecture}, mode
+\State $\gamma \gets \langle\,\rangle$;\quad $m \gets m_0$ \Comment{every appended model component is fired on $m$}
+\For{$i = 1, \ldots, n$}
+  \State $E \gets \{\, t \text{ enabled at } m \mid \lambda(t) = a_i \,\}$
+  \If{$|E| = 1$} append the synchronous move $(a_i, t)$ \Comment{forced by the marking}
+  \ElsIf{$|E| > 1$} append $(a_i, t^\ast)$ with $t^\ast = \arg\max_{t \in E} \mathrm{sync}(i, t)$ \Comment{duplicate labels}
+  \Else{} BFS over model moves from $m$, depth $\leq 8$: invisible transitions first, then by model-move score
+    \If{the search reaches a marking enabling $a_i$} append its model moves, then the synchronous move
+    \Else{} append the log move $(a_i, \gg)$ \Comment{the net cannot catch up}
+    \EndIf
+  \EndIf
+\EndFor
+\State append model moves reaching $m_f$ (bounded search, depth $\leq 32$)
+\State \emph{verify}: replay $\gamma$ from $m_0$; check that $m_f$ is reached and the log projection equals $\sigma$; compute $c(\gamma)$
+\If{mode is \textsc{fast}} \Return $\gamma$ with the verified upper bound $c(\gamma) \geq \delta(\sigma, SN)$
+\Else{} compute $\delta$ by exact A*; \Return $\gamma$ certified if $c(\gamma) = \delta$, else the exact alignment as repair
+\EndIf
+\end{algorithmic}
+\end{algorithm}
+
+The decoder walks over the trace once, left to right, and always knows the current marking, so the candidate $\gamma$ is fireable by construction; the diagnostic regions of Section~\ref{sec:architecture} play no role here. The marking forces everything that can be forced: an event with a unique enabled match synchronizes without any learned knowledge (line 4), and an event that no short model-move sequence can enable becomes a log move (line 8). The learned scores settle exactly the two choices a greedy pass would otherwise guess. Among several enabled transitions carrying the event's label, the duplicate-label situation, the synchronous score selects the identity (line 5): a structural tie-break could only guess between look-alike duplicates, while the score is computed with a view of the entire trace and knows which branch the suffix supports. When the net must first catch up (line 6), the model-move scores decide which routing path through the net the model most plausibly took.
+
+Unlike exact aligners, which explore the synchronous product, may revise any decision, and provably return the cheapest alignment \cite{Zelst2018,Dongen2018}, the bounded searches of lines 6 and 12 explore model moves only, stop at the \emph{first} enabling marking rather than the cheapest one, and never revisit a commitment: they guarantee that the candidate can be replayed, not that it is cheap. This is the failure mode analyzed in Section~\ref{sec:failure} and the reason the exact layer stays in the loop: the verifier (line 13) establishes legality and the cost $c(\gamma)$ by replay, and the certifier (lines 14 and 15) delivers the requested guarantee by cost equality (Section~\ref{sec:preliminaries}) or exact repair. A third mode, \textsc{anytime}, degrades gracefully on exact-backend timeouts and returns the best available bounds. A precomputed per-net runtime keeps the searches cheap, so the neural forward pass dominates fast-mode wall time.
 
 \subsection{Exact-Labeled Training Data}
 \label{sec:data}
 
-The scoring heads are trained by imitation, and imitation is only as good as its labels: every training pair must carry a provably optimal alignment \emph{with transition identities}. Real event logs are a poor source of such labels: the ground truth would still have to be computed by an exact aligner, a log offers no control over how often the hard phenomena (duplicate labels, invisible routing, overlapping deviations) occur, and the instances one would most like to learn from are exactly those where exact labeling is expensive. Synthetic generation turns this around: the generator controls which phenomena the model sees and at which rate, every label is exact by construction, and the supply of data is unlimited. What synthetic data cannot offer, realistic activity names, is irrelevant by design: with the hashed labels of Section~\ref{sec:encoding} the model learns structure, never vocabulary, and the zero-shot results of Section~\ref{sec:reallife} confirm that this transfer works.
+The scoring heads are trained by imitation, so every training pair must carry a provably optimal alignment \emph{with transition identities}. Real event logs are a poor source of such labels: the ground truth would still have to be computed by an exact aligner, the hard phenomena (duplicate labels, invisible routing, overlapping deviations) occur at uncontrolled rates, and the most instructive instances are exactly the most expensive to label. Synthetic generation turns this around: phenomena appear at controlled rates, every label is exact by construction, and the supply of data is unlimited. What synthetic data cannot offer, realistic activity names, is irrelevant by design: with the hashed labels of Section~\ref{sec:encoding} the model learns structure, never vocabulary, and the zero-shot results of Section~\ref{sec:reallife} confirm the transfer.
 
-Each example is produced in three steps. First, a net is drawn from a curriculum in which every family is the smallest structure that isolates one of the two learned decisions of Section~\ref{sec:decoding}, so that the supervision signal for each decision is undiluted: with probability 0.8 a linear workflow over 3 to 8 activities, optionally opened by an invisible transition, on which the model learns where deviations belong, and with probability 0.2 a duplicate-label choice whose two branches start with the same label and differ only in their suffixes, on which identity resolution is learnable precisely because the ambiguous event itself carries no signal. Second, a fitting trace is perturbed with controlled deviations (rate 0.25: deletion, insertion, duplication, swap, append). Third, the exact backend computes an optimal alignment with transition identities and its cost, and every label must additionally pass replay verification, so no incorrect supervision can enter the corpus. The reference corpus is the intentionally compact first stage of this curriculum, 400 training examples (plus 100 validation and 100 test, jointly stratified by family and optimal cost) with traces averaging 5.3 events and optimal costs 0 to 6. The pipeline is generator-agnostic: richer families such as the block-structured generator of Section~\ref{sec:scaling} plug in without changing anything else, and the assessment measures precisely what this first curriculum stage teaches.
+Each example is produced in three steps. First, a net is drawn from a curriculum in which every family isolates one of the two learned decisions of Section~\ref{sec:decoding}, keeping the supervision signal undiluted: with probability 0.8 a linear workflow over 3 to 8 activities, optionally opened by an invisible transition, and with probability 0.2 a duplicate-label choice whose branches start with the same label and differ only in their suffixes, so identity resolution must be learned from context. Second, a fitting trace is perturbed with controlled deviations (rate 0.25: deletion, insertion, duplication, swap, append). Third, the exact backend computes an optimal alignment with transition identities and its cost, and every label must additionally pass replay verification, so no incorrect supervision enters the corpus. The reference corpus is the intentionally compact first stage of this curriculum: 400 training examples (plus 100 validation and 100 test, jointly stratified by family and optimal cost) with traces averaging 5.3 events and optimal costs 0 to 6. The pipeline is generator-agnostic: richer families such as the block-structured generator of Section~\ref{sec:scaling} plug in without changing anything else.
 
 \subsection{Training Objective and Procedure}
 \label{sec:training}
 
-The exact aligner already answers every alignment question, only too slowly, so the model learns to \emph{imitate} it on the corpus of Section~\ref{sec:data}, well enough that the greedy decoder of Section~\ref{sec:decoding} makes the same choices at a fraction of the cost. Every term of the loss holds one output of Section~\ref{sec:architecture} against what the exact aligner did:
+The exact aligner already answers every alignment question, only too slowly, so the model learns to \emph{imitate} it on the corpus of Section~\ref{sec:data}, well enough that the greedy decoder of Section~\ref{sec:decoding} makes the same choices at a fraction of the cost; Figure~\ref{fig:training} illustrates this imitation on a toy duplicate-label pair. Every term of the loss holds one output of Section~\ref{sec:architecture} against what the exact aligner did:
 \begin{equation*}
 \mathcal{L} = w_m (\mathcal{L}_{\mathrm{sync}} + \mathcal{L}_{\mathrm{log}} + \mathcal{L}_{\mathrm{model}}) + w_c \mathcal{L}_{\mathrm{cost}} + w_b \mathcal{L}_{\mathrm{bound}} + w_\ell \mathcal{L}_{\mathrm{bal}} + w_e \mathcal{L}_{\mathrm{ent}}.
 \end{equation*}
 The first three terms make the model imitate the moves of the optimal alignment and correspond to the three alignment questions of Section~\ref{sec:architecture}. $\mathcal{L}_{\mathrm{sync}}$ asks whether the model points to the transition the optimal alignment actually fired: a cross-entropy over transition \emph{identities} rather than labels, which is precisely what teaches duplicate-label resolution. $\mathcal{L}_{\mathrm{log}}$ asks whether the model recognizes the events the optimum skipped, and $\mathcal{L}_{\mathrm{model}}$ whether it recognizes the transitions the optimum fired without a matching event; both are binary cross-entropies. The remaining terms train the diagnostic decomposition branch. $\mathcal{L}_{\mathrm{cost}}$ compares the summed regional upper bounds with the optimal cost $\delta$ (smooth L1), so the regions together must account for the total deviation of the trace. The last three terms shape the regions themselves: $\mathcal{L}_{\mathrm{bound}}$ penalizes assignments in which two transitions connected to the same place fall into different regions, so that regions are connected fragments of the net; $\mathcal{L}_{\mathrm{bal}}$ penalizes variance in region sizes, so that no single region absorbs the whole net; and $\mathcal{L}_{\mathrm{ent}}$ penalizes the entropy of the soft assignments, so that every node is placed decisively. The weights ($w_m = 1.0$, $w_c = 0.03$, $w_b = w_\ell = 0.01$, $w_e = 0.001$) keep imitation dominant: the decomposition is a regularized diagnostic, not the primary objective.
+
+\begin{figure}
+\centering
+\resizebox{0.74\textwidth}{!}{%
+\begin{tikzpicture}[font=\small]
+% panel 1: randomly initialized model
+\node[stagelab, text=black!60] at (1.05,1.95) {1.\ random initialization};
+\node[place] (pa) at (0,0) {};
+\fill[black!70] (pa.center) circle (0.7mm);
+\node[trans] (ta1) at (1.15,0.75) {$b$};
+\node[trans] (ta2) at (1.15,-0.75) {$b$};
+\draw[netarc] (pa) -- (ta1); \draw[netarc] (pa) -- (ta2);
+\node[scorebadgelow, above=1.1mm of ta1] {$t_1$: sync $0.51$};
+\node[scorebadgelow, below=1.1mm of ta2] {$t_2$: sync $0.49$};
+\draw[black!70, fill=black!8] (0.7,-2.45) rectangle +(0.3,0.3);
+\node[font=\tiny, text=black!70] at (0.85,-2.3) {$b$};
+\draw[black!70, fill=black!8] (1.1,-2.45) rectangle +(0.3,0.3);
+\node[font=\tiny, text=black!70] at (1.25,-2.3) {$c$};
+\node[font=\small, anchor=east] at (0.6,-2.3) {$\sigma'' =$};
+\node[font=\scriptsize, text=black!55, align=center] at (1.05,-3.05)
+  {scores $\approx$ uniform: the\\duplicates are indistinguishable};
+% panel 2: message exchange and imitation of the exact teacher
+\node[stagelab, text=black!60] at (5.35,1.95) {2.\ message exchange $+$ imitation};
+\node[place] (pb) at (4.3,0) {};
+\fill[black!70] (pb.center) circle (0.7mm);
+\node[trans, draw=seriesaqua!70!black, line width=1.1pt] (tb1) at (5.45,0.75) {$b$};
+\node[trans] (tb2) at (5.45,-0.75) {$b$};
+\draw[netarc] (pb) -- (tb1); \draw[netarc] (pb) -- (tb2);
+\node[font=\scriptsize, text=seriesaqua!45!black, left=1mm of tb1] {$\gamma^\ast$};
+\node[scorebadge, above=1.1mm of tb1] {$t_1$: sync $0.71\,\uparrow$};
+\node[scorebadgelow, below=1.1mm of tb2] {$t_2$: sync $0.29\,\downarrow$};
+\draw[black!70, fill=black!8] (5.0,-2.45) rectangle +(0.3,0.3);
+\node[font=\tiny, text=black!70] at (5.15,-2.3) {$b$};
+\draw[black!70, fill=black!8] (5.4,-2.45) rectangle +(0.3,0.3);
+\node[font=\tiny, text=black!70] at (5.55,-2.3) {$c$};
+\node[font=\small, anchor=east] at (4.9,-2.3) {$\sigma'' =$};
+\draw[biflow, dashed, draw=black!50] (5.35,-2.1) -- (5.35,-1.58);
+\node[flowlab, anchor=west] at (5.5,-1.84) {messages};
+\node[font=\scriptsize, text=black!55, align=center] at (5.35,-3.05)
+  {cross-entropy on identities pulls\\the sync scores toward $t_1$};
+% panel 3: after training
+\node[stagelab, text=black!60] at (9.65,1.95) {3.\ after training};
+\node[place] (pc) at (8.6,0) {};
+\fill[black!70] (pc.center) circle (0.7mm);
+\node[trans] (tc1) at (9.75,0.75) {$b$};
+\node[trans] (tc2) at (9.75,-0.75) {$b$};
+\draw[netarc] (pc) -- (tc1); \draw[netarc] (pc) -- (tc2);
+\node[scorebadge, above=1.1mm of tc1] {$t_1$: sync $0.92$};
+\node[scorebadgelow, below=1.1mm of tc2] {$t_2$: sync $0.08$};
+\draw[black!70, fill=black!8] (9.3,-2.45) rectangle +(0.3,0.3);
+\node[font=\tiny, text=black!70] at (9.45,-2.3) {$b$};
+\draw[seriesblue!75!black, fill=seriesblue!12] (9.7,-2.45) rectangle +(0.3,0.3);
+\node[font=\tiny, text=seriesblue!60!black] at (9.85,-2.3) {$c$};
+\node[font=\small, anchor=east] at (9.2,-2.3) {$\sigma'' =$};
+\node[font=\scriptsize, text=black!55, align=center] at (9.65,-3.05)
+  {the suffix $c$, seen through\\cross-attention, separates them};
+% progression arrows
+\draw[flow] (2.25,0) -- node[flowlab, above] {gradient\\steps} (3.75,0);
+\draw[flow] (6.55,0) -- node[flowlab, above] {more\\epochs} (8.05,0);
+\end{tikzpicture}}
+\caption{Toy example of how the foundation model is trained, on a duplicate-label pair and the trace $\sigma'' = \langle b, c \rangle$: the randomly initialized model scores both transitions labeled $b$ alike; during training, net and trace representations exchange messages while the cross-entropy on transition identities pulls the synchronous scores toward the transition fired by the exact teacher alignment $\gamma^\ast$; after convergence the checkpoint resolves such duplicates from the trace suffix alone, yielding scores like those of Figure~\ref{fig:decoding}.}
+\label{fig:training}
+\end{figure}
 
 The procedure itself is standard and computationally modest, which matters for a foundation model that is trained once and then reused: with AdamW and early stopping (all hyperparameters in the repository, Section~\ref{sec:implementation}), the reference run needs 22 epochs of roughly 32 seconds each on a single CPU, reaching its best validation loss at epoch 18 (Figure~\ref{fig:panels}, left); the synchronous head converges to a near-zero loss, while deciding whether an event is a deviation remains the hardest sub-task.
 
