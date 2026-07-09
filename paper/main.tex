@@ -450,6 +450,90 @@ The decoder walks over the trace once, left to right, and always knows the curre
 
 Unlike exact aligners, which explore the synchronous product, may revise any decision, and provably return the cheapest alignment \cite{Zelst2018,Dongen2018}, the bounded searches of lines 6 and 12 explore model moves only, stop at the \emph{first} enabling marking rather than the cheapest one, and never revisit a commitment: they guarantee that the candidate can be replayed, not that it is cheap. This is the failure mode analyzed in Section~\ref{sec:failure} and the reason the exact layer stays in the loop: the verifier (line 13) establishes legality and the cost $c(\gamma)$ by replay, and the certifier (lines 14 and 15) delivers the requested guarantee by cost equality (Section~\ref{sec:preliminaries}) or exact repair. A third mode, \textsc{anytime}, degrades gracefully on exact-backend timeouts and returns the best available bounds. A precomputed per-net runtime keeps the searches cheap, so the neural forward pass dominates fast-mode wall time.
 
+% Width of the toy training figure as a fraction of the text width:
+% adjust this single macro to resize the whole figure.
+\newcommand{\trainingfigwidth}{0.7\textwidth}
+\begin{figure}[b]
+\centering
+\resizebox{\trainingfigwidth}{!}{%
+\begin{tikzpicture}[font=\small]
+% panel 1: randomly initialized model
+\node[stagelab, text=black!60] at (1.4,1.95) {1.\ random initialization};
+\node[place] (pa) at (0,0) {};
+\fill[black!70] (pa.center) circle (0.7mm);
+\node[trans] (ta1) at (1.15,0.75) {$b$};
+\node[trans] (ta2) at (1.15,-0.75) {$b$};
+\node[place] (qa1) at (2.0,0.75) {};
+\node[place] (qa2) at (2.0,-0.75) {};
+\node[trans] (ca) at (2.85,0.75) {$c$};
+\node[trans] (da) at (2.85,-0.75) {$d$};
+\draw[netarc] (pa) -- (ta1); \draw[netarc] (pa) -- (ta2);
+\draw[netarc] (ta1) -- (qa1); \draw[netarc] (ta2) -- (qa2);
+\draw[netarc] (qa1) -- (ca); \draw[netarc] (qa2) -- (da);
+\node[scorebadgelow, above=1.1mm of ta1] {$t_1$: sync $0.51$};
+\node[scorebadgelow, below=1.1mm of ta2] {$t_2$: sync $0.49$};
+\draw[black!70, fill=black!8] (1.05,-2.45) rectangle +(0.3,0.3);
+\node[font=\tiny, text=black!70] at (1.2,-2.3) {$b$};
+\draw[black!70, fill=black!8] (1.45,-2.45) rectangle +(0.3,0.3);
+\node[font=\tiny, text=black!70] at (1.6,-2.3) {$c$};
+\node[font=\small, anchor=east] at (0.95,-2.3) {$\sigma'' =$};
+\node[font=\scriptsize, text=black!55, align=center] at (1.4,-3.05)
+  {scores $\approx$ uniform: the\\duplicates are indistinguishable};
+% panel 2: message exchange and imitation of the exact teacher
+\node[stagelab, text=black!60] at (6.4,1.95) {2.\ message exchange $+$ imitation};
+\node[place] (pb) at (5.0,0) {};
+\fill[black!70] (pb.center) circle (0.7mm);
+\node[trans, draw=seriesaqua!70!black, line width=1.1pt] (tb1) at (6.15,0.75) {$b$};
+\node[trans] (tb2) at (6.15,-0.75) {$b$};
+\node[place] (qb1) at (7.0,0.75) {};
+\node[place] (qb2) at (7.0,-0.75) {};
+\node[trans] (cb) at (7.85,0.75) {$c$};
+\node[trans] (db) at (7.85,-0.75) {$d$};
+\draw[netarc] (pb) -- (tb1); \draw[netarc] (pb) -- (tb2);
+\draw[netarc] (tb1) -- (qb1); \draw[netarc] (tb2) -- (qb2);
+\draw[netarc] (qb1) -- (cb); \draw[netarc] (qb2) -- (db);
+\node[font=\scriptsize, text=seriesaqua!45!black, left=1mm of tb1] {$\gamma^\ast$};
+\node[scorebadge, above=1.1mm of tb1] {$t_1$: sync $0.71\,\uparrow$};
+\node[scorebadgelow, below=1.1mm of tb2] {$t_2$: sync $0.29\,\downarrow$};
+\draw[black!70, fill=black!8] (6.05,-2.45) rectangle +(0.3,0.3);
+\node[font=\tiny, text=black!70] at (6.2,-2.3) {$b$};
+\draw[black!70, fill=black!8] (6.45,-2.45) rectangle +(0.3,0.3);
+\node[font=\tiny, text=black!70] at (6.6,-2.3) {$c$};
+\node[font=\small, anchor=east] at (5.95,-2.3) {$\sigma'' =$};
+\draw[biflow, dashed, draw=black!50] (6.4,-2.1) -- (6.4,-1.58);
+\node[flowlab, anchor=west] at (6.55,-1.84) {messages};
+\node[font=\scriptsize, text=black!55, align=center] at (6.4,-3.05)
+  {cross-entropy on identities pulls\\the sync scores toward $t_1$};
+% panel 3: after training
+\node[stagelab, text=black!60] at (11.4,1.95) {3.\ after training};
+\node[place] (pc) at (10.0,0) {};
+\fill[black!70] (pc.center) circle (0.7mm);
+\node[trans] (tc1) at (11.15,0.75) {$b$};
+\node[trans] (tc2) at (11.15,-0.75) {$b$};
+\node[place] (qc1) at (12.0,0.75) {};
+\node[place] (qc2) at (12.0,-0.75) {};
+\node[trans, draw=seriesblue!75!black, line width=1.1pt] (cc) at (12.85,0.75) {$c$};
+\node[trans] (dc) at (12.85,-0.75) {$d$};
+\draw[netarc] (pc) -- (tc1); \draw[netarc] (pc) -- (tc2);
+\draw[netarc] (tc1) -- (qc1); \draw[netarc] (tc2) -- (qc2);
+\draw[netarc] (qc1) -- (cc); \draw[netarc] (qc2) -- (dc);
+\node[scorebadge, above=1.1mm of tc1] {$t_1$: sync $0.92$};
+\node[scorebadgelow, below=1.1mm of tc2] {$t_2$: sync $0.08$};
+\draw[black!70, fill=black!8] (11.05,-2.45) rectangle +(0.3,0.3);
+\node[font=\tiny, text=black!70] at (11.2,-2.3) {$b$};
+\draw[seriesblue!75!black, fill=seriesblue!12] (11.45,-2.45) rectangle +(0.3,0.3);
+\node[font=\tiny, text=seriesblue!60!black] at (11.6,-2.3) {$c$};
+\node[font=\small, anchor=east] at (10.95,-2.3) {$\sigma'' =$};
+\node[font=\scriptsize, text=black!55, align=center] at (11.4,-3.05)
+  {the suffix $c$ only fits the\\branch of $t_1$: scores separate};
+% progression arrows
+\draw[flow] (3.35,0) -- node[flowlab, above] {gradient\\steps} (4.75,0);
+\draw[flow] (8.35,0) -- node[flowlab, above] {more\\epochs} (9.75,0);
+\end{tikzpicture}}
+\caption{Toy example of how the foundation model is trained, on a duplicate-label choice whose branches continue with $c$ and $d$, for the trace $\sigma'' = \langle b, c \rangle$: the randomly initialized model scores both transitions labeled $b$ alike; during training, net and trace representations exchange messages while the cross-entropy on transition identities pulls the synchronous scores toward the transition fired by the exact teacher alignment $\gamma^\ast$; after convergence the checkpoint recognizes that the suffix $c$ only fits the branch of $t_1$, yielding scores like those of Figure~\ref{fig:decoding}.}
+\label{fig:training}
+\end{figure}
+
 \subsection{Exact-Labeled Training Data}
 \label{sec:data}
 
@@ -466,68 +550,6 @@ The exact aligner already answers every alignment question, only too slowly, so 
 \end{equation*}
 The first three terms make the model imitate the moves of the optimal alignment and correspond to the three alignment questions of Section~\ref{sec:architecture}. $\mathcal{L}_{\mathrm{sync}}$ asks whether the model points to the transition the optimal alignment actually fired: a cross-entropy over transition \emph{identities} rather than labels, which is precisely what teaches duplicate-label resolution. $\mathcal{L}_{\mathrm{log}}$ asks whether the model recognizes the events the optimum skipped, and $\mathcal{L}_{\mathrm{model}}$ whether it recognizes the transitions the optimum fired without a matching event; both are binary cross-entropies. The remaining terms train the diagnostic decomposition branch. $\mathcal{L}_{\mathrm{cost}}$ compares the summed regional upper bounds with the optimal cost $\delta$ (smooth L1), so the regions together must account for the total deviation of the trace. The last three terms shape the regions themselves: $\mathcal{L}_{\mathrm{bound}}$ penalizes assignments in which two transitions connected to the same place fall into different regions, so that regions are connected fragments of the net; $\mathcal{L}_{\mathrm{bal}}$ penalizes variance in region sizes, so that no single region absorbs the whole net; and $\mathcal{L}_{\mathrm{ent}}$ penalizes the entropy of the soft assignments, so that every node is placed decisively. The weights ($w_m = 1.0$, $w_c = 0.03$, $w_b = w_\ell = 0.01$, $w_e = 0.001$) keep imitation dominant: the decomposition is a regularized diagnostic, not the primary objective.
 
-\begin{figure}
-\centering
-\resizebox{0.74\textwidth}{!}{%
-\begin{tikzpicture}[font=\small]
-% panel 1: randomly initialized model
-\node[stagelab, text=black!60] at (1.05,1.95) {1.\ random initialization};
-\node[place] (pa) at (0,0) {};
-\fill[black!70] (pa.center) circle (0.7mm);
-\node[trans] (ta1) at (1.15,0.75) {$b$};
-\node[trans] (ta2) at (1.15,-0.75) {$b$};
-\draw[netarc] (pa) -- (ta1); \draw[netarc] (pa) -- (ta2);
-\node[scorebadgelow, above=1.1mm of ta1] {$t_1$: sync $0.51$};
-\node[scorebadgelow, below=1.1mm of ta2] {$t_2$: sync $0.49$};
-\draw[black!70, fill=black!8] (0.7,-2.45) rectangle +(0.3,0.3);
-\node[font=\tiny, text=black!70] at (0.85,-2.3) {$b$};
-\draw[black!70, fill=black!8] (1.1,-2.45) rectangle +(0.3,0.3);
-\node[font=\tiny, text=black!70] at (1.25,-2.3) {$c$};
-\node[font=\small, anchor=east] at (0.6,-2.3) {$\sigma'' =$};
-\node[font=\scriptsize, text=black!55, align=center] at (1.05,-3.05)
-  {scores $\approx$ uniform: the\\duplicates are indistinguishable};
-% panel 2: message exchange and imitation of the exact teacher
-\node[stagelab, text=black!60] at (5.35,1.95) {2.\ message exchange $+$ imitation};
-\node[place] (pb) at (4.3,0) {};
-\fill[black!70] (pb.center) circle (0.7mm);
-\node[trans, draw=seriesaqua!70!black, line width=1.1pt] (tb1) at (5.45,0.75) {$b$};
-\node[trans] (tb2) at (5.45,-0.75) {$b$};
-\draw[netarc] (pb) -- (tb1); \draw[netarc] (pb) -- (tb2);
-\node[font=\scriptsize, text=seriesaqua!45!black, left=1mm of tb1] {$\gamma^\ast$};
-\node[scorebadge, above=1.1mm of tb1] {$t_1$: sync $0.71\,\uparrow$};
-\node[scorebadgelow, below=1.1mm of tb2] {$t_2$: sync $0.29\,\downarrow$};
-\draw[black!70, fill=black!8] (5.0,-2.45) rectangle +(0.3,0.3);
-\node[font=\tiny, text=black!70] at (5.15,-2.3) {$b$};
-\draw[black!70, fill=black!8] (5.4,-2.45) rectangle +(0.3,0.3);
-\node[font=\tiny, text=black!70] at (5.55,-2.3) {$c$};
-\node[font=\small, anchor=east] at (4.9,-2.3) {$\sigma'' =$};
-\draw[biflow, dashed, draw=black!50] (5.35,-2.1) -- (5.35,-1.58);
-\node[flowlab, anchor=west] at (5.5,-1.84) {messages};
-\node[font=\scriptsize, text=black!55, align=center] at (5.35,-3.05)
-  {cross-entropy on identities pulls\\the sync scores toward $t_1$};
-% panel 3: after training
-\node[stagelab, text=black!60] at (9.65,1.95) {3.\ after training};
-\node[place] (pc) at (8.6,0) {};
-\fill[black!70] (pc.center) circle (0.7mm);
-\node[trans] (tc1) at (9.75,0.75) {$b$};
-\node[trans] (tc2) at (9.75,-0.75) {$b$};
-\draw[netarc] (pc) -- (tc1); \draw[netarc] (pc) -- (tc2);
-\node[scorebadge, above=1.1mm of tc1] {$t_1$: sync $0.92$};
-\node[scorebadgelow, below=1.1mm of tc2] {$t_2$: sync $0.08$};
-\draw[black!70, fill=black!8] (9.3,-2.45) rectangle +(0.3,0.3);
-\node[font=\tiny, text=black!70] at (9.45,-2.3) {$b$};
-\draw[seriesblue!75!black, fill=seriesblue!12] (9.7,-2.45) rectangle +(0.3,0.3);
-\node[font=\tiny, text=seriesblue!60!black] at (9.85,-2.3) {$c$};
-\node[font=\small, anchor=east] at (9.2,-2.3) {$\sigma'' =$};
-\node[font=\scriptsize, text=black!55, align=center] at (9.65,-3.05)
-  {the suffix $c$, seen through\\cross-attention, separates them};
-% progression arrows
-\draw[flow] (2.25,0) -- node[flowlab, above] {gradient\\steps} (3.75,0);
-\draw[flow] (6.55,0) -- node[flowlab, above] {more\\epochs} (8.05,0);
-\end{tikzpicture}}
-\caption{Toy example of how the foundation model is trained, on a duplicate-label pair and the trace $\sigma'' = \langle b, c \rangle$: the randomly initialized model scores both transitions labeled $b$ alike; during training, net and trace representations exchange messages while the cross-entropy on transition identities pulls the synchronous scores toward the transition fired by the exact teacher alignment $\gamma^\ast$; after convergence the checkpoint resolves such duplicates from the trace suffix alone, yielding scores like those of Figure~\ref{fig:decoding}.}
-\label{fig:training}
-\end{figure}
 
 The procedure itself is standard and computationally modest, which matters for a foundation model that is trained once and then reused: with AdamW and early stopping (all hyperparameters in the repository, Section~\ref{sec:implementation}), the reference run needs 22 epochs of roughly 32 seconds each on a single CPU, reaching its best validation loss at epoch 18 (Figure~\ref{fig:panels}, left); the synchronous head converges to a near-zero loss, while deciding whether an event is a deviation remains the hardest sub-task.
 
