@@ -18,4 +18,5 @@ runs/
 *.fls
 *.log
 *.fdb*
+!presentation/*.pdf
 
