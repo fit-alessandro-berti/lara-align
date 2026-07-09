@@ -7,6 +7,8 @@
 \usepackage{tikz}
 \usetikzlibrary{positioning,fit,backgrounds,arrows.meta,calc}
 \usepackage{booktabs}
+\usepackage{pgfplots}
+\pgfplotsset{compat=1.16}
 
 \definecolor{larablue}{HTML}{2A78D6}
 \definecolor{laraaqua}{HTML}{1BAF7A}
@@ -373,6 +375,180 @@
   \vspace{2mm}
   \centering\small Checkpoint, scripts, and results:
   \url{https://github.com/fit-alessandro-berti/lara-align}
+\end{frame}
+
+% ================================================================ appendix
+\appendix
+
+\begin{frame}
+  \centering
+  {\LARGE \textbf{\textcolor{larablue}{Appendix}}}\\[3mm]
+  {\large Detailed Evaluation Results}\\[5mm]
+  \small LARA always in fast mode; exact A* optimum as ground truth.
+\end{frame}
+
+% ---------------------------------------------------------------- A2
+\begin{frame}{Appendix: In-Distribution Results}
+  \begin{columns}[T]
+  \begin{column}{0.46\textwidth}
+    \vspace{2mm}
+    \begin{center}
+    \small
+    \begin{tabular}{lr}
+      \toprule
+      Held-out test split ($n = 100$) & \\
+      \midrule
+      replayable (legal) & \keyg{100.0\%} \\
+      certified optimal & \keyc{88.0\%} \\
+      exact transition-sequence match & 68.0\% \\
+      mean / median cost gap & 0.38 / 0.00 \\
+      p95 / max cost gap & 4.0 / 6.0 \\
+      \bottomrule
+    \end{tabular}
+    \end{center}
+    \vspace{3mm}
+    \small All non-zero gaps are \keya{even}: the signature of the greedy
+    decoder trading $k$ synchronous moves for $k$ model $+$ $k$ log moves,
+    a penalty of exactly $2k$.
+  \end{column}
+  \begin{column}{0.5\textwidth}
+    \begin{center}
+    \begin{tikzpicture}
+    \begin{axis}[
+      ybar, bar width=13pt,
+      width=\linewidth, height=5.2cm,
+      xlabel={cost gap (candidate minus optimal)},
+      ylabel={number of traces},
+      xmin=-0.7, xmax=6.7, ymin=0, ymax=100,
+      xtick={0,1,2,3,4,5,6},
+      axis lines=left, axis line style={black!45},
+      ticklabel style={font=\footnotesize},
+      label style={font=\footnotesize},
+      nodes near coords,
+      every node near coord/.append style={font=\footnotesize, color=black!70},
+    ]
+    \addplot[fill=larablue, draw=none] coordinates {(0,88)(2,6)(4,5)(6,1)};
+    \end{axis}
+    \end{tikzpicture}
+    \end{center}
+  \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- A3
+\begin{frame}{Appendix: Guidance Ablation}
+  Identical inputs and decoder; only the neural scores are replaced by fixed
+  structural tie-breaks:
+  \vspace{2mm}
+  \begin{center}
+  \small
+  \begin{tabular}{lrrr}
+    \toprule
+    Metric ($n = 100$) & unguided & guided & $\Delta$ \\
+    \midrule
+    replayable & 100.0\% & 100.0\% & 0.0 \\
+    equal to optimum cost & 83.0\% & \keyc{88.0\%} & $+$5.0 \\
+    exact transition-sequence match & 63.0\% & \keyc{68.0\%} & $+$5.0 \\
+    mean cost gap & 0.48 & \keyc{0.38} & $-$0.10 \\
+    sequence family, optimal ($n = 82$) & 86.6\% & 86.6\% & 0.0 \\
+    duplicate-label family, optimal ($n = 18$) & 66.7\% & \keyc{94.4\%} & \keyg{$+$27.7} \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{3mm}
+  \begin{itemize}\setlength{\itemsep}{4pt}
+    \item On \keyc{sequence} Petri nets every event has at most one matching
+      transition, so guidance changes \keya{nothing}
+    \item The \keyg{entire} in-distribution contribution of learning sits in
+      \keya{duplicate-label} identity resolution, exactly as the mechanism predicts
+  \end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------- A4
+\begin{frame}{Appendix: Scaling Benchmark}
+  Random block-structured Petri nets, \keya{never seen in training}
+  (10 samples per configuration, 30 s exact timeout):
+  \vspace{1mm}
+  \begin{columns}[T]
+  \begin{column}{0.5\textwidth}
+    \begin{center}
+    \footnotesize
+    \begin{tabular}{rrrrr}
+      \toprule
+      size & legal & optimal & fast med. & exact med. \\
+      \midrule
+       5 & 100\% & 80\% & 14.9 ms & 1.0 ms \\
+      10 & 100\% & 80\% &  7.9 ms & 1.4 ms \\
+      20 & 100\% & 60\% &  9.9 ms & 2.2 ms \\
+      40 & 100\% & 30\% & 12.1 ms & \keya{44.0 ms} \\
+      \bottomrule
+    \end{tabular}
+    \end{center}
+    \vspace{2mm}
+    \small (deviation rate 0.15 shown)\\[2mm]
+    \keyg{Legality is scale-invariant}; the optimal-cost rate
+    \keya{drops} out of distribution, while the fast path stays at the
+    \keyc{forward-pass floor}.
+  \end{column}
+  \begin{column}{0.46\textwidth}
+    \begin{center}
+    \begin{tikzpicture}
+    \begin{axis}[
+      width=\linewidth, height=5.4cm,
+      xlabel={visible activities},
+      ylabel={median ms per trace},
+      xmode=log, log ticks with fixed point, xtick={5,10,20,40},
+      ymode=log, log ticks with fixed point, ytick={1,2,5,10,20,50},
+      axis lines=left, axis line style={black!45},
+      ticklabel style={font=\footnotesize},
+      label style={font=\footnotesize},
+      legend style={draw=none, fill=none, font=\scriptsize,
+        at={(0.5,1.02)}, anchor=south, legend columns=2},
+      every axis plot/.append style={line width=1.1pt},
+    ]
+    \addplot[larablue, mark=*, mark size=1.5pt]
+      coordinates {(5,14.9)(10,7.9)(20,9.9)(40,12.1)};
+    \addlegendentry{LARA fast}
+    \addplot[laraaqua, mark=square*, mark size=1.4pt]
+      coordinates {(5,1.0)(10,1.4)(20,2.2)(40,44.0)};
+    \addlegendentry{exact A*}
+    \end{axis}
+    \end{tikzpicture}
+    \end{center}
+    \small Crossover at about \keyc{40 activities}; first exact
+    \keya{timeouts} appear there.
+  \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- A5
+\begin{frame}{Appendix: Zero-Shot Results on Real-Life Logs}
+  Same checkpoint, \keya{no fine-tuning}; Petri nets discovered by the
+  inductive miner (noise 0.0 $=$ perfectly fitting, 0.5 $=$ filtered):
+  \vspace{2mm}
+  \begin{center}
+  \footnotesize
+  \begin{tabular}{llrrrr}
+    \toprule
+    Log & Noise & Legal & Optimal (trace-wtd.) & Max gap & Median LARA / exact \\
+    \midrule
+    road traffic & 0.0 & \keyg{100\%} & 100.0\% & 0 & 8.0 / 1.7 ms \\
+    road traffic & 0.5 & \keyg{100\%} & 94.0\%  & 3 & 7.9 / 1.3 ms \\
+    receipt      & 0.0 & \keyg{100\%} & 82.6\%  & 5 & \keyc{18.5 / 27.4 ms} \\
+    receipt      & 0.5 & \keyg{100\%} & 74.6\%  & 7 & 8.9 / 8.1 ms \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{3mm}
+  \begin{itemize}\setlength{\itemsep}{5pt}
+    \item \keyg{Legality transfers perfectly} to unseen vocabularies and
+      invisible-heavy discovered models (47 invisible vs.\ 27 visible
+      transitions on the fitting receipt net)
+    \item Optimality is strong on \keyc{frequent} behavior; misses concentrate
+      in \keya{rare, long variants} and remain safe upper bounds
+    \item On the largest discovered Petri net, the fast path \keyc{beats exact
+      A*} on a real log (18.5 vs.\ 27.4 ms median)
+  \end{itemize}
 \end{frame}
 
 \end{document}
