@@ -197,6 +197,60 @@
 \end{frame}
 
 % ---------------------------------------------------------------- 7
+\begin{frame}{From Petri Net + Trace to Transition Likelihoods}
+  \begin{center}
+  \resizebox{0.98\textwidth}{!}{%
+  \begin{tikzpicture}[font=\scriptsize, x=1cm, y=1cm]
+    % Petri-net branch
+    \node[iob, minimum width=28mm] (net) at (0,1.55)
+      {\textbf{typed Petri graph}\\places: $m_0,m_f$, degrees\\transitions: label, $\tau$, costs};
+    \node[lrn, minimum width=27mm] (graph) at (3.7,1.55)
+      {\textbf{graph transformer}\\3 layers; 4 arc types\\forward + reverse};
+    \node[lrn, minimum width=20mm] (trans) at (7.05,1.55)
+      {$h_j\in\mathbb{R}^{128}$\\per transition $t_j$};
+    % Trace branch
+    \node[iob, minimum width=28mm] (trace) at (0,-1.05)
+      {\textbf{trace} $\sigma=\langle a_1,\ldots,a_n\rangle$\\BLAKE2b label ids\\shared with transitions};
+    \node[lrn, minimum width=27mm] (seq) at (3.7,-1.05)
+      {\textbf{trace transformer}\\2 layers; positions\\global trace context};
+    \node[lrn, minimum width=20mm] (events) at (7.05,-1.05)
+      {$e_i\in\mathbb{R}^{128}$\\per event $a_i$};
+    % Coupling and output
+    \draw[flow] (net) -- (graph);
+    \draw[flow] (graph) -- (trans);
+    \draw[flow] (trace) -- (seq);
+    \draw[flow] (seq) -- (events);
+    \draw[flow, {Stealth[length=2.2mm]}-{Stealth[length=2.2mm]}]
+      (trans) -- node[flab, fill=white, align=center]
+      {bidirectional\\cross-attention} (events);
+    \node[lrn, minimum width=31mm, minimum height=21mm] (score) at (10.7,0.25)
+      {\textbf{label-masked}\\\textbf{bilinear score}\\[1mm]
+       $s_{ij}=\dfrac{(W e_i)^\top h_j}{\sqrt{128}}$\\
+       $s_{ij}=-\infty$ if $\ell(a_i)\ne\ell(t_j)$};
+    \node[exa, minimum width=28mm] (prob) at (14.45,0.25)
+      {\textbf{transition likelihood}\\
+       $p(t_j\mid a_i,N,\sigma)$\\$=\operatorname{softmax}_j(s_{ij})$};
+    \draw[flow] (trans.east) -- (score.north west);
+    \draw[flow] (events.east) -- (score.south west);
+    \draw[flow] (score) -- (prob);
+  \end{tikzpicture}}
+  \end{center}
+  \vspace{0.5mm}
+  \small
+  \begin{itemize}\setlength{\itemsep}{2pt}
+    \item The net encoder makes each $h_j$ identify a \keyc{concrete transition}
+      by initial/final markings, routing, and downstream context---not merely
+      by its label.
+    \item Cross-attention makes both $h_j$ and $e_i$ depend on the \keyc{whole
+      net--trace pair}; the same transition can therefore score differently for
+      different trace suffixes.
+    \item The hard mask gives mismatched labels probability zero; among
+      duplicates, the softmax ranks \keyc{transition identities}. During decoding,
+      the current marking further restricts the choice to \keyg{enabled transitions}.
+  \end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------- 8
 \begin{frame}{Where Learning Helps: Duplicate Labels}
   \begin{columns}[T]
   \begin{column}{0.54\textwidth}
@@ -337,6 +391,44 @@
 \end{frame}
 
 % ---------------------------------------------------------------- 10
+\begin{frame}{Why Consider LARA in Process Mining?}
+  \begin{block}{When exact alignment is the bottleneck, LARA changes the
+    speed--trust trade-off without changing what an alignment means.}
+    \centering
+    \keyc{learned proposal} $\longrightarrow$ \keyg{replay check}
+    $\longrightarrow$ \keyg{exact certificate or repair}
+  \end{block}
+  \vspace{2mm}
+  \begin{columns}[T]
+  \begin{column}{0.31\textwidth}
+    \centering \keyc{Faster interaction}\par
+    \vspace{1mm}\small
+    A near-fixed CPU forward pass avoids the heavy tail of exact search;
+    the fast path overtakes A* on larger models and already helps on an
+    invisible-heavy discovered net.
+  \end{column}
+  \begin{column}{0.31\textwidth}
+    \centering \keyg{Same conformance object}\par
+    \vspace{1mm}\small
+    The output is still an event-by-event, transition-identity alignment with
+    a replay-verified cost---usable by existing diagnostics, not an opaque
+    fitness prediction.
+  \end{column}
+  \begin{column}{0.31\textwidth}
+    \centering \keya{Low adoption risk}\par
+    \vspace{1mm}\small
+    One vocabulary-free checkpoint applies without per-log retraining;
+    certification can be requested whenever optimality matters, and failures
+    fall back to exact repair.
+  \end{column}
+  \end{columns}
+  \vspace{5mm}
+  \centering
+  \textbf{Practical role:} a safe accelerator in front of the exact aligner,
+  \keya{not a replacement for formal guarantees}.
+\end{frame}
+
+% ---------------------------------------------------------------- 11
 \begin{frame}{What Can Be Improved: Data}
   \begin{itemize}\setlength{\itemsep}{9pt}
     \item Training Petri nets are \keya{tiny} (3 to 9 transitions):

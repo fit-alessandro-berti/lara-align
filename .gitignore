@@ -20,3 +20,7 @@ runs/
 *.fdb*
 !presentation/*.pdf
 
+*.nav
+*.snm
+*.toc
+
