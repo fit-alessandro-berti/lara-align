@@ -31,7 +31,7 @@ from lara_align.synthetic import (
 from lara_align.training import LARALoss, targets_from_alignment
 from lara_align.verify import verify_alignment
 from scripts.test_model import EvaluationRecord, format_human_report
-from scripts.init_data import _class_coverage_report, _generate_family_split
+from scripts.init_data import _class_coverage_report, _generate_family_split, parse_args
 from scripts.train_model import (
     _generalization_gap,
     _metrics_csv_row,
@@ -50,6 +50,22 @@ def _small_model() -> LARANeuralModel:
         sketches_per_region=2,
         dropout=0.0,
     )
+
+
+def test_default_data_sizes_match_the_minimum_recommended_experiment():
+    args = parse_args([])
+    config = BehaviorFamilyConfig()
+    rows_per_family = (
+        config.representations.variants_per_behavior
+        * config.logs.traces_per_behavior
+    )
+
+    assert args.train_size == 2048
+    assert args.val_size == 512
+    assert args.test_size == 512
+    assert args.train_size // rows_per_family // 4 == 128
+    assert args.val_size // rows_per_family // 4 == 32
+    assert args.test_size // rows_per_family // 4 == 32
 
 
 def test_verifier_accepts_legal_sequence_alignment():

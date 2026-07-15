@@ -44,14 +44,14 @@ PRESETS = (
 )
 
 
-def parse_args() -> argparse.Namespace:
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Initialize exact-labeled, behavior-family LARA data."
     )
     parser.add_argument("--output", type=Path, default=Path("data/lara_synthetic"))
-    parser.add_argument("--train-size", type=int, default=400)
-    parser.add_argument("--val-size", type=int, default=100)
-    parser.add_argument("--test-size", type=int, default=100)
+    parser.add_argument("--train-size", type=int, default=2048)
+    parser.add_argument("--val-size", type=int, default=512)
+    parser.add_argument("--test-size", type=int, default=512)
     parser.add_argument("--train-families", type=int, default=None)
     parser.add_argument("--val-families", type=int, default=None)
     parser.add_argument("--test-families", type=int, default=None)
@@ -88,7 +88,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-len", type=int, default=None, help=argparse.SUPPRESS)
     parser.add_argument("--deviation-rate", type=float, default=None, help=argparse.SUPPRESS)
     parser.add_argument("--duplicate-fraction", type=float, default=None, help=argparse.SUPPRESS)
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def main() -> None:

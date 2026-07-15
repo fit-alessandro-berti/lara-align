@@ -127,9 +127,17 @@ python scripts/init_data.py --overwrite
 
 Default split sizes:
 
-- train: 400 examples
-- validation: 100 examples
-- test: 100 examples
+- train: 2,048 examples
+- validation: 512 examples
+- test: 512 examples
+
+With the standard two variants and two traces per behavior, these sizes contain
+512 independent training families and 128 families in each evaluation split.
+Balanced motif weights therefore provide 128 training families and 32
+validation/test families per motif, plus 512 and 128 flattened examples per
+motif respectively. This is the smallest default that leaves useful support for
+the joint motif, representation, edit-count, and move-signature strata without
+making exact data initialization unnecessarily large.
 
 The initializer generates exact-labeled synthetic Petri-net/trace pairs using
 pm4py. It now generates semantic behavior families containing a shared clean
@@ -179,7 +187,7 @@ Named presets and nested JSON configuration are available:
 
 ```bash
 python scripts/init_data.py --preset equivalence_train --overwrite
-python scripts/init_data.py --train-families 100 --val-families 25 --test-families 25 --overwrite
+python scripts/init_data.py --train-families 512 --val-families 128 --test-families 128 --overwrite
 python scripts/init_data.py --preset nonblock_ood --output data/nonblock --overwrite
 python scripts/init_data.py --generator-config configs/behavior_families.json --overwrite
 python scripts/init_data.py \
