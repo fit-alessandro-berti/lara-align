@@ -7,6 +7,9 @@ from lara_align.verify import trace_labels
 from lara_ui.input_service import ParsedLog
 from lara_ui.ui_types import TraceVariant
 
+DEFAULT_SELECTION_MIN_FREQUENCY = 10
+MAX_LIVE_VARIANTS = 500
+
 
 def group_trace_variants(parsed_log: ParsedLog) -> list[TraceVariant]:
     groups: OrderedDict[tuple[str, ...], dict] = OrderedDict()
@@ -45,6 +48,30 @@ def order_variants(
     if order == "Longest traces first":
         return sorted(items, key=lambda item: (-item.length, item.first_index))
     return sorted(items, key=lambda item: item.first_index)
+
+
+def default_selected_variant_ids(
+    variants: Iterable[TraceVariant],
+    min_frequency: int = DEFAULT_SELECTION_MIN_FREQUENCY,
+    limit: int = MAX_LIVE_VARIANTS,
+) -> list[str]:
+    """Select the most frequent variants meeting the minimum frequency."""
+
+    ordered = order_variants(variants, "Most frequent variants first")
+    return [
+        variant.variant_id
+        for variant in ordered
+        if variant.frequency >= min_frequency
+    ][:limit]
+
+
+def limit_live_variants(
+    variants: Iterable[TraceVariant], configured_limit: int
+) -> list[TraceVariant]:
+    """Apply the user limit without ever exceeding the hard live-run cap."""
+
+    effective_limit = max(0, min(int(configured_limit), MAX_LIVE_VARIANTS))
+    return list(variants)[:effective_limit]
 
 
 def variant_table_rows(variants: Iterable[TraceVariant]) -> list[dict]:

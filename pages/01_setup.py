@@ -24,7 +24,14 @@ from lara_ui.validation_service import (
     visible_transition_groups,
     warnings_for_inputs,
 )
-from lara_ui.variant_service import group_trace_variants, variant_table_rows
+from lara_ui.variant_service import (
+    DEFAULT_SELECTION_MIN_FREQUENCY,
+    MAX_LIVE_VARIANTS,
+    default_selected_variant_ids,
+    group_trace_variants,
+    order_variants,
+    variant_table_rows,
+)
 from lara_ui.visualizations.petri_graph import petri_net_dot
 
 prepare_page("Setup & overview", "⚙️")
@@ -162,6 +169,7 @@ try:
         st.session_state.loaded_log = None
         st.session_state.variant_index = []
         st.session_state.selected_variants = []
+        st.session_state.pop("variant_selection_fingerprint", None)
 
     if model_source == "Discover from event log (Inductive Miner)" and loaded_log:
         model_fingerprint = (
@@ -219,11 +227,20 @@ if checkpoint_path:
         st.error(f"Checkpoint architecture is incompatible or unreadable: {type(exc).__name__}: {exc}")
 
 if loaded_log and loaded_net:
-    variants = group_trace_variants(loaded_log)
+    variants = order_variants(
+        group_trace_variants(loaded_log),
+        "Most frequent variants first",
+    )
+    selection_fingerprint = st.session_state.log_input_fingerprint
+    if (
+        st.session_state.get("variant_selection_fingerprint")
+        != selection_fingerprint
+    ):
+        st.session_state.selected_variants = default_selected_variant_ids(variants)
+        st.session_state.variant_selection_fingerprint = selection_fingerprint
     previous_selected = set(st.session_state.selected_variants)
-    if previous_selected:
-        for variant in variants:
-            variant.selected = variant.variant_id in previous_selected
+    for variant in variants:
+        variant.selected = variant.variant_id in previous_selected
     st.session_state.variant_index = variants
 
     compatibility = compatibility_analysis(loaded_log, loaded_net, variants)
@@ -262,8 +279,15 @@ if loaded_log and loaded_net:
 
     tabs = st.tabs(["Trace variants", "Compatibility", "Petri net", "Checkpoint", "Run configuration"])
     with tabs[0]:
-        st.write("Identical activity sequences are computed once and retain their complete case mapping.")
+        st.write(
+            "Variants are ordered by decreasing frequency. On a newly loaded log, "
+            f"variants with frequency of at least {DEFAULT_SELECTION_MIN_FREQUENCY} "
+            "are selected automatically."
+        )
         variant_df = pd.DataFrame(variant_table_rows(variants))
+        editor_fingerprint = content_hash(
+            repr(selection_fingerprint).encode("utf-8")
+        )[:16]
         edited = st.data_editor(
             variant_df,
             hide_index=True,
@@ -273,13 +297,17 @@ if loaded_log and loaded_net:
                 "Selected": st.column_config.CheckboxColumn(required=True),
                 "Coverage": st.column_config.ProgressColumn(format="percent"),
             },
-            key="variant_selector",
+            key=f"variant_selector_{editor_fingerprint}",
         )
-        selection = set(edited.loc[edited["Selected"], "Variant"].tolist())
-        st.session_state.selected_variants = sorted(selection)
+        selected_ids = edited.loc[edited["Selected"], "Variant"].tolist()
+        selection = set(selected_ids)
+        st.session_state.selected_variants = selected_ids
         for variant in variants:
             variant.selected = variant.variant_id in selection
-        st.caption(f"{len(selection)} of {len(variants)} variants selected.")
+        st.caption(
+            f"{len(selection)} of {len(variants)} variants selected. "
+            f"At most {MAX_LIVE_VARIANTS} variants can be processed in one live run."
+        )
 
     with tabs[1]:
         left, right = st.columns(2)
@@ -359,8 +387,20 @@ if loaded_log and loaded_net:
             )
         with middle:
             timeout = st.number_input("Exact timeout per variant (seconds)", 0.1, 86_400.0, 30.0)
-            max_variants = st.number_input("Maximum selected variants", 1, max(len(variants), 1), min(len(variants), 100))
-            max_certify = st.number_input("Maximum variants to certify", 0, max(len(variants), 1), min(len(variants), 50))
+            live_variant_limit = max(min(len(variants), MAX_LIVE_VARIANTS), 1)
+            max_variants = st.number_input(
+                "Maximum selected variants",
+                1,
+                live_variant_limit,
+                live_variant_limit,
+                help=f"Hard-capped at {MAX_LIVE_VARIANTS} variants per live run.",
+            )
+            max_certify = st.number_input(
+                "Maximum variants to certify",
+                0,
+                live_variant_limit,
+                min(live_variant_limit, 50),
+            )
             certification_policy = st.selectbox(
                 "Selective certification",
                 ["All legal candidates", "Candidates with deviations", "Illegal candidates", "Cost at or above threshold", "Most frequent variants", "Longest variants", "Duplicate-label variants", "Manual selection"],

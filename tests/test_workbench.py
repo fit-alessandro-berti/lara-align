@@ -21,7 +21,13 @@ from lara_ui.input_service import (
 )
 from lara_ui.replay_service import alignment_differences, anchored_alignment
 from lara_ui.ui_types import TraceAlignmentResult, TraceVariant
-from lara_ui.variant_service import group_trace_variants
+from lara_ui.variant_service import (
+    MAX_LIVE_VARIANTS,
+    default_selected_variant_ids,
+    group_trace_variants,
+    limit_live_variants,
+    order_variants,
+)
 
 
 def _small_model() -> LARANeuralModel:
@@ -141,6 +147,40 @@ def test_variant_grouping_retains_complete_case_mapping():
     assert variants[0].case_ids == ["case-1", "case-2"]
     assert variants[0].frequency == 2
     assert variants[0].coverage == 2 / 3
+
+
+def test_setup_order_and_frequency_based_default_selection_are_capped_at_500():
+    variants = [
+        TraceVariant(
+            variant_id=f"V{index:03d}",
+            labels=[str(index)],
+            case_ids=[],
+            first_index=index,
+            frequency=700 - index,
+            coverage=0.0,
+        )
+        for index in range(600)
+    ]
+
+    ordered = order_variants(reversed(variants), "Most frequent variants first")
+    selected = default_selected_variant_ids(ordered)
+
+    assert [variant.frequency for variant in ordered] == sorted(
+        (variant.frequency for variant in variants), reverse=True
+    )
+    assert len(selected) == MAX_LIVE_VARIANTS
+    assert all(
+        next(variant for variant in variants if variant.variant_id == variant_id).frequency
+        >= 10
+        for variant_id in selected
+    )
+    assert len(limit_live_variants(ordered, 10_000)) == MAX_LIVE_VARIANTS
+
+    boundary_variants = [
+        TraceVariant(f"B{frequency}", [str(frequency)], [], frequency, frequency, 0.0)
+        for frequency in [9, 10, 11]
+    ]
+    assert default_selected_variant_ids(boundary_variants) == ["B11", "B10"]
 
 
 @pytest.mark.parametrize(

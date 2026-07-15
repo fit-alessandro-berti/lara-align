@@ -108,6 +108,11 @@ modes it renders each independently verified neural proposal before starting
 the corresponding exact work. Exact repair enriches the existing result and
 never overwrites the candidate.
 
+The Setup variant table is ordered by decreasing frequency. For each newly
+loaded log, variants occurring at least 10 times are selected by default.
+Users can adjust the selection manually, while the Live page enforces a hard
+maximum of 500 variants per run.
+
 The Trace inspector compares candidate and exact moves against shared observed
 event positions, exposes concrete transition identities for duplicate labels,
 precomputes marking-replay snapshots, and separates replay diagnostics from

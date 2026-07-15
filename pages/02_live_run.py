@@ -27,7 +27,11 @@ from lara_ui.validation_service import (
     net_summary,
     visible_transition_groups,
 )
-from lara_ui.variant_service import order_variants
+from lara_ui.variant_service import (
+    MAX_LIVE_VARIANTS,
+    limit_live_variants,
+    order_variants,
+)
 
 prepare_page("Live alignment run", "▶️")
 st.title("Live alignment run")
@@ -49,7 +53,10 @@ variants = [
     if variant.variant_id in set(st.session_state.selected_variants)
 ]
 variants = order_variants(variants, configuration.get("order", "Most frequent variants first"))
-variants = variants[: configuration.get("max_variants", len(variants))]
+variants = limit_live_variants(
+    variants,
+    configuration.get("max_variants", MAX_LIVE_VARIANTS),
+)
 
 top = st.columns([2, 2, 2, 1, 1])
 top[0].metric("Mode", configuration["mode"])
