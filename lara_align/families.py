@@ -95,6 +95,14 @@ class ValidationConfig:
 
 
 @dataclass(frozen=True)
+class CoverageConfig:
+    mode: str = "strict"
+    min_families_per_motif: dict[str, int] = field(
+        default_factory=lambda: {"train": 8, "val": 4, "test": 4}
+    )
+
+
+@dataclass(frozen=True)
 class BehaviorFamilyConfig:
     seed: int = 13
     structure: StructureConfig = field(default_factory=StructureConfig)
@@ -110,6 +118,7 @@ class BehaviorFamilyConfig:
     logs: LogConfig = field(default_factory=LogConfig)
     noise: NoiseConfig = field(default_factory=NoiseConfig)
     validation: ValidationConfig = field(default_factory=ValidationConfig)
+    class_coverage: CoverageConfig = field(default_factory=CoverageConfig)
 
     def to_dict(self) -> dict[str, object]:
         value = asdict(self)
@@ -126,6 +135,7 @@ class BehaviorFamilyConfig:
         logs = _mapping(data.get("logs"))
         noise = _mapping(data.get("noise"))
         validation = _mapping(data.get("validation"))
+        coverage = _mapping(data.get("class_coverage"))
         edits = _mapping(noise.get("edit_count_weights"))
         return BehaviorFamilyConfig(
             seed=int(data.get("seed", 13)),
@@ -182,6 +192,16 @@ class BehaviorFamilyConfig:
                 bounded_visible_length=int(validation.get("bounded_visible_length", 20)),
                 reject_on_mismatch=bool(validation.get("reject_on_mismatch", True)),
             ),
+            class_coverage=CoverageConfig(
+                mode=str(coverage.get("mode", "strict")),
+                min_families_per_motif={
+                    str(key): int(value)
+                    for key, value in _mapping(
+                        coverage.get("min_families_per_motif")
+                    ).items()
+                }
+                or {"train": 8, "val": 4, "test": 4},
+            ),
         )
 
     @staticmethod
@@ -195,6 +215,7 @@ class BehaviorFamilyConfig:
             "smoke": {
                 "structure": {"max_visible_occurrences": 6},
                 "logs": {"traces_per_behavior": 1, "clean_pool_size": 4},
+                "class_coverage": {"mode": "best_effort"},
             },
             "balanced_train": {},
             "iid_behavior": {},
@@ -326,10 +347,84 @@ def stable_seed(global_seed: int, *parts: object) -> int:
     return int.from_bytes(digest, byteorder="big", signed=False)
 
 
+def active_motifs(weights: dict[str, float]) -> tuple[str, ...]:
+    motifs = tuple(name for name in MOTIF_KINDS if float(weights.get(name, 0.0)) > 0)
+    unknown = sorted(
+        name
+        for name, weight in weights.items()
+        if float(weight) > 0 and name not in MOTIF_KINDS
+    )
+    if unknown:
+        raise ValueError(f"unknown positive-weight motifs: {', '.join(unknown)}")
+    if not motifs:
+        raise ValueError("at least one known motif must have positive weight")
+    return motifs
+
+
+def allocate_motif_quotas(
+    family_count: int,
+    weights: dict[str, float],
+    minimum_per_motif: int,
+    *,
+    strict: bool,
+) -> dict[str, int]:
+    """Allocate deterministic weighted quotas while reserving class minima."""
+
+    if family_count < 0:
+        raise ValueError("family_count must be non-negative")
+    if minimum_per_motif < 0:
+        raise ValueError("minimum_per_motif must be non-negative")
+    motifs = active_motifs(weights)
+    required = minimum_per_motif * len(motifs)
+    if strict and family_count < required:
+        raise ValueError(
+            f"{family_count} families cannot provide at least {minimum_per_motif} "
+            f"families for each of {len(motifs)} active motifs; need at least {required}"
+        )
+
+    effective_minimum = min(minimum_per_motif, family_count // len(motifs))
+    quotas = {motif: effective_minimum for motif in motifs}
+    remaining = family_count - effective_minimum * len(motifs)
+    total_weight = sum(max(0.0, float(weights[motif])) for motif in motifs)
+    raw = {
+        motif: remaining * max(0.0, float(weights[motif])) / total_weight
+        for motif in motifs
+    }
+    for motif in motifs:
+        quotas[motif] += int(raw[motif])
+    leftovers = family_count - sum(quotas.values())
+    order = sorted(motifs, key=lambda motif: (-(raw[motif] % 1), motif))
+    for motif in order[:leftovers]:
+        quotas[motif] += 1
+    return quotas
+
+
+def motif_quota_plan(
+    family_count: int,
+    config: BehaviorFamilyConfig,
+    split: str,
+) -> tuple[list[str], dict[str, int], int, bool]:
+    minimum = int(config.class_coverage.min_families_per_motif.get(split, 0))
+    mode = config.class_coverage.mode
+    if mode not in {"strict", "best_effort"}:
+        raise ValueError("class coverage mode must be 'strict' or 'best_effort'")
+    quotas = allocate_motif_quotas(
+        family_count,
+        config.motif_weights,
+        minimum,
+        strict=mode == "strict",
+    )
+    plan = [motif for motif in MOTIF_KINDS for _ in range(quotas.get(motif, 0))]
+    Random(stable_seed(config.seed, split, "motif-quota-plan")).shuffle(plan)
+    meets_minimum = all(value >= minimum for value in quotas.values())
+    return plan, quotas, minimum, meets_minimum
+
+
 def generate_behavior_family(
     config: BehaviorFamilyConfig,
     family_index: int,
     split: str,
+    motif: str | None = None,
 ) -> BehaviorFamily:
     seed = stable_seed(config.seed, split, family_index, "family")
     seed_bundle = {
@@ -340,7 +435,10 @@ def generate_behavior_family(
         "noise": stable_seed(seed, "noise"),
     }
     rng = Random(seed_bundle["model"])
-    motif = _weighted_choice(rng, config.motif_weights)
+    if motif is None:
+        motif = _weighted_choice(rng, config.motif_weights)
+    elif motif not in MOTIF_KINDS:
+        raise ValueError(f"unknown motif: {motif}")
     behavior_id = f"{split}-{stable_seed(config.seed, split, family_index):016x}"
 
     if motif == "duplicate_vs_silent":

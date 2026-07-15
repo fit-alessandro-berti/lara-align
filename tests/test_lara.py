@@ -1,4 +1,5 @@
 import csv
+import pytest
 
 from pm4py.objects.log.obj import Event, Trace
 
@@ -14,7 +15,11 @@ from lara_align.data import (
 from lara_align.decode import GreedyCandidateDecoder
 from lara_align.exact import Pm4PyExactAligner
 from lara_align.features import pm4py_to_features
-from lara_align.families import BehaviorFamilyConfig, generate_behavior_family
+from lara_align.families import (
+    BehaviorFamilyConfig,
+    generate_behavior_family,
+    motif_quota_plan,
+)
 from lara_align.model import LARANeuralModel
 from lara_align.synthetic import (
     generate_block_structured_example,
@@ -25,7 +30,7 @@ from lara_align.synthetic import (
 from lara_align.training import LARALoss, targets_from_alignment
 from lara_align.verify import verify_alignment
 from scripts.test_model import EvaluationRecord, format_human_report
-from scripts.init_data import _generate_family_split
+from scripts.init_data import _class_coverage_report, _generate_family_split
 from scripts.train_model import _metrics_csv_row, _write_metrics_csv_row
 
 
@@ -234,6 +239,51 @@ def test_family_initializer_expands_after_split_and_checks_cost_consistency():
         paired.setdefault(key, []).append(sample)
     assert all(len({sample.optimal_cost for sample in group}) == 1 for group in paired.values())
     assert all(len({sample.metadata["representation_kind"] for sample in group}) == 2 for group in paired.values())
+    coverage = _class_coverage_report(samples, config, "train")
+    assert coverage["mode"] == "best_effort"
+    assert not coverage["meets_minimum"]
+    assert coverage["deficits_by_motif"]
+
+
+def test_strict_family_quotas_cover_every_motif_and_representation():
+    config = BehaviorFamilyConfig.from_dict(
+        {
+            "seed": 23,
+            "structure": {"max_visible_occurrences": 6},
+            "logs": {"traces_per_behavior": 1, "clean_pool_size": 4},
+            "noise": {"clean_fraction": 1.0},
+            "class_coverage": {
+                "mode": "strict",
+                "min_families_per_motif": {"train": 1, "val": 1, "test": 1},
+            },
+        }
+    )
+
+    samples, _, family_count = _generate_family_split(
+        "train",
+        8,
+        config,
+        Pm4PyExactAligner(),
+        exact_timeout=None,
+        progress_every=0,
+    )
+    coverage = _class_coverage_report(samples, config, "train")
+
+    assert family_count == 4
+    assert coverage["meets_minimum"]
+    assert coverage["exact_quota_match"]
+    assert not coverage["representation_slot_deficits_by_motif"]
+    assert set(coverage["actual_family_counts_by_motif"].values()) == {1}
+    assert all(
+        len(representation_counts) == 2
+        for representation_counts in coverage["motif_representation_counts"].values()
+    )
+    assert coverage["supervision_audit"]["edit_count_counts"] == {"0": 8}
+
+
+def test_default_strict_family_quota_rejects_an_infeasible_training_split():
+    with pytest.raises(ValueError, match="need at least 32"):
+        motif_quota_plan(31, BehaviorFamilyConfig(), "train")
 
 
 def test_certifying_system_returns_legal_certified_alignment():

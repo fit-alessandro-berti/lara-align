@@ -19,7 +19,9 @@ from lara_align.data import (  # noqa: E402
 from lara_align.exact import Pm4PyExactAligner  # noqa: E402
 from lara_align.families import (  # noqa: E402
     BehaviorFamilyConfig,
+    active_motifs,
     generate_behavior_family,
+    motif_quota_plan,
     transition_identity_identifiable,
 )
 from lara_align.synthetic import trace_from_labels  # noqa: E402
@@ -57,6 +59,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--generator-config", type=Path, default=None)
     parser.add_argument("--preset", choices=PRESETS, default=None)
     parser.add_argument("--motif-weights", default=None, help="Comma-separated KIND=WEIGHT values.")
+    parser.add_argument(
+        "--min-families-per-motif",
+        type=int,
+        default=None,
+        help="Minimum behavior families for every positive-weight motif in every split.",
+    )
+    parser.add_argument(
+        "--class-coverage-mode",
+        choices=("strict", "best_effort"),
+        default=None,
+        help="Fail on infeasible class quotas (strict) or record deficits (best_effort).",
+    )
     parser.add_argument("--variants-per-behavior", type=int, default=None)
     parser.add_argument("--traces-per-behavior", type=int, default=None)
     parser.add_argument("--clean-fraction", type=float, default=None)
@@ -79,12 +93,15 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
-    _prepare_output_dir(args.output, args.overwrite)
     config = _config_from_args(args)
     exact = Pm4PyExactAligner()
     rows_per_family = (
         config.representations.variants_per_behavior * config.logs.traces_per_behavior
     )
+    if rows_per_family <= 0:
+        raise SystemExit(
+            "variants_per_behavior and traces_per_behavior must both be positive"
+        )
     split_sizes = {
         "train": (
             _positive(args.train_families, "train-families") * rows_per_family
@@ -102,9 +119,23 @@ def main() -> None:
             else _positive(args.test_size, "test-size")
         ),
     }
+    for split in SPLITS:
+        target_size = split_sizes[split]
+        if config.class_coverage.mode == "strict" and target_size % rows_per_family:
+            raise SystemExit(
+                f"strict class coverage requires {split}-size ({target_size}) to be "
+                f"divisible by rows_per_family ({rows_per_family})"
+            )
+        family_count = (target_size + rows_per_family - 1) // rows_per_family
+        try:
+            motif_quota_plan(family_count, config, split)
+        except ValueError as exc:
+            raise SystemExit(f"invalid {split} class coverage request: {exc}") from exc
+    _prepare_output_dir(args.output, args.overwrite)
 
     rejection_totals: Counter[str] = Counter()
     split_family_counts: dict[str, int] = {}
+    split_class_coverage: dict[str, dict[str, object]] = {}
     for split in SPLITS:
         samples, rejections, family_count = _generate_family_split(
             split,
@@ -116,6 +147,7 @@ def main() -> None:
         )
         rejection_totals.update(rejections)
         split_family_counts[split] = family_count
+        split_class_coverage[split] = _class_coverage_report(samples, config, split)
         save_split(args.output, split, samples)
         print(
             f"wrote {len(samples):4d} {split} samples from {family_count:4d} "
@@ -135,6 +167,7 @@ def main() -> None:
                 "progress_every": args.progress_every,
                 "split_unit": "behavior_id_before_variant_expansion",
                 "family_counts": split_family_counts,
+                "class_coverage": split_class_coverage,
                 "rejected_family_reasons": dict(sorted(rejection_totals.items())),
                 "cost_consistency": "asserted_for_exact_equivalence_families",
             },
@@ -152,6 +185,20 @@ def _generate_family_split(
     exact_timeout: float | None,
     progress_every: int,
 ) -> tuple[list[AlignmentSample], Counter[str], int]:
+    if target_size <= 0:
+        raise ValueError("target_size must be positive")
+    rows_per_family = (
+        config.representations.variants_per_behavior * config.logs.traces_per_behavior
+    )
+    if rows_per_family <= 0:
+        raise ValueError("variants_per_behavior and traces_per_behavior must be positive")
+    if config.class_coverage.mode == "strict" and target_size % rows_per_family:
+        raise ValueError(
+            f"strict class coverage requires {split} target_size ({target_size}) to be "
+            f"divisible by rows_per_family ({rows_per_family})"
+        )
+    requested_families = (target_size + rows_per_family - 1) // rows_per_family
+    motif_plan, _, _, _ = motif_quota_plan(requested_families, config, split)
     samples: list[AlignmentSample] = []
     rejections: Counter[str] = Counter()
     family_index = 0
@@ -159,21 +206,24 @@ def _generate_family_split(
     alignment_cache: dict[tuple[object, ...], tuple[object, float]] = {}
     max_attempts = max(100, target_size * 20)
 
-    while len(samples) < target_size and family_index < max_attempts:
+    while accepted_families < len(motif_plan) and family_index < max_attempts:
         current_index = family_index
         family_index += 1
+        planned_motif = motif_plan[accepted_families]
         try:
-            family = generate_behavior_family(config, current_index, split)
+            family = generate_behavior_family(
+                config, current_index, split, motif=planned_motif
+            )
         except Exception as exc:
             rejections[f"generation:{type(exc).__name__}"] += 1
             continue
 
-        family_rows: list[tuple[object, object, object, object, float, bool]] = []
+        family_rows: list[tuple[object, object, int, object, object, float, bool]] = []
         family_failed = False
         for observed in family.noisy_traces:
             costs: list[int] = []
             trace = trace_from_labels(observed.labels)
-            for variant in family.model_variants:
+            for representation_slot, variant in enumerate(family.model_variants):
                 cache_key = (
                     _net_signature(
                         variant.net,
@@ -221,7 +271,15 @@ def _generate_family_split(
                     break
                 costs.append(verifier.cost)
                 family_rows.append(
-                    (observed, variant, result, verifier, exact_seconds, cache_hit)
+                    (
+                        observed,
+                        variant,
+                        representation_slot,
+                        result,
+                        verifier,
+                        exact_seconds,
+                        cache_hit,
+                    )
                 )
             if family_failed:
                 break
@@ -233,7 +291,15 @@ def _generate_family_split(
             continue
 
         accepted_families += 1
-        for observed, variant, result, verifier, exact_seconds, cache_hit in family_rows:
+        for (
+            observed,
+            variant,
+            representation_slot,
+            result,
+            verifier,
+            exact_seconds,
+            cache_hit,
+        ) in family_rows:
             if len(samples) >= target_size:
                 break
             identifiable = transition_identity_identifiable(variant, observed.labels)
@@ -254,6 +320,7 @@ def _generate_family_split(
                         "behavior_id": family.behavior_id,
                         "variant_id": variant.variant_id,
                         "representation_kind": variant.representation_kind,
+                        "representation_slot": representation_slot,
                         "equivalence_level": variant.equivalence_level,
                         "equivalence_certificate": family.equivalence_certificate.to_dict(),
                         "canonical_spec": family.canonical_spec.to_dict(),
@@ -299,6 +366,91 @@ def _generate_family_split(
             f"after {family_index} family attempts; rejections={dict(rejections)}"
         )
     return samples, rejections, accepted_families
+
+
+def _class_coverage_report(
+    samples: list[AlignmentSample],
+    config: BehaviorFamilyConfig,
+    split: str,
+) -> dict[str, object]:
+    family_motifs: dict[str, str] = {}
+    motif_samples: Counter[str] = Counter()
+    representations: Counter[str] = Counter()
+    motif_representations: dict[str, Counter[str]] = {}
+    motif_representation_slots: dict[str, Counter[str]] = {}
+    edit_counts: Counter[str] = Counter()
+    move_signatures: Counter[str] = Counter()
+    for sample in samples:
+        behavior_id = str(sample.metadata["behavior_id"])
+        motif = str(sample.metadata["motif"])
+        existing = family_motifs.setdefault(behavior_id, motif)
+        if existing != motif:
+            raise RuntimeError(f"behavior {behavior_id} has inconsistent motif labels")
+        representation = str(sample.metadata["representation_kind"])
+        motif_samples[motif] += 1
+        representations[representation] += 1
+        motif_representations.setdefault(motif, Counter())[representation] += 1
+        representation_slot = str(sample.metadata["representation_slot"])
+        motif_representation_slots.setdefault(motif, Counter())[representation_slot] += 1
+        edit_counts[str(sample.metadata["edit_count"])] += 1
+        move_signatures[str(sample.metadata["move_signature"])] += 1
+
+    actual = Counter(family_motifs.values())
+    _, planned, minimum, planned_meets_minimum = motif_quota_plan(
+        len(family_motifs), config, split
+    )
+    active = active_motifs(config.motif_weights)
+    deficits = {
+        motif: max(0, minimum - actual.get(motif, 0))
+        for motif in active
+        if actual.get(motif, 0) < minimum
+    }
+    minimum_rows_per_slot = minimum * config.logs.traces_per_behavior
+    representation_slot_deficits: dict[str, dict[str, int]] = {}
+    for motif in active:
+        per_motif = motif_representation_slots.get(motif, Counter())
+        missing = {
+            str(slot): max(0, minimum_rows_per_slot - per_motif[str(slot)])
+            for slot in range(config.representations.variants_per_behavior)
+            if per_motif[str(slot)] < minimum_rows_per_slot
+        }
+        if missing:
+            representation_slot_deficits[motif] = missing
+    exact_quota_match = all(actual.get(motif, 0) == planned[motif] for motif in active)
+    meets_minimum = not deficits and not representation_slot_deficits
+    report: dict[str, object] = {
+        "mode": config.class_coverage.mode,
+        "unit": "behavior_family",
+        "active_motifs": list(active),
+        "minimum_families_per_motif": minimum,
+        "planned_family_counts_by_motif": dict(sorted(planned.items())),
+        "actual_family_counts_by_motif": dict(sorted(actual.items())),
+        "sample_counts_by_motif": dict(sorted(motif_samples.items())),
+        "representation_counts": dict(sorted(representations.items())),
+        "motif_representation_counts": {
+            motif: dict(sorted(counts.items()))
+            for motif, counts in sorted(motif_representations.items())
+        },
+        "motif_representation_slot_counts": {
+            motif: dict(sorted(counts.items()))
+            for motif, counts in sorted(motif_representation_slots.items())
+        },
+        "minimum_rows_per_representation_slot": minimum_rows_per_slot,
+        "representation_slot_deficits_by_motif": representation_slot_deficits,
+        "supervision_audit": {
+            "edit_count_counts": dict(sorted(edit_counts.items())),
+            "move_signature_counts": dict(sorted(move_signatures.items())),
+        },
+        "deficits_by_motif": dict(sorted(deficits.items())),
+        "planned_meets_minimum": planned_meets_minimum,
+        "exact_quota_match": exact_quota_match,
+        "meets_minimum": meets_minimum,
+    }
+    if config.class_coverage.mode == "strict" and (
+        not meets_minimum or not exact_quota_match
+    ):
+        raise RuntimeError(f"strict class coverage failed for {split}: {report}")
+    return report
 
 
 def _config_from_args(args: argparse.Namespace) -> BehaviorFamilyConfig:
@@ -374,6 +526,18 @@ def _config_from_args(args: argparse.Namespace) -> BehaviorFamilyConfig:
             "concurrent_vs_interleaved": remaining / 3,
             "m_nonfreechoice": remaining / 3,
         }
+    class_coverage = config.class_coverage
+    if args.min_families_per_motif is not None:
+        if args.min_families_per_motif < 0:
+            raise ValueError("min-families-per-motif must be non-negative")
+        class_coverage = replace(
+            class_coverage,
+            min_families_per_motif={
+                split: args.min_families_per_motif for split in SPLITS
+            },
+        )
+    if args.class_coverage_mode is not None:
+        class_coverage = replace(class_coverage, mode=args.class_coverage_mode)
     return replace(
         config,
         structure=structure,
@@ -381,6 +545,7 @@ def _config_from_args(args: argparse.Namespace) -> BehaviorFamilyConfig:
         logs=logs,
         noise=noise,
         motif_weights=motif_weights,
+        class_coverage=class_coverage,
     )
 
 

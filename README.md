@@ -147,6 +147,16 @@ The initializer verifies visible-language equivalence, exact-aligns every
 optimal costs differ. Families are assigned to a split before expansion, so no
 behavior ID can leak across train, validation, and test.
 
+Splits use deterministic class quotas rather than independent random motif
+draws. Strict coverage is the default: every positive-weight motif receives at
+least 8 behavior families in training and 4 in validation and test, and split
+sizes must contain complete families so all representation slots are covered.
+These thresholds are configurable under
+`class_coverage.min_families_per_motif`, or uniformly with
+`--min-families-per-motif`. Infeasible requests fail before any split is
+written. Use `--class-coverage-mode best_effort` only for deliberately tiny
+diagnostic data; its manifest explicitly reports deficits.
+
 - `data/lara_synthetic/train.pkl`
 - `data/lara_synthetic/val.pkl`
 - `data/lara_synthetic/test.pkl`
@@ -157,6 +167,7 @@ For a quick smoke dataset:
 
 ```bash
 python scripts/init_data.py \
+  --preset smoke \
   --output /tmp/lara_smoke_data \
   --train-size 32 \
   --val-size 8 \
@@ -185,7 +196,9 @@ The same interface provides `iid_behavior`, `equivalence_seen`,
 Metadata includes behavior/variant/trace IDs, canonical specs, transformation
 and structural statistics, equivalence certificates, and trace-edit provenance.
 Non-identifiable transition targets are masked while legality and cost
-supervision remain active.
+supervision remain active. The manifest also records planned and actual motif
+family counts, motif × representation-slot coverage, and audit distributions
+for edit counts and alignment move signatures in every split.
 
 ### 3. Train
 
