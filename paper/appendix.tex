@@ -1,0 +1,249 @@
+\appendix
+
+\section{Training Data Generation}
+\label{app:data-generation}
+
+This appendix expands Section~\ref{sec:data}. The data generator creates a
+supervised alignment corpus in which every row contains a Petri net, one trace,
+and the exact optimal alignment for that trace on that net. The relevant code
+path is \texttt{scripts/init\_data.py}, which calls the behavior-family
+generator in \texttt{lara\_align/families.py}, the PM4Py exact aligner in
+\texttt{lara\_align/exact.py}, and the replay verifier in
+\texttt{lara\_align/verify.py}.
+
+\subsection{What One Training Row Contains}
+
+One generated row is an \texttt{AlignmentSample}. It contains:
+\begin{itemize}
+  \item a Petri net $SN$ with its initial and final markings;
+  \item one observed trace $\sigma$;
+  \item an optimal alignment $\gamma^\ast$ computed by the exact backend;
+  \item the optimal cost $\delta = c(\gamma^\ast)$ under the standard move
+    costs;
+  \item metadata describing how the row was generated.
+\end{itemize}
+The standard costs are the same costs used throughout the paper: synchronous
+moves cost zero, visible log moves cost one, visible model moves cost one, and
+silent model moves cost zero. The exact alignment is transition-aware. Thus a
+synchronous move stores the concrete transition name, not only the visible
+activity label. This matters when two transitions have the same label.
+
+The neural training targets are derived from this exact alignment. For each
+trace event, the sync target is the transition fired by the exact alignment
+when that event is synchronized. Events skipped by the optimum become log-move
+targets. Transitions fired without consuming an event become model-move
+targets. The exact cost is also stored as the target for the learned cost
+estimate.
+
+\subsection{Behavior Families}
+
+The generator does not create isolated trace-net pairs directly. It first
+creates a \emph{behavior family}. A behavior family is a small group of related
+models and traces that represent the same visible behavior in different Petri
+net forms. This is the unit that is assigned to train, validation, or test
+before any row is written. Assigning whole families to a split prevents a model
+variant from one behavior appearing in training while another variant of the
+same behavior appears in testing.
+
+With the default configuration, each family has two Petri-net representations
+and two observed traces. Therefore each family expands to four rows:
+\[
+  2 \text{ representations} \times 2 \text{ traces} = 4 \text{ rows}.
+\]
+The reference corpus uses four family motifs with equal weight. Table
+\ref{tab:appendix-motifs} summarizes them.
+
+\begin{table}
+\centering
+\caption{Behavior-family motifs used in the reference corpus. Each family
+contains two Petri-net representations of the same visible behavior.}
+\label{tab:appendix-motifs}
+\small
+\begin{tabular}{@{}lll@{}}
+\toprule
+motif & representation 1 & representation 2 \\
+\midrule
+ordinary tree & canonical block net & isomorphic renaming \\
+duplicate versus silent & duplicate-prefix net & silent-routing net \\
+concurrent versus interleaved & parallel net & explicit interleaving net \\
+M-pattern & canonical block net & non-free-choice M-pattern net \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Ordinary Tree.}
+The ordinary-tree motif samples a random block-structured process tree. The
+default tree has between 4 and 12 visible activity occurrences and depth at
+most 6. Internal nodes are sampled from sequence, exclusive choice, and
+parallel composition with weights 0.4, 0.3, and 0.3. The visible alphabet size
+is about 70\% of the number of visible occurrences, so duplicate labels can
+appear naturally. The first representation is the compiled block-structured
+Petri net. The second representation is an isomorphic renaming of the same net:
+places and transition names are changed, but labels and behavior are preserved.
+
+\paragraph{Duplicate Versus Silent.}
+This motif has two ways to represent the visible behavior ``$A$ followed by
+either $B$ or $C$''. In the duplicate-prefix representation, there are two
+different visible transitions labeled $A$: one leads to the $B$ branch and the
+other to the $C$ branch. In the silent-routing representation, there is one
+visible $A$ transition followed by a silent choice between the two branches.
+This motif directly tests whether the model learns transition identity rather
+than only label identity.
+
+\paragraph{Concurrent Versus Interleaved.}
+This motif represents the visible language $\langle A,B\rangle$ and
+$\langle B,A\rangle$ in two different ways. One representation uses real
+parallelism: an invisible split produces two concurrent branches, and an
+invisible join closes them. The other representation encodes the two possible
+orders explicitly as alternatives. The two nets have the same visible complete
+traces but different causal structure.
+
+\paragraph{M-pattern.}
+This motif compares a block-structured net with a non-free-choice M-pattern.
+The visible behavior is an exclusive choice between $B$ and the parallel
+execution of $A$ and $C$. The non-free-choice representation shares input
+places in a way that violates free choice. This gives the model examples whose
+behavior is simple but whose Petri-net structure is not block structured.
+
+For the three controlled motifs above, the default generator appends a short
+shared suffix of two fresh visible activities. This makes the examples less
+degenerate while preserving the intended comparison between the two
+representations.
+
+\subsection{Checking That Representations Match}
+
+After the two representations are built, the generator enumerates their
+complete visible trace languages. The default limits for this check are 5,000
+states, 10,000 traces, and visible length 20. A family is rejected if the
+visible languages disagree. A family is also rejected if the language is empty,
+the final marking is unreachable, or any transition is dead.
+
+The reference corpus is small enough that all accepted train, validation, and
+test rows have an exact visible-language certificate. In other words, the
+language comparison completed within the limits for every accepted row.
+
+\subsection{Clean Trace Pool}
+
+For each accepted family, the generator sorts the complete visible language and
+keeps at most 16 clean traces. If the language has more than 16 traces, a
+deterministic sample of 16 traces is selected using the family seed. These
+clean traces are not training rows yet. They are the fitting traces from which
+observed traces are produced.
+
+The default configuration creates two observed traces per family. The first two
+clean traces in the selected pool are used, wrapping around if the pool is
+smaller than two. Trace generation is deterministic given the global seed, the
+split name, and the family index.
+
+\subsection{Trace Noise}
+
+Noise is added once at the visible-label level. The same noisy trace is then
+paired with every representation in the family. This is important: if a family
+has a duplicate-prefix net and a silent-routing net, both nets see the same
+observed trace. The exact aligner then decides how that same observation should
+be explained on each representation.
+
+With the default noise settings, 20\% of observed traces are kept clean. The
+remaining traces receive one, two, or three edits with probabilities 0.5, 0.3,
+and 0.2. The edit operations are:
+\begin{itemize}
+  \item delete one event;
+  \item insert an event whose label is already in the family alphabet;
+  \item substitute one event label by another label from the family alphabet;
+  \item swap two neighboring events;
+  \item repeat one event;
+  \item remove a prefix;
+  \item remove a suffix;
+  \item insert the special outside label \texttt{\_\_OOD\_\_}.
+\end{itemize}
+The first five operations have weight 0.15 each, prefix and suffix truncation
+have weight 0.10 each, and outside insertion has weight 0.05. Generated traces
+are capped at length 128.
+
+\subsection{Exact Labeling}
+
+The initializer expands every accepted family into trace-net pairs and sends
+each pair to the PM4Py state-equation A* aligner. The aligner is run with
+transition-aware output enabled, so the returned alignment identifies the
+actual Petri-net transition used by each synchronous or model move.
+
+Every exact result is replay-checked by LARA's verifier. Replay checking starts
+from the initial marking, fires the model side of the alignment move by move,
+checks that the log projection equals the observed trace, and checks that the
+final marking is reached. If replay fails, the row is rejected. If PM4Py does
+not return an optimal alignment, the whole family is rejected and another
+family index is tried.
+
+For families whose representation equivalence was certified exactly, the
+initializer also checks cost consistency: the same observed trace must have the
+same optimal cost on all equivalent representations. If equivalent
+representations disagree in cost, the family is rejected. This prevents the
+model from receiving contradictory targets for what is meant to be the same
+visible behavior.
+
+\subsection{Masked Transition-Identity Targets}
+
+Most synchronous targets can be used directly. One corner case occurs in the
+duplicate-prefix representation. If noise removes the suffix that distinguishes
+the two branches, the observed trace may no longer identify which $A$
+transition was intended. In that case the transition-identity target is masked
+for the sync loss. The row is still kept: log-move targets, model-move targets,
+legality, and optimal-cost supervision remain valid. The metadata records this
+as \texttt{transition\_identity\_loss\_masked}.
+
+\subsection{Reference Split Sizes}
+
+The default command
+\[
+  \texttt{python scripts/init\_data.py --overwrite}
+\]
+creates the reference corpus in \texttt{data/lara\_synthetic}. It writes one
+pickle file per split, plus machine-readable and human-readable metadata:
+\begin{itemize}
+  \item \texttt{train.pkl}, \texttt{val.pkl}, and \texttt{test.pkl};
+  \item \texttt{metadata.pkl} and \texttt{metadata.json}.
+\end{itemize}
+
+\begin{table}
+\centering
+\caption{Reference corpus generated with seed 13. Each family expands to four
+rows because it has two representations and two observed traces.}
+\label{tab:appendix-splits}
+\small
+\begin{tabular}{@{}lrrr@{}}
+\toprule
+split & families & rows & families per motif \\
+\midrule
+train & 512 & 2{,}048 & 128 \\
+validation & 128 & 512 & 32 \\
+test & 128 & 512 & 32 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Strict class coverage is used by default. This means the requested split size
+must contain complete families, and every active motif must meet its required
+minimum. In the reference corpus all four motifs are exactly balanced in every
+split. The manifest records one generation detail that does not affect the
+dataset: 25 attempted families were rejected during generation and replaced by
+later accepted families.
+
+\subsection{Metadata and Reproducibility}
+
+Each row stores metadata that makes the corpus auditable. The metadata includes
+the split, family id, motif, representation kind, representation slot, trace
+id, clean trace, observed trace, trace-edit list, structural statistics,
+equivalence certificate, exact-aligner diagnostics, and buckets for cost, model
+size, duplicate labels, and invisible transitions. The split metadata also
+records motif counts, representation counts, edit-count counts, and move
+signature counts.
+
+The seeds are derived from the global seed, the split name, and the family
+index. Separate seeds are used for model construction, representation choices,
+playout, log view, and noise. This makes the generated files reproducible while
+keeping the different random choices independent.
+
+The result is a corpus in which every training row has a legal, exact,
+transition-aware alignment target, while the split structure prevents related
+representations of the same behavior from crossing between training,
+validation, and testing.
