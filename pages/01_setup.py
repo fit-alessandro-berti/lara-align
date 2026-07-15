@@ -10,6 +10,7 @@ from lara_ui.app_state import apply_configuration
 from lara_ui.input_service import (
     checkpoint_metadata,
     content_hash,
+    discover_petri_net_inductive,
     parse_pnml_bytes,
     parse_xes_bytes,
     save_uploaded_checkpoint,
@@ -31,27 +32,75 @@ st.title("Setup and data overview")
 st.caption("Inputs are validated together before any alignment starts.")
 
 root = Path(__file__).resolve().parents[1]
+log_bytes = None
+log_name = ""
+pnml_bytes = None
+pnml_name = ""
+discovery_noise_threshold = 0.0
+discovery_disable_fallthroughs = False
 
 with st.sidebar:
     st.header("Inputs")
     log_source = st.radio("Event log source", ["Bundled example", "Upload XES"])
     if log_source == "Bundled example":
-        log_name = st.selectbox(
-            "Bundled log",
-            ["running-example.xes", "receipt.xes", "roadtraffic100traces.xes"],
+        bundled_logs = {
+            "Running example · files/running-example.xes": "running-example.xes",
+            "Receipt log · files/receipt.xes": "receipt.xes",
+            "Road traffic · files/roadtraffic100traces.xes": "roadtraffic100traces.xes",
+        }
+        bundled_choice = st.selectbox(
+            "Bundled XES example",
+            list(bundled_logs),
+            help="Choose a ready-to-use XES log. The default model option discovers its Petri net automatically.",
         )
+        log_name = bundled_logs[bundled_choice]
         log_bytes = (root / "files" / log_name).read_bytes()
     else:
-        log_upload = st.file_uploader("XES event log", type=["xes", "xml"])
+        log_upload = st.file_uploader(
+            "XES event log",
+            type=["xes", "xml", "gz"],
+            help="Upload an XES, XML-encoded XES, or compressed .xes.gz file.",
+        )
         log_bytes = log_upload.getvalue() if log_upload else None
         log_name = log_upload.name if log_upload else ""
 
-    pnml_source = st.radio("Petri-net source", ["Bundled example", "Upload PNML"])
-    if pnml_source == "Bundled example":
+    st.subheader("Petri-net model")
+    model_source = st.radio(
+        "Model source",
+        [
+            "Discover from event log (Inductive Miner)",
+            "Upload PNML reference model",
+            "Bundled running-example PNML",
+        ],
+        help="Discovery needs only the XES log. Uploaded PNML keeps the model independent from the evaluated log.",
+    )
+    if model_source == "Discover from event log (Inductive Miner)":
+        discovery_noise_threshold = st.slider(
+            "Inductive Miner noise threshold",
+            min_value=0.0,
+            max_value=1.0,
+            value=0.0,
+            step=0.05,
+            help=(
+                "0 uses standard Inductive Miner. Values above 0 use "
+                "Inductive Miner-infrequent to filter infrequent behavior."
+            ),
+        )
+        discovery_disable_fallthroughs = st.checkbox(
+            "Disable Inductive Miner fall-throughs",
+            value=False,
+            help="Advanced: restricts fallback model constructions when no structural cut is found.",
+        )
+        st.caption("The Petri net and both markings are discovered automatically after the XES log is parsed.")
+    elif model_source == "Bundled running-example PNML":
         pnml_name = "running-example.pnml"
         pnml_bytes = (root / "files" / pnml_name).read_bytes()
     else:
-        pnml_upload = st.file_uploader("PNML model", type=["pnml", "xml"])
+        pnml_upload = st.file_uploader(
+            "PNML reference model",
+            type=["pnml", "xml"],
+            help="Upload any PNML/XML Petri net containing an initial and final marking.",
+        )
         pnml_bytes = pnml_upload.getvalue() if pnml_upload else None
         pnml_name = pnml_upload.name if pnml_upload else ""
 
@@ -88,7 +137,7 @@ with st.sidebar:
 
 loaded_log = None
 loaded_net = None
-input_error = None
+model_fingerprint = None
 try:
     if log_bytes:
         log_fingerprint = (
@@ -109,17 +158,52 @@ try:
             st.session_state.log_input_fingerprint = log_fingerprint
         else:
             loaded_log = st.session_state.loaded_log
-    if pnml_bytes:
-        pnml_fingerprint = content_hash(pnml_bytes)
-        if st.session_state.get("pnml_input_fingerprint") != pnml_fingerprint:
-            loaded_net = parse_pnml_bytes(pnml_bytes, pnml_name)
+    else:
+        st.session_state.loaded_log = None
+        st.session_state.variant_index = []
+        st.session_state.selected_variants = []
+
+    if model_source == "Discover from event log (Inductive Miner)" and loaded_log:
+        model_fingerprint = (
+            "inductive_miner",
+            st.session_state.log_input_fingerprint,
+            discovery_noise_threshold,
+            discovery_disable_fallthroughs,
+        )
+        if st.session_state.get("model_input_fingerprint") != model_fingerprint:
+            with st.spinner("Discovering a marked Petri net with Inductive Miner…"):
+                loaded_net = discover_petri_net_inductive(
+                    loaded_log,
+                    noise_threshold=discovery_noise_threshold,
+                    disable_fallthroughs=discovery_disable_fallthroughs,
+                )
             st.session_state.loaded_net = loaded_net
-            st.session_state.pnml_input_fingerprint = pnml_fingerprint
+            st.session_state.model_input_fingerprint = model_fingerprint
         else:
             loaded_net = st.session_state.loaded_net
+    elif model_source != "Discover from event log (Inductive Miner)" and pnml_bytes:
+        pnml_fingerprint = content_hash(pnml_bytes)
+        source_kind = (
+            "bundled_pnml"
+            if model_source == "Bundled running-example PNML"
+            else "uploaded_pnml"
+        )
+        model_fingerprint = (source_kind, pnml_fingerprint)
+        if st.session_state.get("model_input_fingerprint") != model_fingerprint:
+            loaded_net = parse_pnml_bytes(
+                pnml_bytes,
+                pnml_name,
+                source_kind=source_kind,
+            )
+            st.session_state.loaded_net = loaded_net
+            st.session_state.model_input_fingerprint = model_fingerprint
+        else:
+            loaded_net = st.session_state.loaded_net
+    else:
+        st.session_state.loaded_net = None
 except Exception as exc:
-    input_error = f"{type(exc).__name__}: {exc}"
-    st.error(input_error)
+    st.session_state.loaded_net = None
+    st.error(f"{type(exc).__name__}: {exc}")
 
 if checkpoint_path:
     try:
@@ -145,6 +229,18 @@ if loaded_log and loaded_net:
     compatibility = compatibility_analysis(loaded_log, loaded_net, variants)
     log_stats = log_summary(loaded_log, set(visible_transition_groups(loaded_net.net)))
     model_stats = net_summary(loaded_net)
+
+    if loaded_net.source_kind == "discovered_from_event_log":
+        st.info(
+            f"**Model source: discovered from `{loaded_log.source_name}`.** "
+            f"{loaded_net.discovery_algorithm}, noise threshold "
+            f"{loaded_net.discovery_noise_threshold:.2f}. This model was learned "
+            "from the same log now being evaluated."
+        )
+    elif loaded_net.source_kind == "uploaded_pnml":
+        st.success(f"**Model source: uploaded PNML reference model** · `{loaded_net.source_name}`")
+    else:
+        st.success(f"**Model source: bundled PNML reference model** · `{loaded_net.source_name}`")
 
     for warning in warnings_for_inputs(loaded_log, loaded_net, variants):
         st.warning(warning)
@@ -206,6 +302,14 @@ if loaded_log and loaded_net:
         metrics[3].metric("Markings available", "Yes" if compatibility["initial_marking_valid"] and compatibility["final_marking_valid"] else "No")
 
     with tabs[2]:
+        if loaded_net.source_kind == "discovered_from_event_log":
+            st.caption(
+                f"Discovered with {loaded_net.discovery_algorithm}; noise threshold "
+                f"{loaded_net.discovery_noise_threshold:.2f}; fall-throughs "
+                f"{'disabled' if loaded_net.discovery_disable_fallthroughs else 'enabled'}."
+            )
+        else:
+            st.caption(f"Reference model loaded from {loaded_net.source_name}.")
         net_metrics = st.columns(6)
         for column, key, label in zip(
             net_metrics,
@@ -294,6 +398,13 @@ if loaded_log and loaded_net:
             "activity_key": "concept:name",
             "log_hash": content_hash(log_bytes) if log_bytes else None,
             "pnml_hash": content_hash(pnml_bytes) if pnml_bytes else None,
+            "model_source": loaded_net.source_kind,
+            "model_fingerprint": model_fingerprint,
+            "discovery": {
+                "algorithm": loaded_net.discovery_algorithm,
+                "noise_threshold": loaded_net.discovery_noise_threshold,
+                "disable_fallthroughs": loaded_net.discovery_disable_fallthroughs,
+            },
             "checkpoint_path": str(checkpoint_path) if checkpoint_path else None,
             "selected_variants": sorted(st.session_state.selected_variants),
         }
@@ -315,4 +426,7 @@ if loaded_log and loaded_net:
     else:
         st.error("Preflight is incomplete. Resolve missing inputs, markings, checkpoint, or variant selection.")
 else:
-    st.info("Choose an event log and PNML model in the sidebar to begin preflight analysis.")
+    st.info(
+        "Choose or upload an XES event log, then discover its Petri net automatically "
+        "or provide a PNML reference model in the sidebar."
+    )

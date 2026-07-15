@@ -92,13 +92,21 @@ variant-level conformance checking:
 streamlit run streamlit_app.py
 ```
 
-The Setup page loads an XES log, PNML model, and trusted LARA checkpoint, then
-shows log/model summaries, compatibility warnings, duplicate-label groups, and
-the complete variant-to-case mapping. The Live page offers fast candidates,
-progressive certification, and an exact baseline. In candidate modes it renders
-each independently verified neural proposal before starting the corresponding
-exact work. Exact repair enriches the existing result and never overwrites the
-candidate.
+The Setup page accepts uploaded XES (including `.xes.gz`) and PNML files, plus
+one-click choices for `files/running-example.xes`, `files/receipt.xes`, and
+`files/roadtraffic100traces.xes`. A user may provide a PNML reference model or
+upload only the XES log and discover a marked Petri net automatically with
+PM4Py's Inductive Miner. The noise threshold is configurable: zero selects
+standard IM, while a positive value selects IM-infrequent. The UI labels
+discovered-from-log models explicitly so they cannot be mistaken for an
+independent reference model.
+
+Setup then shows log/model summaries, compatibility warnings, duplicate-label
+groups, and the complete variant-to-case mapping. The Live page offers fast
+candidates, progressive certification, and an exact baseline. In candidate
+modes it renders each independently verified neural proposal before starting
+the corresponding exact work. Exact repair enriches the existing result and
+never overwrites the candidate.
 
 The Trace inspector compares candidate and exact moves against shared observed
 event positions, exposes concrete transition identities for duplicate labels,

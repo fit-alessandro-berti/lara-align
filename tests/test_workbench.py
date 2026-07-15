@@ -1,5 +1,9 @@
 from __future__ import annotations
 
+import gzip
+from pathlib import Path
+
+import pytest
 from pm4py.objects.log.obj import Event, Trace
 
 from lara_align.certifier import CertifyingAlignmentSystem
@@ -9,7 +13,12 @@ from lara_align.synthetic import make_sequence_net, trace_from_labels
 from lara_align.types import Alignment, AlignmentMove, CostModel
 from lara_ui.alignment_runner import WorkbenchRunner
 from lara_ui.export_service import case_csv, full_json, variant_csv
-from lara_ui.input_service import ParsedLog
+from lara_ui.input_service import (
+    ParsedLog,
+    discover_petri_net_inductive,
+    parse_pnml_bytes,
+    parse_xes_bytes,
+)
 from lara_ui.replay_service import alignment_differences, anchored_alignment
 from lara_ui.ui_types import TraceAlignmentResult, TraceVariant
 from lara_ui.variant_service import group_trace_variants
@@ -132,6 +141,80 @@ def test_variant_grouping_retains_complete_case_mapping():
     assert variants[0].case_ids == ["case-1", "case-2"]
     assert variants[0].frequency == 2
     assert variants[0].coverage == 2 / 3
+
+
+@pytest.mark.parametrize(
+    ("filename", "expected_cases"),
+    [
+        ("running-example.xes", 6),
+        ("receipt.xes", 1434),
+        ("roadtraffic100traces.xes", 100),
+    ],
+)
+def test_every_bundled_xes_can_be_loaded_and_automatically_discovered(
+    filename, expected_cases
+):
+    data = (Path("files") / filename).read_bytes()
+
+    parsed_log = parse_xes_bytes(data, filename)
+    parsed_net = discover_petri_net_inductive(parsed_log, noise_threshold=0.0)
+
+    assert len(parsed_log.traces) == expected_cases
+    assert parsed_net.source_kind == "discovered_from_event_log"
+    assert parsed_net.source_name == f"Discovered from {filename}"
+    assert parsed_net.discovery_algorithm == "Inductive Miner (IM)"
+    assert parsed_net.discovery_noise_threshold == 0.0
+    assert parsed_net.net.places
+    assert parsed_net.net.transitions
+    assert sum(parsed_net.initial_marking.values()) > 0
+    assert sum(parsed_net.final_marking.values()) > 0
+
+
+def test_positive_noise_threshold_selects_inductive_miner_infrequent():
+    data = Path("files/running-example.xes").read_bytes()
+    parsed_log = parse_xes_bytes(data, "user-upload.xes")
+
+    parsed_net = discover_petri_net_inductive(
+        parsed_log,
+        noise_threshold=0.2,
+        disable_fallthroughs=True,
+    )
+
+    assert parsed_net.discovery_algorithm == "Inductive Miner - infrequent (IMf)"
+    assert parsed_net.discovery_noise_threshold == 0.2
+    assert parsed_net.discovery_disable_fallthroughs is True
+
+
+def test_compressed_xes_upload_is_supported():
+    compressed = gzip.compress(Path("files/running-example.xes").read_bytes())
+
+    parsed_log = parse_xes_bytes(compressed, "user-upload.xes.gz")
+
+    assert len(parsed_log.traces) == 6
+    assert parsed_log.source_name == "user-upload.xes.gz"
+
+
+def test_discovery_rejects_invalid_noise_thresholds():
+    parsed_log = parse_xes_bytes(
+        Path("files/running-example.xes").read_bytes(), "upload.xes"
+    )
+
+    with pytest.raises(ValueError, match="between 0 and 1"):
+        discover_petri_net_inductive(parsed_log, noise_threshold=1.1)
+
+
+def test_uploaded_pnml_is_identified_as_an_independent_reference_model():
+    parsed_net = parse_pnml_bytes(
+        Path("files/running-example.pnml").read_bytes(),
+        "user-model.pnml",
+        source_kind="uploaded_pnml",
+    )
+
+    assert parsed_net.source_kind == "uploaded_pnml"
+    assert parsed_net.source_name == "user-model.pnml"
+    assert parsed_net.discovery_algorithm is None
+    assert parsed_net.initial_marking
+    assert parsed_net.final_marking
 
 
 def test_alignment_comparison_is_anchored_to_events_not_raw_move_indices():

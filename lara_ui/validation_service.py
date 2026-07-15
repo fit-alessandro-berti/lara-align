@@ -60,6 +60,10 @@ def net_summary(parsed_net: ParsedNet) -> dict:
         "initial_marking_present": bool(parsed_net.initial_marking),
         "final_marking_present": bool(parsed_net.final_marking),
         "source": parsed_net.source_kind,
+        "source_name": parsed_net.source_name,
+        "discovery_algorithm": parsed_net.discovery_algorithm,
+        "discovery_noise_threshold": parsed_net.discovery_noise_threshold,
+        "discovery_disable_fallthroughs": parsed_net.discovery_disable_fallthroughs,
     }
 
 

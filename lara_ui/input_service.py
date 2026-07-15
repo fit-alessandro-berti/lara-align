@@ -6,7 +6,8 @@ from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, Sequence
 
-from pm4py.objects.log.obj import Event, Trace
+import pm4py
+from pm4py.objects.log.obj import Event, EventLog, Trace
 from pm4py.objects.log.importer.xes import importer as xes_importer
 from pm4py.objects.petri_net.importer import importer as pnml_importer
 
@@ -30,6 +31,9 @@ class ParsedNet:
     source_kind: str = "uploaded_pnml"
     initial_marking_guessed: bool = False
     final_marking_guessed: bool = False
+    discovery_algorithm: str | None = None
+    discovery_noise_threshold: float | None = None
+    discovery_disable_fallthroughs: bool | None = None
 
 
 def content_hash(data: bytes) -> str:
@@ -54,7 +58,8 @@ def parse_xes_bytes(
     ignore_empty: bool = True,
     include_lifecycle: bool = False,
 ) -> ParsedLog:
-    path = _temporary_input(data, ".xes")
+    suffix = ".xes.gz" if source_name.lower().endswith(".xes.gz") else ".xes"
+    path = _temporary_input(data, suffix)
     try:
         parameters: dict[str, Any] = {"show_progress_bar": False}
         if max_cases is not None:
@@ -123,7 +128,11 @@ def normalize_log(
     )
 
 
-def parse_pnml_bytes(data: bytes, source_name: str) -> ParsedNet:
+def parse_pnml_bytes(
+    data: bytes,
+    source_name: str,
+    source_kind: str = "uploaded_pnml",
+) -> ParsedNet:
     path = _temporary_input(data, ".pnml")
     try:
         net, initial_marking, final_marking = pnml_importer.apply(str(path))
@@ -134,12 +143,55 @@ def parse_pnml_bytes(data: bytes, source_name: str) -> ParsedNet:
         initial_marking=initial_marking,
         final_marking=final_marking,
         source_name=source_name,
+        source_kind=source_kind,
     )
 
 
 def parse_pnml_path(path: str | Path) -> ParsedNet:
     source = Path(path)
     return parse_pnml_bytes(source.read_bytes(), source.name)
+
+
+def discover_petri_net_inductive(
+    parsed_log: ParsedLog,
+    noise_threshold: float = 0.0,
+    disable_fallthroughs: bool = False,
+) -> ParsedNet:
+    """Discover a marked Petri net directly from a normalized XES log.
+
+    PM4Py selects standard Inductive Miner for threshold zero and Inductive
+    Miner-infrequent for positive thresholds. The returned provenance makes it
+    explicit that this is not an independently supplied reference model.
+    """
+
+    if not 0.0 <= noise_threshold <= 1.0:
+        raise ValueError("Inductive Miner noise threshold must be between 0 and 1")
+    if not parsed_log.traces:
+        raise ValueError("Cannot discover a Petri net from an empty event log")
+
+    event_log = EventLog(list(parsed_log.traces))
+    net, initial_marking, final_marking = pm4py.discover_petri_net_inductive(
+        event_log,
+        noise_threshold=float(noise_threshold),
+        activity_key=parsed_log.activity_key,
+        disable_fallthroughs=disable_fallthroughs,
+        multi_processing=False,
+    )
+    algorithm = (
+        "Inductive Miner - infrequent (IMf)"
+        if noise_threshold > 0
+        else "Inductive Miner (IM)"
+    )
+    return ParsedNet(
+        net=net,
+        initial_marking=initial_marking,
+        final_marking=final_marking,
+        source_name=f"Discovered from {parsed_log.source_name}",
+        source_kind="discovered_from_event_log",
+        discovery_algorithm=algorithm,
+        discovery_noise_threshold=float(noise_threshold),
+        discovery_disable_fallthroughs=disable_fallthroughs,
+    )
 
 
 def save_uploaded_checkpoint(data: bytes, original_name: str) -> Path:
