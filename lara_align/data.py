@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
+import json
 from pathlib import Path
 import pickle
 from typing import Any, Iterable
@@ -11,7 +12,7 @@ from pm4py.objects.petri_net.obj import Marking, PetriNet
 from lara_align.types import Alignment
 
 SPLITS = ("train", "val", "test")
-DATASET_VERSION = 1
+DATASET_VERSION = 2
 
 
 @dataclass
@@ -60,6 +61,10 @@ def save_metadata(data_dir: str | Path, metadata: DatasetMetadata) -> Path:
     metadata_path = path / "metadata.pkl"
     with metadata_path.open("wb") as handle:
         pickle.dump(metadata, handle, protocol=pickle.HIGHEST_PROTOCOL)
+    json_path = path / "metadata.json"
+    with json_path.open("w", encoding="utf-8") as handle:
+        json.dump(asdict(metadata), handle, indent=2, sort_keys=True)
+        handle.write("\n")
     return metadata_path
 
 

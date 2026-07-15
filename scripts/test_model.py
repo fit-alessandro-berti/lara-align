@@ -37,6 +37,13 @@ class EvaluationRecord:
     label_alignment_match: bool
     move_count_gap: int | None
     certified_optimal: bool | None = None
+    behavior_id: str = ""
+    representation_kind: str = "unknown"
+    trace_id: str = ""
+    fast_seconds: float | None = None
+    exact_visited_states: int | None = None
+    exact_queued_states: int | None = None
+    exact_seconds: float | None = None
 
     @property
     def cost_gap(self) -> int | None:
@@ -89,6 +96,19 @@ def parse_args() -> argparse.Namespace:
             "heuristics only) to isolate the learned model's contribution."
         ),
     )
+    parser.add_argument(
+        "--representation-kind",
+        action="append",
+        default=None,
+        help="Evaluate only this representation kind; repeat for multiple kinds.",
+    )
+    parser.add_argument(
+        "--motif",
+        action="append",
+        default=None,
+        help="Evaluate only this behavior motif; repeat for multiple motifs.",
+    )
+    parser.add_argument("--max-samples", type=int, default=None)
     return parser.parse_args()
 
 
@@ -97,6 +117,20 @@ def main() -> None:
     device = torch.device(args.device)
     model, checkpoint = load_checkpoint(args.checkpoint, device=device)
     samples = load_split(args.data_dir, args.split)
+    if args.representation_kind:
+        selected = set(args.representation_kind)
+        samples = [
+            sample
+            for sample in samples
+            if sample.metadata.get("representation_kind") in selected
+        ]
+    if args.motif:
+        selected = set(args.motif)
+        samples = [sample for sample in samples if sample.metadata.get("motif") in selected]
+    if args.max_samples is not None:
+        samples = samples[: max(0, args.max_samples)]
+    if not samples:
+        raise SystemExit("no samples matched the requested evaluation filters")
     criterion = LARALoss()
 
     start = perf_counter()
@@ -152,6 +186,7 @@ def evaluate_model(
             for key, value in losses.items():
                 loss_totals[key] = loss_totals.get(key, 0.0) + float(value.detach().cpu())
 
+            fast_start = perf_counter()
             fast = system.align(
                 sample.net,
                 sample.initial_marking,
@@ -159,6 +194,7 @@ def evaluate_model(
                 sample.trace,
                 mode=LARAMode.FAST,
             )
+            fast_seconds = perf_counter() - fast_start
 
             certified_value: bool | None = None
             if run_certified:
@@ -173,7 +209,7 @@ def evaluate_model(
                 if certified.certified_optimal:
                     certified_optimal += 1
 
-            records.append(_make_record(sample, fast, certified_value))
+            records.append(_make_record(sample, fast, certified_value, fast_seconds))
 
     count = max(1, len(samples))
     averaged_losses = {f"loss_{key}": value / count for key, value in loss_totals.items()}
@@ -221,6 +257,33 @@ def format_human_report(
     lines.append(f"std dev:           {_fmt(metrics['gap_std'])}")
     lines.append(f"mean relative gap: {_fmt(metrics['gap_relative_mean'])}")
     lines.append("")
+    paired = metrics.get("paired_equivalence", {})
+    if isinstance(paired, dict) and int(paired.get("pair_count", 0)) > 0:
+        lines.append("Paired Equivalent Representations")
+        lines.append("-" * 33)
+        lines.append(f"paired traces:                 {paired.get('pair_count', 0)}")
+        lines.append(
+            f"exact optimal-cost consistency: {_pct(paired.get('exact_cost_consistency_rate'))}"
+        )
+        lines.append(
+            f"legal on every representation:  {_pct(paired.get('all_variants_legal_rate'))}"
+        )
+        lines.append(
+            f"predicted-cost consistency:     {_pct(paired.get('predicted_cost_consistency_rate'))}"
+        )
+        lines.append(
+            f"optimality agreement:           {_pct(paired.get('optimality_agreement_rate'))}"
+        )
+        lines.append(
+            f"mean fast runtime ratio:        {_fmt(paired.get('fast_runtime_ratio_mean'))}"
+        )
+        lines.append(
+            f"mean exact visited-state ratio: {_fmt(paired.get('exact_visited_state_ratio_mean'))}"
+        )
+        lines.append(
+            f"mean exact runtime ratio:       {_fmt(paired.get('exact_runtime_ratio_mean'))}"
+        )
+        lines.append("")
     lines.append("Losses")
     lines.append("-" * 6)
     for key in sorted(k for k in metrics if k.startswith("loss_")):
@@ -235,6 +298,16 @@ def format_human_report(
             f"opt_cost={_pct(family_metrics['optimal_cost_rate'])} "
             f"mean_gap={_fmt(family_metrics['gap_mean'])}"
         )
+    lines.append("")
+    lines.append("By Representation")
+    lines.append("-" * 17)
+    for representation, values in sorted(metrics.get("by_representation", {}).items()):
+        lines.append(
+            f"{representation:24s} n={values['samples']:3d} "
+            f"replay={_pct(values['legal_rate'])} "
+            f"opt_cost={_pct(values['optimal_cost_rate'])} "
+            f"mean_gap={_fmt(values['gap_mean'])}"
+        )
 
     examples = _select_examples(records, args)
     if examples:
@@ -246,7 +319,12 @@ def format_human_report(
     return "\n".join(lines)
 
 
-def _make_record(sample: AlignmentSample, fast_result, certified_value: bool | None) -> EvaluationRecord:
+def _make_record(
+    sample: AlignmentSample,
+    fast_result,
+    certified_value: bool | None,
+    fast_seconds: float | None = None,
+) -> EvaluationRecord:
     predicted = fast_result.alignment
     exact_match = predicted is not None and _alignment_identity(
         predicted
@@ -260,6 +338,8 @@ def _make_record(sample: AlignmentSample, fast_result, certified_value: bool | N
         if predicted is not None
         else None
     )
+    exact_diagnostics = sample.metadata.get("exact_diagnostics", {})
+    exact_diagnostics = exact_diagnostics if isinstance(exact_diagnostics, dict) else {}
     return EvaluationRecord(
         sample_id=sample.sample_id,
         family=str(sample.metadata.get("family", "unknown")),
@@ -274,6 +354,13 @@ def _make_record(sample: AlignmentSample, fast_result, certified_value: bool | N
         label_alignment_match=label_match,
         move_count_gap=move_count_gap,
         certified_optimal=certified_value,
+        behavior_id=str(sample.metadata.get("behavior_id", sample.sample_id)),
+        representation_kind=str(sample.metadata.get("representation_kind", "unknown")),
+        trace_id=str(sample.metadata.get("trace_id", sample.sample_id)),
+        fast_seconds=fast_seconds,
+        exact_visited_states=_optional_int(exact_diagnostics.get("visited_states")),
+        exact_queued_states=_optional_int(exact_diagnostics.get("queued_states")),
+        exact_seconds=_optional_float(exact_diagnostics.get("elapsed_seconds")),
     )
 
 
@@ -314,15 +401,126 @@ def _alignment_metrics(records: list[EvaluationRecord]) -> dict[str, Any]:
             [record.move_count_gap for record in records if record.move_count_gap is not None]
         ),
         "by_family": _family_metrics(records),
+        "by_representation": _group_metrics(
+            records, lambda record: record.representation_kind
+        ),
+        "paired_equivalence": _paired_equivalence_metrics(records),
         "failure_reasons": _failure_reasons(records),
     }
 
 
+def _paired_equivalence_metrics(records: list[EvaluationRecord]) -> dict[str, Any]:
+    grouped: dict[tuple[str, str], list[EvaluationRecord]] = {}
+    for record in records:
+        grouped.setdefault((record.behavior_id, record.trace_id), []).append(record)
+    groups = [
+        values
+        for values in grouped.values()
+        if len({record.representation_kind for record in values}) > 1
+    ]
+    exact_consistent = 0
+    all_legal = 0
+    predicted_consistent = 0
+    optimality_agreement = 0
+    fast_ratios: list[float] = []
+    visited_ratios: list[float] = []
+    queued_ratios: list[float] = []
+    exact_runtime_ratios: list[float] = []
+    by_pair: dict[str, list[list[EvaluationRecord]]] = {}
+    for values in groups:
+        exact_consistent += int(len({record.optimal_cost for record in values}) == 1)
+        all_legal += int(all(record.legal for record in values))
+        predicted = [record.predicted_cost for record in values]
+        predicted_consistent += int(
+            all(value is not None for value in predicted) and len(set(predicted)) == 1
+        )
+        statuses = [record.legal and record.cost_gap == 0 for record in values]
+        optimality_agreement += int(len(set(statuses)) == 1)
+        fast_ratio = _max_min_ratio(
+            [record.fast_seconds for record in values if record.fast_seconds is not None]
+        )
+        visited_ratio = _max_min_ratio(
+            [
+                record.exact_visited_states
+                for record in values
+                if record.exact_visited_states is not None
+            ]
+        )
+        queued_ratio = _max_min_ratio(
+            [
+                record.exact_queued_states
+                for record in values
+                if record.exact_queued_states is not None
+            ]
+        )
+        exact_runtime_ratio = _max_min_ratio(
+            [record.exact_seconds for record in values if record.exact_seconds is not None]
+        )
+        if fast_ratio is not None:
+            fast_ratios.append(fast_ratio)
+        if visited_ratio is not None:
+            visited_ratios.append(visited_ratio)
+        if queued_ratio is not None:
+            queued_ratios.append(queued_ratio)
+        if exact_runtime_ratio is not None:
+            exact_runtime_ratios.append(exact_runtime_ratio)
+        pair = "__vs__".join(sorted({record.representation_kind for record in values}))
+        by_pair.setdefault(pair, []).append(values)
+    count = len(groups)
+    return {
+        "pair_count": count,
+        "exact_cost_consistency_rate": exact_consistent / count if count else 0.0,
+        "all_variants_legal_rate": all_legal / count if count else 0.0,
+        "predicted_cost_consistency_rate": predicted_consistent / count if count else 0.0,
+        "optimality_agreement_rate": optimality_agreement / count if count else 0.0,
+        "fast_runtime_ratio_mean": _safe_mean(fast_ratios),
+        "exact_visited_state_ratio_mean": _safe_mean(visited_ratios),
+        "exact_queued_state_ratio_mean": _safe_mean(queued_ratios),
+        "exact_runtime_ratio_mean": _safe_mean(exact_runtime_ratios),
+        "by_representation_pair": {
+            pair: {
+                "count": len(values),
+                "all_variants_legal_rate": sum(
+                    all(record.legal for record in group) for group in values
+                )
+                / len(values),
+                "predicted_cost_consistency_rate": sum(
+                    all(record.predicted_cost is not None for record in group)
+                    and len({record.predicted_cost for record in group}) == 1
+                    for group in values
+                )
+                / len(values),
+                "duplicate_transition_selection_accuracy": _safe_mean(
+                    [
+                        float(record.exact_alignment_match)
+                        for group in values
+                        for record in group
+                        if record.representation_kind == "duplicate_prefix"
+                    ]
+                ),
+                "invisible_routing_label_accuracy": _safe_mean(
+                    [
+                        float(record.label_alignment_match)
+                        for group in values
+                        for record in group
+                        if record.representation_kind == "silent_routing"
+                    ]
+                ),
+            }
+            for pair, values in sorted(by_pair.items())
+        },
+    }
+
+
 def _family_metrics(records: list[EvaluationRecord]) -> dict[str, dict[str, Any]]:
-    families = sorted({record.family for record in records})
+    return _group_metrics(records, lambda record: record.family)
+
+
+def _group_metrics(records: list[EvaluationRecord], key_fn) -> dict[str, dict[str, Any]]:
+    families = sorted({key_fn(record) for record in records})
     result: dict[str, dict[str, Any]] = {}
     for family in families:
-        family_records = [record for record in records if record.family == family]
+        family_records = [record for record in records if key_fn(record) == family]
         count = max(1, len(family_records))
         legal = [record for record in family_records if record.legal and record.cost_gap is not None]
         gaps = [record.cost_gap for record in legal if record.cost_gap is not None]
@@ -422,6 +620,13 @@ def _record_to_json(record: EvaluationRecord) -> dict[str, Any]:
         "label_alignment_match": record.label_alignment_match,
         "move_count_gap": record.move_count_gap,
         "certified_optimal": record.certified_optimal,
+        "behavior_id": record.behavior_id,
+        "representation_kind": record.representation_kind,
+        "trace_id": record.trace_id,
+        "fast_seconds": record.fast_seconds,
+        "exact_visited_states": record.exact_visited_states,
+        "exact_queued_states": record.exact_queued_states,
+        "exact_seconds": record.exact_seconds,
         "optimal_alignment": [
             _move_to_json(move) for move in record.optimal_alignment.moves
         ],
@@ -458,6 +663,9 @@ def _sample_losses(
         sample.optimal_alignment,
         features,
         optimal_cost=sample.optimal_cost,
+        mask_transition_identity=not bool(
+            sample.metadata.get("transition_identity_identifiable", True)
+        ),
     )
     output = model(features)
     return criterion(output, features, targets)
@@ -496,6 +704,21 @@ def _pct(value: float | None) -> str:
 def _safe_mean(values: list[float | int | None]) -> float | None:
     clean = [float(value) for value in values if value is not None]
     return mean(clean) if clean else None
+
+
+def _max_min_ratio(values: list[float | int]) -> float | None:
+    clean = [float(value) for value in values]
+    if len(clean) < 2:
+        return None
+    return max(clean) / max(min(clean), 1e-12)
+
+
+def _optional_int(value: object) -> int | None:
+    return int(value) if isinstance(value, (int, float)) else None
+
+
+def _optional_float(value: object) -> float | None:
+    return float(value) if isinstance(value, (int, float)) else None
 
 
 def _percentile(values: list[int], quantile: float) -> float | None:

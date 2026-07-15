@@ -132,14 +132,26 @@ Default split sizes:
 - test: 100 examples
 
 The initializer generates exact-labeled synthetic Petri-net/trace pairs using
-pm4py. It currently mixes sequential nets and duplicate-label choice nets, then
-injects controlled deviations. A single exact-labeled pool is stratified by
-synthetic family and optimal-cost bucket before writing:
+pm4py. It now generates semantic behavior families containing a shared clean
+trace pool and matched Petri-net variants for duplicate activity versus silent
+routing, concurrency versus explicit interleaving, block versus non-free-choice
+M-pattern, and random block models versus isomorphic renamings.
+Configurations requesting three or four variants also receive an exact prefix
+trie and an invisible-prefix refinement.
+Controlled motifs receive a shared configurable sequence context
+(`structure.motif_context_size`) to support larger matched examples.
+
+Corruption is applied once at visible-label level and reused for every variant.
+The initializer verifies visible-language equivalence, exact-aligns every
+`(variant, trace)` pair, verifies each alignment, and rejects an exact family if
+optimal costs differ. Families are assigned to a split before expansion, so no
+behavior ID can leak across train, validation, and test.
 
 - `data/lara_synthetic/train.pkl`
 - `data/lara_synthetic/val.pkl`
 - `data/lara_synthetic/test.pkl`
 - `data/lara_synthetic/metadata.pkl`
+- `data/lara_synthetic/metadata.json` (human-readable manifest)
 
 For a quick smoke dataset:
 
@@ -151,6 +163,29 @@ python scripts/init_data.py \
   --test-size 8 \
   --overwrite
 ```
+
+Named presets and nested JSON configuration are available:
+
+```bash
+python scripts/init_data.py --preset equivalence_train --overwrite
+python scripts/init_data.py --train-families 100 --val-families 25 --test-families 25 --overwrite
+python scripts/init_data.py --preset nonblock_ood --output data/nonblock --overwrite
+python scripts/init_data.py --generator-config configs/behavior_families.json --overwrite
+python scripts/init_data.py \
+  --motif-weights duplicate_vs_silent=1,m_nonfreechoice=1 \
+  --traces-per-behavior 3 \
+  --edit-count-weights 1=0.5,2=0.3,3=0.2 \
+  --overwrite
+```
+
+The same interface provides `iid_behavior`, `equivalence_seen`,
+`equivalence_unseen`, `scale_ood`, `noise_ood`, `sampling_ood`, and
+`loops_bounded` evaluation presets.
+
+Metadata includes behavior/variant/trace IDs, canonical specs, transformation
+and structural statistics, equivalence certificates, and trace-edit provenance.
+Non-identifiable transition targets are masked while legality and cost
+supervision remain active.
 
 ### 3. Train
 
@@ -223,6 +258,8 @@ The evaluator prints a human-readable report containing:
 - label-level alignment match rate;
 - mean, median, min, max, p90, p95, and standard deviation of cost gaps;
 - per-family legality and optimality metrics;
+- paired equivalent-representation exact/predicted cost consistency, legality,
+  and optimality agreement;
 - example traces with side-by-side pm4py optimal and LARA reconstructed
   alignments.
 
@@ -242,6 +279,11 @@ Use `--no-guidance` to run the guidance ablation: the decoder receives no
 neural move scores and falls back to structural heuristics only, isolating
 the learned model's contribution. The same flag is available in
 `scripts/benchmark_scaling.py`.
+
+Use repeatable `--representation-kind` and `--motif` filters for held-out
+transformation studies. Training supports `--representation-kind` as well as
+`--max-train-samples` and `--max-val-samples`; evaluation supports
+`--max-samples`.
 
 ### 5. Scaling Benchmark
 

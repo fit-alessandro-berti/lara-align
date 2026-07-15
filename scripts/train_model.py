@@ -69,6 +69,14 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Disable tqdm progress bars.",
     )
+    parser.add_argument(
+        "--representation-kind",
+        action="append",
+        default=None,
+        help="Train/validate only on this representation kind; repeat as needed.",
+    )
+    parser.add_argument("--max-train-samples", type=int, default=None)
+    parser.add_argument("--max-val-samples", type=int, default=None)
     return parser.parse_args()
 
 
@@ -81,6 +89,24 @@ def main() -> None:
     progress_enabled = not args.no_progress
     _progress_write(f"loading data from {args.data_dir}")
     train_samples, val_samples = _load_training_splits(args.data_dir, progress_enabled)
+    if args.representation_kind:
+        selected = set(args.representation_kind)
+        train_samples = [
+            sample
+            for sample in train_samples
+            if sample.metadata.get("representation_kind") in selected
+        ]
+        val_samples = [
+            sample
+            for sample in val_samples
+            if sample.metadata.get("representation_kind") in selected
+        ]
+    if args.max_train_samples is not None:
+        train_samples = train_samples[: max(0, args.max_train_samples)]
+    if args.max_val_samples is not None:
+        val_samples = val_samples[: max(0, args.max_val_samples)]
+    if not train_samples or not val_samples:
+        raise SystemExit("training filters produced an empty train or validation split")
     _progress_write(
         f"loaded data: train={len(train_samples)} samples, val={len(val_samples)} samples"
     )
@@ -380,6 +406,9 @@ def _sample_losses(
         sample.optimal_alignment,
         features,
         optimal_cost=sample.optimal_cost,
+        mask_transition_identity=not bool(
+            sample.metadata.get("transition_identity_identifiable", True)
+        ),
     )
     output = model(features)
     return criterion(output, features, targets)

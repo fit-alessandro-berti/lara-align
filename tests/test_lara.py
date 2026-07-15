@@ -14,6 +14,7 @@ from lara_align.data import (
 from lara_align.decode import GreedyCandidateDecoder
 from lara_align.exact import Pm4PyExactAligner
 from lara_align.features import pm4py_to_features
+from lara_align.families import BehaviorFamilyConfig, generate_behavior_family
 from lara_align.model import LARANeuralModel
 from lara_align.synthetic import (
     generate_block_structured_example,
@@ -24,6 +25,7 @@ from lara_align.synthetic import (
 from lara_align.training import LARALoss, targets_from_alignment
 from lara_align.verify import verify_alignment
 from scripts.test_model import EvaluationRecord, format_human_report
+from scripts.init_data import _generate_family_split
 from scripts.train_model import _metrics_csv_row, _write_metrics_csv_row
 
 
@@ -176,6 +178,64 @@ def test_block_structured_example_is_exactly_alignable():
     ).legal
 
 
+def test_behavior_family_exact_pairs_and_corruption_provenance():
+    expected = {
+        "duplicate_vs_silent": {"duplicate_prefix", "silent_routing"},
+        "concurrent_vs_interleaved": {"parallel", "explicit_interleaving"},
+        "m_nonfreechoice": {"canonical_block", "m_nonfreechoice"},
+    }
+    for motif, kinds in expected.items():
+        config = BehaviorFamilyConfig.from_dict(
+            {
+                "seed": 19,
+                "motifs": {motif: 1.0},
+                "logs": {"traces_per_behavior": 2},
+                "noise": {
+                    "clean_fraction": 0.0,
+                    "edit_count_weights": {"1": 1.0},
+                    "operation_weights": {"outside_insert": 1.0},
+                },
+            }
+        )
+        family = generate_behavior_family(config, 0, "test")
+
+        assert family.equivalence_certificate.status == "exact"
+        assert family.equivalence_certificate.semantics == "visible_complete_trace_language"
+        assert {variant.representation_kind for variant in family.model_variants} == kinds
+        assert all(trace.edits and trace.edits[0].kind == "outside_insert" for trace in family.noisy_traces)
+        assert all(trace.trace_id.startswith(family.behavior_id) for trace in family.noisy_traces)
+
+        if motif == "m_nonfreechoice":
+            nonfree = next(
+                variant
+                for variant in family.model_variants
+                if variant.representation_kind == "m_nonfreechoice"
+            )
+            assert nonfree.structural_statistics["free_choice_violation_count"] > 0
+
+
+def test_family_initializer_expands_after_split_and_checks_cost_consistency():
+    config = BehaviorFamilyConfig.preset("smoke")
+    samples, rejections, family_count = _generate_family_split(
+        "train",
+        4,
+        config,
+        Pm4PyExactAligner(),
+        exact_timeout=None,
+        progress_every=0,
+    )
+
+    assert family_count == 2
+    assert not rejections
+    assert {sample.split for sample in samples} == {"train"}
+    paired: dict[tuple[str, str], list[AlignmentSample]] = {}
+    for sample in samples:
+        key = (sample.metadata["behavior_id"], sample.metadata["trace_id"])
+        paired.setdefault(key, []).append(sample)
+    assert all(len({sample.optimal_cost for sample in group}) == 1 for group in paired.values())
+    assert all(len({sample.metadata["representation_kind"] for sample in group}) == 2 for group in paired.values())
+
+
 def test_certifying_system_returns_legal_certified_alignment():
     net, im, fm = make_sequence_net(["A", "B"])
     trace = Trace(
@@ -224,6 +284,23 @@ def test_training_loss_handles_empty_trace():
 
     assert losses["log_move"].isfinite()
     assert losses["total"].isfinite()
+
+
+def test_transition_identity_target_can_be_masked_without_masking_cost():
+    net, im, fm = make_duplicate_label_choice_net()
+    trace = trace_from_labels(["A"])
+    exact = Pm4PyExactAligner().align_trace(net, im, fm, trace)
+    features = pm4py_to_features(net, im, fm, trace)
+
+    targets = targets_from_alignment(
+        exact.alignment,
+        features,
+        optimal_cost=exact.cost,
+        mask_transition_identity=True,
+    )
+
+    assert targets.sync_transition_targets.eq(-1).all()
+    assert targets.optimal_cost is not None
 
 
 def test_training_metrics_csv_writes_epoch_rows(tmp_path):

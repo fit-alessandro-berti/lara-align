@@ -98,6 +98,7 @@ def targets_from_alignment(
     alignment: Alignment,
     features: PetriTraceFeatures,
     optimal_cost: int | None = None,
+    mask_transition_identity: bool = False,
 ) -> AlignmentTargets:
     transition_indices = {
         transition_name: index
@@ -110,7 +111,11 @@ def targets_from_alignment(
     event_index = 0
     for move in alignment.moves:
         if move.kind == MoveKind.SYNCHRONOUS:
-            if move.transition_name in transition_indices and event_index < features.trace_length:
+            if (
+                not mask_transition_identity
+                and move.transition_name in transition_indices
+                and event_index < features.trace_length
+            ):
                 sync_targets[event_index] = transition_indices[move.transition_name]
             event_index += 1
         elif move.kind == MoveKind.LOG:
