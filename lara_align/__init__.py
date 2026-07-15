@@ -14,7 +14,14 @@ from lara_align.families import (
     generate_behavior_family,
 )
 from lara_align.model import LARANeuralModel
-from lara_align.types import Alignment, AlignmentMove, CostModel, LARAResult
+from lara_align.types import (
+    Alignment,
+    AlignmentMove,
+    CandidateResult,
+    CertificationResult,
+    CostModel,
+    LARAResult,
+)
 from lara_align.verify import verify_alignment
 
 __all__ = [
@@ -25,6 +32,8 @@ __all__ = [
     "BehaviorFamilyConfig",
     "BehaviorSpec",
     "CertifyingAlignmentSystem",
+    "CandidateResult",
+    "CertificationResult",
     "CostModel",
     "GreedyCandidateDecoder",
     "LARAMode",

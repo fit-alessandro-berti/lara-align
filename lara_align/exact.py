@@ -17,6 +17,8 @@ class ExactAlignmentResult:
     optimal: bool
     raw: dict[str, Any] | None = None
     diagnostics: dict[str, Any] | None = None
+    timed_out: bool = False
+    error: str | None = None
 
 
 class Pm4PyExactAligner:
@@ -43,12 +45,21 @@ class Pm4PyExactAligner:
             variant=alignments.Variants.VERSION_STATE_EQUATION_A_STAR,
         )
         if raw is None:
+            timed_out = timeout_seconds is not None
             return ExactAlignmentResult(
                 alignment=None,
                 cost=None,
                 optimal=False,
                 raw=None,
-                diagnostics={"reason": "pm4py returned no alignment"},
+                diagnostics={
+                    "reason": (
+                        "exact alignment timed out"
+                        if timed_out
+                        else "pm4py returned no alignment"
+                    ),
+                    "backend": "pm4py_state_equation_a_star",
+                },
+                timed_out=timed_out,
             )
 
         parsed = parse_pm4py_alignment(raw, net)
@@ -73,6 +84,7 @@ class Pm4PyExactAligner:
         parsed.cost = verified.cost
         parsed.metadata.update(
             {
+                "backend": "pm4py_state_equation_a_star",
                 "pm4py_cost": raw.get("cost"),
                 "visited_states": raw.get("visited_states"),
                 "queued_states": raw.get("queued_states"),

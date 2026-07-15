@@ -83,6 +83,33 @@ The important design constraint is that neural output is never trusted as a
 certificate. Fast mode evaluates the learned candidate. Certified mode invokes
 pm4py and returns an exact repair if the candidate is not already optimal.
 
+## Interactive conformance workbench
+
+The repository includes a four-page Streamlit application for progressive,
+variant-level conformance checking:
+
+```bash
+streamlit run streamlit_app.py
+```
+
+The Setup page loads an XES log, PNML model, and trusted LARA checkpoint, then
+shows log/model summaries, compatibility warnings, duplicate-label groups, and
+the complete variant-to-case mapping. The Live page offers fast candidates,
+progressive certification, and an exact baseline. In candidate modes it renders
+each independently verified neural proposal before starting the corresponding
+exact work. Exact repair enriches the existing result and never overwrites the
+candidate.
+
+The Trace inspector compares candidate and exact moves against shared observed
+event positions, exposes concrete transition identities for duplicate labels,
+precomputes marking-replay snapshots, and separates replay diagnostics from
+optimality evidence. Variant CSV, case CSV, complete JSON, execution-log, and
+per-alignment move exports are available from the run and inspector pages.
+
+PyTorch checkpoints can contain executable content. The default selector only
+offers server-side files under `runs/`; uploaded checkpoints require an explicit
+trust confirmation.
+
 ## Research Questions
 
 This prototype is organized around the following research questions.

@@ -119,5 +119,70 @@ class LARAResult:
     certified_optimal: bool
     mode: str
     verifier: VerificationResult | None = None
+    # Kept separately because a repaired result may expose the exact alignment
+    # through ``alignment`` for backwards compatibility.  Consumers that
+    # evaluate the learned method must never lose the original candidate.
+    candidate_alignment: Alignment | None = None
     exact_alignment: Alignment | None = None
     diagnostics: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass
+class CandidateResult:
+    """Verified output of the neural candidate stage.
+
+    Timings deliberately separate feature construction, inference, decoding,
+    and verification so interactive callers can report where time was spent.
+    """
+
+    trace_key: str
+    labels: list[str]
+    alignment: Alignment | None
+    verification: VerificationResult | None
+    cost: int | None
+    feature_seconds: float = 0.0
+    inference_seconds: float = 0.0
+    decoding_seconds: float = 0.0
+    verification_seconds: float = 0.0
+    neural_diagnostics: dict[str, Any] = field(default_factory=dict)
+    error: str | None = None
+
+    @property
+    def legal(self) -> bool:
+        return bool(self.verification and self.verification.legal)
+
+    @property
+    def total_seconds(self) -> float:
+        return (
+            self.feature_seconds
+            + self.inference_seconds
+            + self.decoding_seconds
+            + self.verification_seconds
+        )
+
+
+@dataclass
+class CertificationResult:
+    """Exact result enriching (but never replacing) a candidate."""
+
+    candidate: CandidateResult | None
+    exact_alignment: Alignment | None
+    exact_cost: int | None
+    exact_seconds: float
+    status: str
+    certified_optimal: bool
+    final_alignment_source: str
+    cost_gap: int | None = None
+    exact_diagnostics: dict[str, Any] = field(default_factory=dict)
+    timed_out: bool = False
+    error: str | None = None
+
+    @property
+    def candidate_alignment(self) -> Alignment | None:
+        return None if self.candidate is None else self.candidate.alignment
+
+    @property
+    def final_alignment(self) -> Alignment | None:
+        if self.final_alignment_source in {"exact_repair", "exact_only"}:
+            return self.exact_alignment
+        return self.candidate_alignment
