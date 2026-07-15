@@ -84,16 +84,16 @@ model can only propose label-consistent synchronous moves.
 ### 3.1 Petri/Trace Encoder
 
 - **Node embedding.** Place and transition feature rows are linearly projected
-  to the hidden dimension $d = 128$; transitions additionally receive their
+  to the hidden dimension $d = 96$; transitions additionally receive their
   hashed label embedding; a 2-way node-type embedding distinguishes places from
   transitions.
-- **Typed graph transformer (3 layers).** Each `TypedGraphTransformerLayer`
+- **Typed graph transformer (2 layers).** Each `TypedGraphTransformerLayer`
   combines (i) full self-attention over all net nodes (4 heads) with (ii)
   relation-specific message passing: per edge type (4 types, forward and
   reverse), source embeddings pass through a dedicated linear map and are
   mean-aggregated into targets. The sum of attention output and typed messages
   enters a pre-norm residual block with a 4× GELU feed-forward.
-- **Trace transformer (2 layers).** Events are embedded via the shared label
+- **Trace transformer (1 layer).** Events are embedded via the shared label
   embedding plus learned positional embeddings (max length 4,096) and encoded
   by a standard Transformer encoder (4 heads, 4× GELU feed-forward).
 - **Cross-attention coupling.** One bidirectional multi-head cross-attention
@@ -105,7 +105,7 @@ model can only propose label-consistent synchronous moves.
 ### 3.2 Learned Router (latent regions)
 
 Two linear heads map transition and event embeddings to soft assignments over
-$R = 8$ latent regions (softmax). The router is the learned analogue of
+$R = 6$ latent regions (softmax). The router is the learned analogue of
 decomposition-based alignment: instead of a fixed structural decomposition of
 the net, region membership is predicted per (net, trace) pair. Three
 regularizers (Section 5) push the assignments toward decompositions that are
@@ -117,7 +117,7 @@ For each region, transition and event embeddings are pooled by
 assignment-probability-weighted averaging, concatenated, and passed through a
 2-layer GELU MLP. Per region the experts predict:
 
-- **sketch logits** over $S = 6$ local alignment sketches per region
+- **sketch logits** over $S = 4$ local alignment sketches per region
   (a coarse classification of the local deviation pattern);
 - a **lower cost bound** (Softplus, non-negative);
 - an **upper cost bound**, parameterized as lower bound + non-negative
@@ -148,20 +148,20 @@ Global move scores over the full (net, trace) pair:
 
 ### 3.5 Parameter Budget
 
-Default configuration (hidden 128, 4 heads, 3 graph layers, 2 trace layers,
-8 regions, 6 sketches/region, 4 edge types):
+Default configuration of the evaluated checkpoint (hidden 96, 4 heads, 2 graph
+layers, 1 trace layer, 6 regions, 4 sketches/region, 4 edge types):
 
 | component | parameters |
 |---|---:|
-| Petri/Trace encoder | 2,895,360 |
-| Learned router | 2,064 |
-| Local alignment experts | 50,569 |
-| Recomposer heads | 16,642 |
-| **total** | **2,964,635** |
+| Petri/Trace encoder | 1,665,216 |
+| Learned router | 1,164 |
+| Local alignment experts | 28,519 |
+| Recomposer heads | 9,410 |
+| **total** | **1,704,309** |
 
 The encoder dominates; within it, the hashed label embedding
-(8,192 × 128 ≈ 1.05M) and positional embedding (4,096 × 128 ≈ 0.52M) account
-for more than half of all parameters. At ~3M parameters the model runs
+(8,192 × 96 ≈ 0.79M) and positional embedding (4,096 × 96 ≈ 0.39M) account
+for more than half of all parameters. At ~1.7M parameters the model runs
 comfortably on CPU.
 
 ## 4. Candidate Decoding, Verification, and Certification
@@ -226,38 +226,40 @@ $\mathcal{L}_{\text{sync}}$ is what teaches duplicate-label disambiguation.
 
 **Generation pipeline** (per example):
 
-1. **Sample a model family.** With probability 0.8 a *sequence* net over a
-   sampled label sequence (length 3–8 from an 8-letter alphabet; with
-   probability 0.25 prefixed by an invisible transition); with probability 0.2
-   a *duplicate-label choice* net: an XOR of two branches whose first
-   transitions share label `A`, followed by distinguishing suffixes `B`/`C`
-   and invisible join transitions — by construction the trace suffix, not the
-   ambiguous event itself, reveals the intended transition.
-2. **Inject controlled deviations** into the fitting trace
-   (`inject_deviations`, rate 0.25): per event, independent deletion, random
-   insertion, and duplication (each with rate/3); plus trace-level adjacent
-   swap and random append (each with the full rate).
-3. **Label exactly.** pm4py's state-equation A* computes an optimal alignment;
-   examples whose exact search fails or is non-optimal are discarded.
-4. **Verify.** The optimal alignment must pass `verify_alignment` (replay to
-   $m_f$ + exact trace reconstruction); the verified cost becomes the label.
-5. **Stratified split.** The pooled examples are split into train/val/test
-   stratified jointly by family and by optimal-cost bucket
-   ($\min(\delta, 4)$), so the difficulty and family mix are matched across
-   splits.
+1. **Sample a behavior family.** The current generator samples complete
+   families, not isolated traces. Four motifs are balanced by deterministic
+   quotas: ordinary block trees versus isomorphic renamings, duplicate-prefix
+   activity versus silent routing, true parallelism versus explicit
+   interleaving, and canonical blocks versus M-pattern non-free-choice nets.
+2. **Expand equivalent representations.** Each behavior family contributes two
+   Petri-net representations and two observed traces. Corruption is applied at
+   the shared visible-label level, so equivalent representations see the same
+   clean/noisy behavior and can be compared pairwise.
+3. **Inject controlled deviations.** A configurable edit process mixes clean
+   traces with one to three edits: deletion, insertion, outside insertion,
+   substitution, repetition, adjacent swap, and prefix/suffix truncation.
+4. **Label exactly and verify.** pm4py's state-equation A* computes an optimal
+   alignment for every `(representation, trace)` pair; examples whose exact
+   search fails, whose replay verification fails, or whose equivalent
+   representations disagree in optimal cost are rejected.
+5. **Split before expansion.** Behavior IDs are assigned to train/val/test
+   before representation expansion, preventing leakage of an equivalent model
+   variant across splits. Strict class coverage records planned and actual
+   motif/representation quotas in `metadata.json`.
 
 **Resulting dataset** (seed 13, defaults):
 
-| split | examples | sequence | duplicate-label choice | trace length (min/mean/max) | optimal cost range |
+| split | examples | behavior families | motif examples each | trace length (min/mean/max) | optimal cost range |
 |---|---:|---:|---:|---|---|
-| train | 400 | 327 | 73 | 1 / 5.30 / 12 | 0–6 |
-| val | 100 | 82 | 18 | 1 / 5.16 / 11 | 0–6 |
-| test | 100 | 82 | 18 | 1 / 5.25 / 12 | 0–6 |
+| train | 2,048 | 512 | 512 | 0 / 3.65 / 12 | 0–9 |
+| val | 512 | 128 | 128 | 0 / 3.42 / 12 | 0–8 |
+| test | 512 | 128 | 128 | 0 / 3.62 / 11 | 0–7 |
 
-Optimal-cost distribution (train): $\delta{=}0$: 86, $1$: 116, $2$: 98,
-$3$: 65, $4$: 22, $5$: 10, $6$: 3. Nets range over 3–9 transitions and 4–10
-places. Every sample stores the net, markings, trace, the pm4py-optimal
-alignment with transition identities, and the exact optimal cost.
+The test split contains 128 examples for each motif and exact coverage of the
+two representation slots inside each motif. Every sample stores the net,
+markings, trace, edit provenance, behavior/representation identifiers, the
+pm4py-optimal alignment with transition identities, exact-search diagnostics,
+and the exact optimal cost.
 
 ## 7. Training Procedure and Hyperparameters
 
@@ -266,15 +268,16 @@ passes accumulated into batched optimizer steps.
 
 | hyperparameter | value |
 |---|---|
-| epochs (max) | 50, early stopping patience 8 (min-delta $10^{-4}$) |
-| optimizer | AdamW, lr $5 \times 10^{-4}$, weight decay $10^{-3}$ |
-| LR schedule | ReduceLROnPlateau on val total loss (factor 0.5, patience 3, min lr $10^{-5}$) |
+| epochs (max) | 50, early stopping patience 6 (min-delta $5 \times 10^{-4}$) |
+| optimizer | AdamW, lr $5 \times 10^{-4}$, weight decay $3 \times 10^{-3}$ |
+| LR schedule | ReduceLROnPlateau on val total loss (factor 0.5, patience 2, min lr $10^{-5}$) |
 | gradient-accumulation batch size | 16 |
 | gradient clipping | max norm 1.0 |
-| hidden dim / heads | 128 / 4 |
-| graph / trace layers | 3 / 2 |
-| latent regions / sketches per region | 8 / 6 |
-| dropout | 0.25 |
+| hidden dim / heads | 96 / 4 |
+| graph / trace layers | 2 / 1 |
+| latent regions / sketches per region | 6 / 4 |
+| dropout | 0.30 |
+| label remapping | 0.5 probability per training sample |
 | loss weights | move 1.0, cost 0.03, boundary 0.01, balance 0.01, entropy 0.001 |
 | seed | 13 |
 
@@ -285,11 +288,10 @@ cost, router boundary/balance/entropy, aggregate move loss, total), epoch wall
 time, current learning rate, best validation loss, and the early-stopping
 counter. These per-epoch curves are analyzed in `assessment.md`.
 
-**Reference run.** The checkpoint evaluated in the paper
-(`runs/lara_bidir/best.pt`) comes from a run of 22 recorded epochs at
-~32 s/epoch on CPU; the best validation total loss, 0.4614, was reached at
-epoch 18 (the run was stopped manually before the early-stopping criterion
-fired).
+**Reference run.** The checkpoint evaluated in the paper (`runs/lara/best.pt`)
+comes from a 50-epoch CPU run at ~41 s/epoch. The best validation total loss,
+0.6839, was reached at epoch 49; the last checkpoint at epoch 50 had validation
+loss 0.6919.
 
 ## 8. Design Rationale
 

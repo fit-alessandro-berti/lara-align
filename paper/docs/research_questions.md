@@ -42,15 +42,16 @@ The contribution decomposes into four parts:
    graph transformer over the net (with bidirectional arc messages, which are
    provably necessary for duplicate-label disambiguation), a trace
    transformer, and cross-attention coupling — with activity labels embedded
-   through a stable hash, so the same ~3M-parameter model applies zero-shot
+   through a stable hash, so the same ~1.7M-parameter model applies zero-shot
    to event logs and models whose vocabulary it has never seen.
 
 3. **An exact-labeled synthetic training pipeline.** Generators for
-   controlled net families (including duplicate-label choices, invisible
-   transitions, and large block-structured nets with concurrency and loops)
-   whose traces are labeled with provably optimal alignments, stratified by
-   family and difficulty — making supervised training on *transition
-   identities*, not just labels, possible.
+   balanced behavior families (including duplicate-prefix versus silent
+   routing, parallel versus interleaved behavior, ordinary block trees,
+   isomorphic renamings, and non-free-choice motifs) whose traces are labeled
+   with provably optimal alignments and split before representation expansion
+   — making supervised training on *transition identities*, not just labels,
+   possible without leaking equivalent variants across splits.
 
 4. **An evaluation methodology for learned alignment.** Beyond accuracy: a
    guidance ablation that isolates what the learned component contributes
@@ -113,15 +114,14 @@ baseline that future models must beat.
 ## Answers in One Paragraph
 
 On held-out synthetic data the system produces legal alignments for 100% of
-traces and exactly optimal ones for 88%, certifying them by cost equality;
+traces and exactly optimal ones for 91.0%, certifying them by cost equality;
 the learned contribution is concentrated precisely where classical heuristics
-are blind — duplicate-label resolution (94.4% vs. 66.7% without guidance).
-Legality transfers perfectly to out-of-distribution stress nets and,
-zero-shot, to two real-life logs (74.6–100% trace-weighted optimality), where
-the fast path already outpaces exact search on the invisible-transition-heavy
-discovered model of the receipt log. On synthetic nets, learned decoding
-overtakes exact A* at roughly 40 activities, where exact search begins to
-time out. What remains open is quality — not legality — at scale, which the
-ablation ties to training data rather than architecture: the block-structured
-generator and the unguided baseline define exactly the experiment that closes
-the gap.
+are blind — duplicate-label resolution (95.3% vs. 68.8% optimality on
+duplicate-prefix representations). Legality transfers perfectly to stress
+nets and, zero-shot, to two real-life logs (74.6–100% trace-weighted
+optimality), where the fast path outpaces exact search on the
+invisible-transition-heavy receipt models. On random stress nets, learned
+decoding overtakes exact A* at size 40 for deviation rate 0.15 and size 20 for
+deviation rate 0.35. What remains open is quality — not legality — at scale:
+the unguided baseline shows that future checkpoints must improve the guided
+quality curve, not merely the decoder's legality.
