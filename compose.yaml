@@ -1,0 +1,60 @@
+name: lara-align
+
+services:
+  streamlit:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CHECKPOINT_SOURCE: "${LARA_CHECKPOINT_SOURCE:-local}"
+        CHECKPOINT_URL: "${LARA_CHECKPOINT_URL:-https://www.alessandroberti.it/checkpoint_lara_latest.tar.gz}"
+        CHECKPOINT_SHA256: "${LARA_CHECKPOINT_SHA256:-}"
+    image: lara-align:local
+    init: true
+    environment:
+      MPLCONFIGDIR: /tmp/matplotlib
+      PM4PY_SHOW_PROGRESS_BAR: "False"
+      STREAMLIT_SERVER_MAX_UPLOAD_SIZE: "${STREAMLIT_MAX_UPLOAD_MB:-1024}"
+      STREAMLIT_SERVER_MAX_MESSAGE_SIZE: "${STREAMLIT_MAX_MESSAGE_MB:-1024}"
+    expose:
+      - "8501"
+    tmpfs:
+      - /tmp:size=1073741824,mode=1777
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - >-
+          import urllib.request;
+          urllib.request.urlopen('http://127.0.0.1:8501/_stcore/health', timeout=4).read()
+      interval: 15s
+      timeout: 5s
+      start_period: 30s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - backend
+
+  nginx:
+    image: nginx:1.27-alpine
+    depends_on:
+      streamlit:
+        condition: service_healthy
+    ports:
+      - "${LARA_ALIGN_PORT:-8080}:80"
+    volumes:
+      - ./deploy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1/healthz | grep -q ok"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 5
+    restart: unless-stopped
+    networks:
+      - backend
+
+networks:
+  backend:
+    driver: bridge

@@ -123,6 +123,61 @@ PyTorch checkpoints can contain executable content. The default selector only
 offers server-side files under `runs/`; uploaded checkpoints require an explicit
 trust confirmation.
 
+### Docker deployment with NGINX
+
+Streamlit is a Tornado/WebSocket application, not a WSGI application, so uWSGI
+is not part of this deployment. NGINX proxies HTTP and WebSocket traffic
+directly to a single non-root Streamlit service:
+
+```bash
+docker compose up --build -d
+```
+
+Open <http://localhost:8080>. Check service health and stop the deployment with:
+
+```bash
+docker compose ps
+docker compose down
+```
+
+The public port and upload limits can be configured when Compose starts:
+
+```bash
+LARA_ALIGN_PORT=8090 \
+STREAMLIT_MAX_UPLOAD_MB=2048 \
+STREAMLIT_MAX_MESSAGE_MB=2048 \
+docker compose up --build -d
+```
+
+NGINX accepts request bodies up to 1 GiB by default. If a larger Streamlit
+upload limit is configured, update `client_max_body_size` in
+`deploy/nginx.conf` to match.
+
+By default, the image copies checkpoints from the repository's existing
+`runs/` directory:
+
+```bash
+docker compose up --build -d
+```
+
+To download the latest published checkpoint archive while building instead:
+
+```bash
+LARA_CHECKPOINT_SOURCE=download docker compose up --build -d
+```
+
+The download URL can be overridden with `LARA_CHECKPOINT_URL`. For a
+reproducible build, set `LARA_CHECKPOINT_SHA256` to the expected archive digest;
+the build fails if the downloaded bytes differ. Checkpoints are stored in the
+image rather than hidden by a runtime bind mount, so changing either local or
+remote checkpoint content requires rebuilding the Streamlit image. Uploaded
+checkpoints and temporary parser files live in the container's 1 GiB temporary
+filesystem and disappear when the container is replaced.
+
+The Compose deployment intentionally runs one Streamlit replica because
+Streamlit session state is process-local. Horizontal scaling requires sticky
+sessions and shared handling for any state that must survive a replica change.
+
 ## Research Questions
 
 This prototype is organized around the following research questions.
