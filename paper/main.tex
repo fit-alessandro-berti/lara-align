@@ -151,15 +151,15 @@ Alignments explain, event by event, how a trace deviates from a process model, b
 
 Process mining relates recorded event data to process models in order to discover, check, and improve processes \cite{Aalst2016}. Conformance checking quantifies how well observed behavior agrees with modeled behavior \cite{Carmona2018,Rozinat2008}, and alignments are its reference technique \cite{Adriansyah2011,Adriansyah2014}: an alignment explains every event of a trace through synchronous, log, and model moves, and an optimal alignment minimizes the total deviation cost. The result is not merely a fitness number but a diagnostic object showing exactly where log and model disagree.
 
-The guarantee of optimality is also the burden of the technique. Optimal alignments are computed by exact shortest-path search, typically A* \cite{Hart1968} with heuristics derived from the marking equation \cite{Dongen2018,Zelst2018}, over the reachability graph of a synchronous product net. This state space grows quickly with concurrency, loops, duplicate labels, and invisible transitions, and the problem is intrinsically hard \cite{Schwanen2026}. These are exactly the ingredients of discovered models, so exact alignment is often the bottleneck of the entire analysis, with running times that cannot be predicted from the input size.
+The guarantee of optimality is also the computational bottleneck of the technique. Optimal alignments are computed by exact shortest-path search, typically A* \cite{Hart1968} with heuristics derived from the marking equation \cite{Dongen2018,Zelst2018}, over the reachability graph of a synchronous product net. This state space grows with concurrency, loops, duplicate labels, and invisible transitions, and the problem is intrinsically hard \cite{Schwanen2026}. These constructs occur frequently in discovered models, so exact alignment can dominate the running time of a conformance analysis and can exhibit substantial variance across traces.
 
-Machine learning promises speed, and neural models have been applied successfully to event data for predictive monitoring and discovery \cite{Tax2017,Bukhsh2021,Sommers2021}. However, a purely learned aligner is unusable for conformance checking: a predicted alignment may be \emph{illegal}, meaning its model projection cannot be replayed from the initial to the final marking, or it may be silently suboptimal, and any conformance verdict built on it inherits this uncertainty. The tension is between trust and tractability.
+Neural models have been applied successfully to event data for predictive monitoring and discovery \cite{Tax2017,Bukhsh2021,Sommers2021}, and they offer a possible way to obtain low-latency alignment candidates. However, a purely learned aligner is not sufficient for conformance checking unless its output is checked against the process semantics: a predicted alignment may be \emph{illegal}, meaning that its model projection cannot be replayed from the initial to the final marking, or it may be suboptimal without an explicit certificate. A learned alignment method therefore has to address both computational efficiency and semantic correctness.
 
-This paper asks whether the tension can be dissolved instead. We present LARA (Learned Adaptive Recombined Alignments), a neural-guided alignment system built around one invariant: \emph{neural output is never trusted as a certificate}. A learned model scores alignment decisions; a constrained greedy decoder turns the scores into a candidate whose model moves are fireable by construction; an exact replay verifier decides legality; and an exact alignment backend remains the sole authority on optimality, certifying or repairing the candidate. Speed comes from the model, but correctness never depends on it: the system degrades from certified optimal to a safe upper bound, never to wrong. Figure~\ref{fig:outline} summarizes the learned core of the approach and the outputs it offers.
+This paper studies such a hybrid design. We present LARA (Learned Adaptive Recombined Alignments), a neural-guided alignment system built around the invariant that \emph{neural output is never used as a certificate}. A learned model scores alignment decisions; a constrained greedy decoder turns the scores into a candidate whose model moves are fireable by construction; an exact replay verifier checks legality; and an exact alignment backend remains responsible for optimality, certifying or repairing the candidate. The neural component is used to propose candidates, while replay and exact search provide the guarantees. Figure~\ref{fig:outline} summarizes the learned core of the approach and the outputs it produces.
 
-For the user of conformance checking, this design is interesting for three reasons. First, the neural component is a small \emph{foundation model} for alignment: trained once, offline, on synthetic data, and vocabulary-free through hashed label embeddings, it applies to any event log and any Petri net without retraining or configuration. Second, its per-trace latency is dominated by a fixed forward pass, staying flat and predictable where exact search has heavy tails, which is what interactive analysis of large discovered models needs. Third, adopting it is risk-free: every answer is at least a legal alignment with a verified cost, and in certified mode exactly as trustworthy as classical alignment. The contribution of the paper is this \textbf{foundation model for alignment}, one small neural model that scores alignment moves for any Petri net and any event log and is designed to resolve duplicate labels and invisible routing, the classic hard cases of alignment, together with the certifying architecture that makes it safe to adopt (Section~\ref{sec:approach}), the exact-labeled synthetic pipeline that trains it, and an assessment asking what learning adds over pure search, when the fast path overtakes exact A*, and whether one checkpoint transfers unchanged to real-life logs (Section~\ref{sec:assessment}).
+The design has three relevant properties. First, the neural component is a small \emph{foundation model} for alignment: it is trained once, offline, on synthetic data, and it uses hashed label embeddings rather than a fixed activity vocabulary, so the same checkpoint can be applied to different event logs and Petri nets without retraining. Second, its per-trace latency is largely determined by feature extraction and one forward pass, whereas exact search may have heavy-tailed running times on some traces. Third, every returned candidate is replay-verified and has a known cost; in certified mode, cost equality with the exact backend provides the same optimality guarantee as classical alignment. The contribution of the paper is this \textbf{foundation model for alignment}, one neural model that scores alignment moves for arbitrary Petri nets and event logs, together with the certifying architecture that separates proposal from verification (Section~\ref{sec:approach}), the exact-labeled synthetic pipeline used for training, and an assessment of the learned contribution, the speed threshold relative to exact A*, and zero-shot transfer to real-life logs (Section~\ref{sec:assessment}).
 
-The central question, can a learned model make trace alignment fast without making it less trustworthy, is refined into six research questions. \textbf{RQ1 (legality)}: are the produced alignments always legal, even on unseen nets and vocabularies? \textbf{RQ2 (near-optimality)}: how often is the exact optimal cost attained, and how large are the gaps otherwise? \textbf{RQ3 (ambiguity)}: are duplicate labels and invisible routing resolved? \textbf{RQ4 (generalization)}: does performance transfer across families, scales, and real-life logs? \textbf{RQ5 (certification)}: how often does cost equality certify the candidate? \textbf{RQ6 (attribution)}: how much quality is owed to the learned scores rather than to the constrained search around them?
+We evaluate the approach through six research questions. \textbf{RQ1 (legality)}: are the produced alignments always legal, even on unseen nets and vocabularies? \textbf{RQ2 (near-optimality)}: how often is the exact optimal cost attained, and how large are the gaps otherwise? \textbf{RQ3 (ambiguity)}: are duplicate labels and invisible routing resolved? \textbf{RQ4 (generalization)}: does performance transfer across families, scales, and real-life logs? \textbf{RQ5 (certification)}: how often does cost equality certify the candidate? \textbf{RQ6 (attribution)}: how much quality is owed to the learned scores rather than to the constrained search around them?
 
 \begin{figure}
 \centering
@@ -537,7 +537,7 @@ Unlike exact aligners, which explore the synchronous product, may revise any dec
 \subsection{Exact-Labeled Training Data}
 \label{sec:data}
 
-The scoring heads are trained by imitation, so every training pair must carry a provably optimal alignment \emph{with transition identities}. Real event logs are a poor source of such labels: the ground truth would still have to be computed by an exact aligner, the hard phenomena (duplicate labels, invisible routing, overlapping deviations) occur at uncontrolled rates, and the most instructive instances are exactly the most expensive to label. Synthetic generation turns this around: phenomena appear at controlled rates, every label is exact by construction, and the supply of data is unlimited. What synthetic data cannot offer, realistic activity names, is irrelevant by design: with the hashed labels of Section~\ref{sec:encoding} the model learns structure, never vocabulary, and the zero-shot results of Section~\ref{sec:reallife} confirm the transfer.
+The scoring heads are trained by imitation on synthetic event logs paired with synthetic Petri-net representations. Each generated trace-model pair is labeled by the exact backend, so every training target is a provably optimal alignment \emph{with transition identities}. The generator controls how often duplicate labels, invisible routing, concurrency, non-free-choice structure, and overlapping deviations appear, while the exact aligner supplies the supervision used by the move heads. Activity names are deliberately unimportant: with the hashed labels of Section~\ref{sec:encoding}, the model learns structural and behavioral relations rather than a fixed vocabulary.
 
 Each example is produced at the level of a \emph{behavior family}, not as an isolated trace. The generator balances four motifs that expose the ambiguities of alignment: ordinary block trees and isomorphic renamings, duplicate-prefix activities and equivalent silent routing, true parallelism and explicit interleaving, and canonical blocks versus M-pattern non-free-choice nets. For each family, two Petri-net representations and two observed traces are created; corruption is applied once at the visible-label level, mixing clean behavior with deletion, insertion, substitution, repetition, swaps, and prefix or suffix truncation, so equivalent representations see the same noisy trace. The exact backend then aligns every representation-trace pair, replay-verifies the alignment, and rejects families whose equivalent variants disagree in optimal cost. Splits are assigned before representation expansion, preventing behavior leakage. The reference corpus contains 2{,}048 training examples plus 512 validation and 512 test examples, balanced across the four motifs, with test traces averaging 3.6 events and optimal costs 0 to 7.
 
@@ -614,41 +614,67 @@ LARA is implemented in Python on top of PyTorch and PM4Py \cite{Berti2023} and i
 Table~\ref{tab:headline} reports the held-out test split (512 examples from 128 behavior families never seen in training). Every candidate was legal: bounded-search decoding plus replay verification eliminated illegal outputs (RQ1). In 91.0\% of cases the candidate attains the exact optimum and is certified without repair by cost equality (RQ2, RQ5); the remaining 9.0\% require exact repair in certified mode.
 
 \begin{table}
-\begin{minipage}[t]{0.46\textwidth}
+\centering
+\begin{minipage}[t]{0.27\textwidth}
+\vspace{0pt}
 \centering
 \caption{Headline results on the held-out test split ($n = 512$).}
 \label{tab:headline}
-\footnotesize
-\begin{tabular}{lr}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{@{}lr@{}}
 \toprule
 metric & value \\
 \midrule
-replayable (legal) alignments & \textbf{100.0\%} \\
-equal to optimum cost, hence certified optimal & \textbf{91.0\%} \\
-exact transition-sequence match & 61.1\% \\
-label-level alignment match & 62.5\% \\
+replayable & \textbf{100.0\%} \\
+optimum cost / cert. & \textbf{91.0\%} \\
+transition-seq. match & 61.1\% \\
+label-level match & 62.5\% \\
 mean / median cost gap & 0.18 / 0.00 \\
 p90 / p95 / max cost gap & 0.0 / 2.0 / 4.0 \\
 \bottomrule
 \end{tabular}
 \end{minipage}\hfill
-\begin{minipage}[t]{0.52\textwidth}
+\begin{minipage}[t]{0.39\textwidth}
+\vspace{0pt}
 \centering
 \caption{Guidance ablation on the test split ($n = 512$).}
 \label{tab:ablation}
-\footnotesize
-\setlength{\tabcolsep}{3pt}
-\begin{tabular}{lrrr}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{@{}lrrr@{}}
 \toprule
-metric & unguided & guided & $\Delta$ \\
+metric & unguid. & guided & $\Delta$ \\
 \midrule
 replayable & 100.0\% & 100.0\% & 0.0 \\
-equal to optimum cost & 86.9\% & \textbf{91.0\%} & +4.1 \\
-exact transition-sequence match & 57.8\% & \textbf{61.1\%} & +3.3 \\
-label-level alignment match & 58.8\% & \textbf{62.5\%} & +3.7 \\
+optimum cost & 86.9\% & \textbf{91.0\%} & +4.1 \\
+transition-seq. match & 57.8\% & \textbf{61.1\%} & +3.3 \\
+label-level match & 58.8\% & \textbf{62.5\%} & +3.7 \\
 mean cost gap & 0.26 & \textbf{0.18} & $-$0.08 \\
-duplicate-prefix optimal ($n = 64$) & 68.8\% & \textbf{95.3\%} & \textbf{+26.6} \\
-duplicate transition selection & 59.4\% & \textbf{79.7\%} & \textbf{+20.3} \\
+dup.-prefix opt. & 68.8\% & \textbf{95.3\%} & \textbf{+26.6} \\
+dup. transition & 59.4\% & \textbf{79.7\%} & \textbf{+20.3} \\
+\bottomrule
+\end{tabular}
+\end{minipage}\hfill
+\begin{minipage}[t]{0.30\textwidth}
+\vspace{0pt}
+\centering
+\caption{The learned cost estimate against the exact optimum $\delta$ on the held-out test split ($n = 512$).}
+\label{tab:costest}
+\scriptsize
+\setlength{\tabcolsep}{2pt}
+\begin{tabular}{@{}lr@{}}
+\toprule
+metric & value \\
+\midrule
+MAE upper vs.\ $\delta$ & 0.51 \\
+mean signed error & $-$0.15 \\
+Pearson $r$ with $\delta$ & \textbf{0.82} \\
+mean est. ($\delta = 0$) & 0.27 \\
+mean est. ($\delta > 0$) & 1.78 \\
+deviation detect. & \textbf{89.8\%} \\
+mean interval width & 1.16 \\
+interval coverage & 29.1\% \\
 \bottomrule
 \end{tabular}
 \end{minipage}
@@ -666,26 +692,6 @@ Table~\ref{tab:ablation} shows a targeted contribution. The constrained decoder 
 \label{sec:costest}
 
 The diagnostic branch of Section~\ref{sec:architecture} is trained but, unlike the moves, never verified at alignment time, so its usefulness must be established empirically; Table~\ref{tab:costest} compares its output with the exact optimum on the same held-out split. As a point estimate, the summed upper bounds track the optimal cost and separate fitting from deviating traces: thresholding the estimate at 0.5 decides whether a trace deviates at all with 89.8\% accuracy, so traces can be ranked by expected deviation before any alignment is computed. As an \emph{interval}, however, the branch is still miscalibrated, predicting ranges that contain the optimum in only 29.1\% of cases; this confirms the design decision of Section~\ref{sec:architecture} that learned bounds inform the analyst and never enter the search.
-
-\begin{table}
-\caption{The learned cost estimate against the exact optimum $\delta$ on the held-out test split ($n = 512$).}
-\label{tab:costest}
-\footnotesize
-\begin{tabular}{lr}
-\toprule
-metric & value \\
-\midrule
-mean absolute error of $\Sigma$ upper bounds vs.\ $\delta$ & 0.51 \\
-mean signed error & $-$0.15 \\
-Pearson correlation with $\delta$ & \textbf{0.82} \\
-mean estimate on fitting traces ($\delta = 0$) & 0.27 \\
-mean estimate on deviating traces ($\delta > 0$) & 1.78 \\
-deviation detection accuracy (threshold 0.5) & \textbf{89.8\%} \\
-mean interval width ($\Sigma$ upper $-$ $\Sigma$ lower) & 1.16 \\
-interval coverage of $\delta$ & 29.1\% \\
-\bottomrule
-\end{tabular}
-\end{table}
 
 \subsection{Scaling Benchmark: The Speed and Quality Threshold}
 \label{sec:scaling}
