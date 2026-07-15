@@ -238,15 +238,18 @@ class PetriTraceEncoder(nn.Module):
 
 
 class LearnedRouter(nn.Module):
-    def __init__(self, hidden_dim: int, num_regions: int) -> None:
+    def __init__(self, hidden_dim: int, num_regions: int, dropout: float = 0.0) -> None:
         super().__init__()
+        self.dropout = nn.Dropout(dropout)
         self.transition_router = nn.Linear(hidden_dim, num_regions)
         self.event_router = nn.Linear(hidden_dim, num_regions)
 
     def forward(
         self, transition_embeddings: torch.Tensor, event_embeddings: torch.Tensor
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        transition_probs = F.softmax(self.transition_router(transition_embeddings), dim=-1)
+        transition_probs = F.softmax(
+            self.transition_router(self.dropout(transition_embeddings)), dim=-1
+        )
         if event_embeddings.numel() == 0:
             event_probs = torch.empty(
                 (0, transition_probs.shape[-1]),
@@ -254,20 +257,30 @@ class LearnedRouter(nn.Module):
                 device=transition_probs.device,
             )
         else:
-            event_probs = F.softmax(self.event_router(event_embeddings), dim=-1)
+            event_probs = F.softmax(
+                self.event_router(self.dropout(event_embeddings)), dim=-1
+            )
         return transition_probs, event_probs
 
 
 class LocalAlignmentExperts(nn.Module):
-    def __init__(self, hidden_dim: int, num_regions: int, sketches_per_region: int) -> None:
+    def __init__(
+        self,
+        hidden_dim: int,
+        num_regions: int,
+        sketches_per_region: int,
+        dropout: float = 0.0,
+    ) -> None:
         super().__init__()
         self.num_regions = num_regions
         self.sketches_per_region = sketches_per_region
         self.summary_projection = nn.Sequential(
             nn.Linear(hidden_dim * 2, hidden_dim),
             nn.GELU(),
+            nn.Dropout(dropout),
             nn.Linear(hidden_dim, hidden_dim),
             nn.GELU(),
+            nn.Dropout(dropout),
         )
         self.sketch_head = nn.Linear(hidden_dim, sketches_per_region)
         self.lower_bound_head = nn.Sequential(nn.Linear(hidden_dim, 1), nn.Softplus())
@@ -296,8 +309,9 @@ class LocalAlignmentExperts(nn.Module):
 
 
 class RecomposerHeads(nn.Module):
-    def __init__(self, hidden_dim: int) -> None:
+    def __init__(self, hidden_dim: int, dropout: float = 0.0) -> None:
         super().__init__()
+        self.dropout = nn.Dropout(dropout)
         self.sync_bilinear = nn.Linear(hidden_dim, hidden_dim, bias=False)
         self.log_head = nn.Linear(hidden_dim, 1)
         self.model_head = nn.Linear(hidden_dim, 1)
@@ -308,6 +322,8 @@ class RecomposerHeads(nn.Module):
         event_embeddings: torch.Tensor,
         compatibility: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        transition_embeddings = self.dropout(transition_embeddings)
+        event_embeddings = self.dropout(event_embeddings)
         if event_embeddings.numel() == 0 or transition_embeddings.numel() == 0:
             sync_logits = torch.empty(
                 (event_embeddings.shape[0], transition_embeddings.shape[0]),
@@ -355,13 +371,14 @@ class LARANeuralModel(nn.Module):
             dropout=dropout,
             num_edge_types=num_edge_types,
         )
-        self.router = LearnedRouter(hidden_dim, num_regions)
+        self.router = LearnedRouter(hidden_dim, num_regions, dropout=dropout)
         self.local_experts = LocalAlignmentExperts(
             hidden_dim,
             num_regions=num_regions,
             sketches_per_region=sketches_per_region,
+            dropout=dropout,
         )
-        self.recomposer = RecomposerHeads(hidden_dim)
+        self.recomposer = RecomposerHeads(hidden_dim, dropout=dropout)
 
     def forward(self, features: PetriTraceFeatures) -> LARAForwardOutput:
         place_embeddings, transition_embeddings, event_embeddings = self.encoder(features)

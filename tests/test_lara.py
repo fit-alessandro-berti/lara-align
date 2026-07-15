@@ -1,5 +1,6 @@
 import csv
 import pytest
+from random import Random
 
 from pm4py.objects.log.obj import Event, Trace
 
@@ -31,7 +32,12 @@ from lara_align.training import LARALoss, targets_from_alignment
 from lara_align.verify import verify_alignment
 from scripts.test_model import EvaluationRecord, format_human_report
 from scripts.init_data import _class_coverage_report, _generate_family_split
-from scripts.train_model import _metrics_csv_row, _write_metrics_csv_row
+from scripts.train_model import (
+    _generalization_gap,
+    _metrics_csv_row,
+    _remap_activity_ids,
+    _write_metrics_csv_row,
+)
 
 
 def _small_model() -> LARANeuralModel:
@@ -148,6 +154,24 @@ def test_features_include_reverse_edge_types():
     assert edge_types == {0, 1, 2, 3}
     # One forward and one reverse edge per arc.
     assert features.edge_index.shape[1] == 2 * 2 * len(net.transitions)
+
+
+def test_training_label_remap_preserves_label_equality_and_invisible_id():
+    net, im, fm = make_sequence_net(["A", "B"], silent_prefix=True)
+    features = pm4py_to_features(net, im, fm, trace_from_labels(["A", "B", "A"]))
+    original_compatibility = features.compatibility.clone()
+
+    remapped = _remap_activity_ids(features, Random(7))
+
+    assert remapped.compatibility.equal(original_compatibility)
+    for event_index, event_label in enumerate(remapped.event_labels):
+        matching_transition = remapped.transition_labels.index(event_label)
+        assert (
+            remapped.event_label_ids[event_index]
+            == remapped.transition_label_ids[matching_transition]
+        )
+    invisible = remapped.transition_labels.index(None)
+    assert remapped.transition_label_ids[invisible].item() == 0
 
 
 def test_block_structured_example_is_exactly_alignable():
@@ -321,6 +345,34 @@ def test_training_loss_smoke():
     assert losses["total"].ndim == 0
 
 
+def test_training_loss_supports_label_smoothing_and_validates_ranges():
+    criterion = LARALoss(
+        bce_label_smoothing=0.03,
+        sync_label_smoothing=0.05,
+    )
+    assert criterion.bce_label_smoothing == 0.03
+    assert criterion.sync_label_smoothing == 0.05
+
+    net, im, fm = make_duplicate_label_choice_net()
+    trace = trace_from_labels(["A", "C"])
+    features = pm4py_to_features(net, im, fm, trace)
+    exact = Pm4PyExactAligner().align_trace(net, im, fm, trace)
+    output = _small_model()(features)
+    targets = targets_from_alignment(
+        exact.alignment,
+        features,
+        optimal_cost=exact.cost,
+    )
+    losses = criterion(output, features, targets)
+    assert losses["sync_move"].isfinite()
+    assert losses["sync_move"] < 100
+
+    with pytest.raises(ValueError, match="bce_label_smoothing"):
+        LARALoss(bce_label_smoothing=0.5)
+    with pytest.raises(ValueError, match="sync_label_smoothing"):
+        LARALoss(sync_label_smoothing=1.0)
+
+
 def test_training_loss_handles_empty_trace():
     net, im, fm = make_sequence_net(["A"])
     trace = trace_from_labels([])
@@ -387,6 +439,12 @@ def test_training_metrics_csv_writes_epoch_rows(tmp_path):
     assert rows[1]["improved"] == "0"
     assert rows[0]["train_total"] == "1.0"
     assert rows[1]["val_move"] == "1.3"
+    assert rows[0]["gap_total"] == "0.5"
+    assert rows[1]["gap_move"] == "0.6000000000000001"
+    assert _generalization_gap(
+        {"total": 1.0, "samples": 2.0},
+        {"total": 1.25, "samples": 1.0},
+    ) == {"total": 0.25}
 
 
 def test_fast_mode_uses_neural_decoder_and_verifier():

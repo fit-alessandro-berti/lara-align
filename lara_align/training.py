@@ -31,8 +31,13 @@ class LARALoss(nn.Module):
         router_entropy_weight: float = 0.001,
         cost_beta: float = 1.0,
         bce_label_smoothing: float = 0.0,
+        sync_label_smoothing: float = 0.0,
     ) -> None:
         super().__init__()
+        if not 0.0 <= bce_label_smoothing < 0.5:
+            raise ValueError("bce_label_smoothing must be in [0, 0.5)")
+        if not 0.0 <= sync_label_smoothing < 1.0:
+            raise ValueError("sync_label_smoothing must be in [0, 1)")
         self.move_weight = move_weight
         self.cost_weight = cost_weight
         self.router_boundary_weight = router_boundary_weight
@@ -40,6 +45,7 @@ class LARALoss(nn.Module):
         self.router_entropy_weight = router_entropy_weight
         self.cost_beta = cost_beta
         self.bce_label_smoothing = bce_label_smoothing
+        self.sync_label_smoothing = sync_label_smoothing
 
     def forward(
         self,
@@ -49,7 +55,10 @@ class LARALoss(nn.Module):
     ) -> dict[str, torch.Tensor]:
         losses: dict[str, torch.Tensor] = {}
         losses["sync_move"] = _sync_cross_entropy(
-            output.sync_logits, targets.sync_transition_targets
+            output.sync_logits,
+            targets.sync_transition_targets,
+            compatibility=features.compatibility,
+            label_smoothing=self.sync_label_smoothing,
         )
         losses["log_move"] = _binary_cross_entropy_with_optional_empty_logits(
             output.log_move_logits,
@@ -154,12 +163,36 @@ def router_regularization(
     return {"boundary": boundary, "balance": balance, "entropy": entropy}
 
 
-def _sync_cross_entropy(sync_logits: torch.Tensor, targets: torch.Tensor) -> torch.Tensor:
+def _sync_cross_entropy(
+    sync_logits: torch.Tensor,
+    targets: torch.Tensor,
+    *,
+    compatibility: torch.Tensor | None = None,
+    label_smoothing: float = 0.0,
+) -> torch.Tensor:
     targets = targets.to(sync_logits.device)
     mask = targets >= 0
     if not torch.any(mask):
         return torch.zeros((), device=sync_logits.device)
-    return F.cross_entropy(sync_logits[mask], targets[mask])
+    selected_logits = sync_logits[mask]
+    selected_targets = targets[mask]
+    if label_smoothing <= 0:
+        return F.cross_entropy(selected_logits, selected_targets)
+
+    if compatibility is None:
+        valid_classes = selected_logits > -1e8
+    else:
+        valid_classes = compatibility.to(sync_logits.device)[mask]
+    valid_counts = valid_classes.sum(dim=-1).clamp_min(1)
+    log_probs = F.log_softmax(selected_logits, dim=-1)
+    negative_log_likelihood = -log_probs.gather(
+        dim=-1, index=selected_targets.unsqueeze(-1)
+    ).squeeze(-1)
+    smooth_loss = -log_probs.masked_fill(~valid_classes, 0.0).sum(dim=-1) / valid_counts
+    return (
+        (1.0 - label_smoothing) * negative_log_likelihood
+        + label_smoothing * smooth_loss
+    ).mean()
 
 
 def _boundary_cut_penalty(
@@ -200,8 +233,6 @@ def _entropy(probs: torch.Tensor) -> torch.Tensor:
 def _smooth_binary_targets(targets: torch.Tensor, smoothing: float) -> torch.Tensor:
     if smoothing <= 0:
         return targets
-    if smoothing >= 0.5:
-        raise ValueError("bce_label_smoothing must be in [0, 0.5)")
     return targets * (1.0 - 2.0 * smoothing) + smoothing
 
 

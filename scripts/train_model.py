@@ -20,7 +20,11 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
 from lara_align.checkpoint import build_model, save_checkpoint  # noqa: E402
 from lara_align.data import AlignmentSample, load_split  # noqa: E402
-from lara_align.features import pm4py_to_features  # noqa: E402
+from lara_align.features import (  # noqa: E402
+    DEFAULT_HASH_VOCAB_SIZE,
+    PetriTraceFeatures,
+    pm4py_to_features,
+)
 from lara_align.training import LARALoss, targets_from_alignment  # noqa: E402
 
 
@@ -39,30 +43,40 @@ def parse_args() -> argparse.Namespace:
     )
     parser.add_argument("--epochs", type=int, default=50)
     parser.add_argument("--lr", type=float, default=5e-4)
-    parser.add_argument("--weight-decay", type=float, default=1e-3)
+    parser.add_argument("--weight-decay", type=float, default=3e-3)
     parser.add_argument("--seed", type=int, default=13)
     parser.add_argument("--device", default="cpu")
     parser.add_argument("--batch-size", type=int, default=16)
     parser.add_argument("--max-grad-norm", type=float, default=1.0)
-    parser.add_argument("--patience", type=int, default=8)
-    parser.add_argument("--min-delta", type=float, default=1e-4)
-    parser.add_argument("--hidden-dim", type=int, default=128)
+    parser.add_argument("--patience", type=int, default=6)
+    parser.add_argument("--min-delta", type=float, default=5e-4)
+    parser.add_argument("--hidden-dim", type=int, default=96)
     parser.add_argument("--num-heads", type=int, default=4)
-    parser.add_argument("--graph-layers", type=int, default=3)
-    parser.add_argument("--trace-layers", type=int, default=2)
-    parser.add_argument("--num-regions", type=int, default=8)
-    parser.add_argument("--sketches-per-region", type=int, default=6)
+    parser.add_argument("--graph-layers", type=int, default=2)
+    parser.add_argument("--trace-layers", type=int, default=1)
+    parser.add_argument("--num-regions", type=int, default=6)
+    parser.add_argument("--sketches-per-region", type=int, default=4)
     parser.add_argument("--num-edge-types", type=int, default=4)
-    parser.add_argument("--dropout", type=float, default=0.25)
+    parser.add_argument("--dropout", type=float, default=0.30)
     parser.add_argument("--move-weight", type=float, default=1.0)
     parser.add_argument("--cost-weight", type=float, default=0.03)
     parser.add_argument("--cost-beta", type=float, default=1.0)
-    parser.add_argument("--bce-label-smoothing", type=float, default=0.0)
+    parser.add_argument("--bce-label-smoothing", type=float, default=0.03)
+    parser.add_argument("--sync-label-smoothing", type=float, default=0.05)
+    parser.add_argument(
+        "--label-remap-probability",
+        type=float,
+        default=0.5,
+        help=(
+            "Probability of consistently renaming activity IDs within each training "
+            "sample; preserves equality while discouraging synthetic-label memorization."
+        ),
+    )
     parser.add_argument("--router-boundary-weight", type=float, default=0.01)
     parser.add_argument("--router-balance-weight", type=float, default=0.01)
     parser.add_argument("--router-entropy-weight", type=float, default=0.001)
     parser.add_argument("--plateau-factor", type=float, default=0.5)
-    parser.add_argument("--plateau-patience", type=int, default=3)
+    parser.add_argument("--plateau-patience", type=int, default=2)
     parser.add_argument("--min-lr", type=float, default=1e-5)
     parser.add_argument(
         "--no-progress",
@@ -82,6 +96,8 @@ def parse_args() -> argparse.Namespace:
 
 def main() -> None:
     args = parse_args()
+    if not 0.0 <= args.label_remap_probability <= 1.0:
+        raise SystemExit("label-remap-probability must be in [0, 1]")
     torch.manual_seed(args.seed)
     rng = Random(args.seed)
     device = torch.device(args.device)
@@ -120,6 +136,7 @@ def main() -> None:
         router_entropy_weight=args.router_entropy_weight,
         cost_beta=args.cost_beta,
         bce_label_smoothing=args.bce_label_smoothing,
+        sync_label_smoothing=args.sync_label_smoothing,
     )
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -164,6 +181,7 @@ def main() -> None:
                 batch_size=args.batch_size,
                 split_name="train",
                 progress_enabled=progress_enabled,
+                label_remap_probability=args.label_remap_probability,
             )
             val_metrics = _run_epoch(
                 model,
@@ -176,11 +194,14 @@ def main() -> None:
                 batch_size=args.batch_size,
                 split_name="val",
                 progress_enabled=progress_enabled,
+                label_remap_probability=0.0,
             )
             elapsed = perf_counter() - start
+            generalization_gap = _generalization_gap(train_metrics, val_metrics)
             metrics = {
                 "train": train_metrics,
                 "val": val_metrics,
+                "generalization_gap": generalization_gap,
                 "elapsed_seconds": elapsed,
                 "args": _jsonable_args(args),
             }
@@ -225,6 +246,7 @@ def main() -> None:
                 f"val_cost={val_metrics['cost']:.4f} "
                 f"val_log={val_metrics['log_move']:.4f} "
                 f"val_model={val_metrics['model_move']:.4f} "
+                f"gap={generalization_gap['total']:+.4f} "
                 f"lr={lr:.2e} "
                 f"best_val={best_val:.4f} "
                 f"time={elapsed:.1f}s"
@@ -336,6 +358,7 @@ def _run_epoch(
     batch_size: int,
     split_name: str,
     progress_enabled: bool,
+    label_remap_probability: float,
 ) -> dict[str, float]:
     is_train = optimizer is not None
     model.train(is_train)
@@ -362,7 +385,19 @@ def _run_epoch(
 
             for sample in batch:
                 with torch.set_grad_enabled(is_train):
-                    losses = _sample_losses(model, criterion, sample, device)
+                    remap_labels = (
+                        is_train
+                        and label_remap_probability > 0
+                        and rng.random() < label_remap_probability
+                    )
+                    losses = _sample_losses(
+                        model,
+                        criterion,
+                        sample,
+                        device,
+                        remap_labels=remap_labels,
+                        rng=rng,
+                    )
                     if is_train:
                         (losses["total"] / len(batch)).backward()
 
@@ -395,6 +430,9 @@ def _sample_losses(
     criterion: LARALoss,
     sample: AlignmentSample,
     device: torch.device,
+    *,
+    remap_labels: bool = False,
+    rng: Random | None = None,
 ) -> dict[str, torch.Tensor]:
     features = pm4py_to_features(
         sample.net,
@@ -402,6 +440,10 @@ def _sample_losses(
         sample.final_marking,
         sample.trace,
     ).to(device)
+    if remap_labels:
+        if rng is None:
+            raise ValueError("rng is required when remap_labels is enabled")
+        features = _remap_activity_ids(features, rng)
     targets = targets_from_alignment(
         sample.optimal_alignment,
         features,
@@ -412,6 +454,38 @@ def _sample_losses(
     )
     output = model(features)
     return criterion(output, features, targets)
+
+
+def _remap_activity_ids(
+    features: PetriTraceFeatures,
+    rng: Random,
+    *,
+    hash_vocab_size: int = DEFAULT_HASH_VOCAB_SIZE,
+) -> PetriTraceFeatures:
+    """Apply a per-sample bijection to visible-label IDs without changing equality."""
+
+    if hash_vocab_size <= 1:
+        raise ValueError("hash_vocab_size must be greater than 1")
+    all_ids = torch.cat(
+        [features.transition_label_ids, features.event_label_ids], dim=0
+    )
+    visible_ids = sorted(
+        int(value) for value in torch.unique(all_ids).tolist() if int(value) != 0
+    )
+    if len(visible_ids) > hash_vocab_size - 1:
+        raise ValueError("sample has more visible labels than the hash vocabulary")
+    replacements = rng.sample(range(1, hash_vocab_size), len(visible_ids))
+
+    original_transition_ids = features.transition_label_ids
+    original_event_ids = features.event_label_ids
+    remapped_transition_ids = original_transition_ids.clone()
+    remapped_event_ids = original_event_ids.clone()
+    for source, target in zip(visible_ids, replacements):
+        remapped_transition_ids[original_transition_ids == source] = target
+        remapped_event_ids[original_event_ids == source] = target
+    features.transition_label_ids = remapped_transition_ids
+    features.event_label_ids = remapped_event_ids
+    return features
 
 
 def _model_config(args: argparse.Namespace) -> dict:
@@ -454,11 +528,28 @@ def _metrics_csv_row(
     }
     row.update(_prefixed_metrics("train", train_metrics))
     row.update(_prefixed_metrics("val", val_metrics))
+    row.update(
+        {
+            f"gap_{key}": value
+            for key, value in _generalization_gap(train_metrics, val_metrics).items()
+        }
+    )
     return row
 
 
 def _prefixed_metrics(prefix: str, metrics: dict[str, float]) -> dict[str, float]:
     return {f"{prefix}_{key}": metrics[key] for key in sorted(metrics)}
+
+
+def _generalization_gap(
+    train_metrics: dict[str, float],
+    val_metrics: dict[str, float],
+) -> dict[str, float]:
+    return {
+        key: val_metrics[key] - train_metrics[key]
+        for key in sorted(train_metrics.keys() & val_metrics.keys())
+        if key != "samples"
+    }
 
 
 def _write_metrics_csv_row(

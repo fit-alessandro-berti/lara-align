@@ -11,7 +11,12 @@ from lara_align.types import CostModel
 from lara_align.verify import trace_labels
 
 
-def stable_label_id(label: str | None, hash_vocab_size: int = 8192) -> int:
+DEFAULT_HASH_VOCAB_SIZE = 8192
+
+
+def stable_label_id(
+    label: str | None, hash_vocab_size: int = DEFAULT_HASH_VOCAB_SIZE
+) -> int:
     """Map labels into a stable bounded vocabulary for neural embeddings."""
 
     if label is None:
@@ -80,7 +85,7 @@ def pm4py_to_features(
     trace: Sequence[object],
     cost_model: CostModel | None = None,
     activity_key: str = "concept:name",
-    hash_vocab_size: int = 8192,
+    hash_vocab_size: int = DEFAULT_HASH_VOCAB_SIZE,
 ) -> PetriTraceFeatures:
     """Convert a pm4py Petri net and trace into typed tensors.
 
