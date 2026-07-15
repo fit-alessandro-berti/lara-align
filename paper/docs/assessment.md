@@ -4,6 +4,10 @@ This document reports the results of the current reference checkpoint and the
 base experiments used by `paper/main.tex`. All numbers below are reproducible
 from local result artifacts and scripts:
 
+For an experimental comparison between LARA and the approximate alignment
+variants available in PM4Py 2.7.23.2, see
+`pm4py_approx_alignment_comparison.md`.
+
 - training: `runs/lara/metrics.csv`
 - checkpoint: `runs/lara/best.pt`
 - held-out test: `runs/lara/test_guided.json`,
