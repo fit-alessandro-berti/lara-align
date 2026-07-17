@@ -222,30 +222,74 @@ $\mathcal{L}_{\text{sync}}$ is what teaches duplicate-label disambiguation.
 
 ## 6. Training Data Creation
 
-`scripts/init_data.py` generates a fully *exact-labeled* synthetic corpus.
+`scripts/init_data.py` generates a fully *exact-labeled* synthetic corpus. Its
+unit is a **behavior family**, not one independently sampled net/trace pair.
+Each family fixes a visible behavior, realizes it as two Petri nets, chooses
+two clean complete traces, and applies each trace corruption once at label
+level. Pairing the same two observed traces with both nets gives four rows per
+family and makes representation comparisons genuinely paired.
 
-**Generation pipeline** (per example):
+### 6.1 What the four motifs and their representations mean
 
-1. **Sample a behavior family.** The current generator samples complete
-   families, not isolated traces. Four motifs are balanced by deterministic
-   quotas: ordinary block trees versus isomorphic renamings, duplicate-prefix
-   activity versus silent routing, true parallelism versus explicit
-   interleaving, and canonical blocks versus M-pattern non-free-choice nets.
-2. **Expand equivalent representations.** Each behavior family contributes two
-   Petri-net representations and two observed traces. Corruption is applied at
-   the shared visible-label level, so equivalent representations see the same
-   clean/noisy behavior and can be compared pairwise.
-3. **Inject controlled deviations.** A configurable edit process mixes clean
-   traces with one to three edits: deletion, insertion, outside insertion,
-   substitution, repetition, adjacent swap, and prefix/suffix truncation.
-4. **Label exactly and verify.** pm4py's state-equation A* computes an optimal
-   alignment for every `(representation, trace)` pair; examples whose exact
-   search fails, whose replay verification fails, or whose equivalent
-   representations disagree in optimal cost are rejected.
-5. **Split before expansion.** Behavior IDs are assigned to train/val/test
-   before representation expansion, preventing leakage of an equivalent model
-   variant across splits. Strict class coverage records planned and actual
-   motif/representation quotas in `metadata.json`.
+The three controlled motifs below receive the same two fresh sequential
+activities as a suffix after the displayed core behavior. The suffix makes
+their traces less degenerate without changing the comparison.
+
+| motif | core complete visible traces | representation 1 | representation 2 |
+|---|---|---|---|
+| ordinary tree | language of a newly sampled process tree | canonical block compilation | isomorphic rename of that compiled net |
+| duplicate / silent | `A B` or `A C` | two concrete `A` transitions, leading to `B` and `C` | one `A`, followed by an invisible choice to `B` or `C` |
+| concurrency / interleaving | `A B` or `B A` | an invisible AND split/join around concurrent `A` and `B` | an explicit XOR between the two sequential paths `A B` and `B A` |
+| M-pattern | `B`, `A C`, or `C A` | block-structured XOR between `B` and `AND(A,C)` | non-free-choice net where `A` and `C` consume separate places but `B` consumes both |
+
+**Ordinary tree** is the generator's name for its heterogeneous random
+process-tree class; it does not mean a Petri net whose graph is a tree. A tree
+has 4–12 visible leaf occurrences and depth at most 6. Internal operators are
+sequence, XOR, and AND with probabilities 0.4/0.3/0.3. Labels are sampled from
+an alphabet about 70% as large as the leaf count, so repeated labels arise
+naturally.
+
+**Canonical block** means the output of this codebase's deterministic compiler,
+not a mathematically unique Petri-net normal form. A leaf becomes one visible
+transition; a sequence chains child blocks through places; XOR children share
+entry and exit places; and an AND block receives an invisible split and join.
+For an ordinary tree this compiler handles the sampled tree. For the M family,
+it compiles the fixed tree `XOR(B, AND(A,C))`.
+
+**Isomorphic rename** clones the canonical ordinary-tree net and permutes only
+place and transition *names*. It preserves the bipartite graph, arc weights,
+visible transition labels, and initial/final markings under the one-to-one
+mapping. Hence language and optimal costs are identical. The renaming is still
+experimentally useful because the unguided decoder breaks equal structural
+choices by transition-name order; its output need not be invariant to this
+otherwise semantics-preserving change.
+
+**Explicit interleaving** removes true token concurrency. Instead of enabling
+`A` and `B` together after an AND split, it creates two exclusive sequential
+paths, `A` then `B` and `B` then `A`. It preserves the complete visible
+language but not causal structure. The **non-free-choice M-net** similarly
+preserves the M-family language without preserving block structure: after an
+invisible split creates two tokens, `A` consumes the left token, `C` the right,
+and `B` requires both. Thus `B` is in conflict with each side although their
+presets are unequal—the characteristic non-free-choice M relation.
+
+### 6.2 Generation and validation pipeline
+
+1. **Allocate complete families.** Deterministic quotas balance the four motifs
+   and assign whole behavior IDs to train/validation/test before expansion, so
+   equivalent representations never cross splits.
+2. **Certify representation equivalence.** The generator enumerates complete
+   visible languages (up to 5,000 states, 10,000 traces, and visible length 20)
+   and rejects empty, mismatching, unreachable, or dead-transition families.
+3. **Create shared observations.** It retains at most 16 clean complete traces,
+   selects two, and keeps 20% clean. Otherwise it applies one, two, or three
+   label edits with probabilities 0.5/0.3/0.2: deletion, insertion, outside
+   insertion, substitution, repetition, adjacent swap, or prefix/suffix
+   truncation. The same corrupted trace is reused for both representations.
+4. **Label exactly and verify.** pm4py's state-equation A* computes an optimal,
+   concrete-transition-aware alignment for every representation/trace row.
+   Every alignment is replayed; families are rejected if replay fails or
+   equivalent representations receive unequal optimal costs.
 
 **Resulting dataset** (seed 13, defaults):
 

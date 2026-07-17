@@ -114,15 +114,23 @@ Every cell remains 100% replayable, so legality is omitted from the table.
 | M-pattern | canonical block | 92.2% | 92.2% | 0.0 [0.0, 0.0] | 0.094 / 1 | 92.9% (170) | 1.56 / 0.55 |
 | M-pattern | non-free-choice | 92.2% | 92.2% | 0.0 [0.0, 0.0] | 0.094 / 1 | 93.5% (170) | 1.58 / 0.58 |
 
-The cell-wise result localizes the learned contribution. Duplicate-prefix
-optimality gains 26.6 points, whereas silent routing receives no gain: the
-decoder can traverse its invisible route structurally, but choosing between
-same-label visible transitions requires suffix-dependent evidence. Guidance is
-also insensitive to an isomorphic renaming: the two ordinary-tree candidates
-always have equal cost. The unguided transition-name tie-break is not invariant
-and loses 9.4 points of pairwise candidate-cost agreement on the renamed form.
-Parallel versus explicit interleaving and canonical versus non-free-choice
-M-pattern representations have identical cost distributions in both modes.
+The ordinary-tree pair is central to interpreting the deltas. Guided
+optimality is 84.4% on both the canonical net and its isomorphic rename, and
+their guided candidate costs always agree. Unguided optimality is instead
+85.9% on the canonical identifiers and 76.6% after renaming. Thus the -1.6
+point canonical delta and +7.8 point renamed delta do not describe different
+behavior: they expose a transition-name-order baseline that happens to be
+slightly favorable on one numbering and substantially unfavorable on the
+other. The observed canonical reduction has an interval that reaches zero.
+Guidance does not beat the favorable canonical tie-break, but it removes that
+identifier sensitivity across the pair.
+
+Duplicate-prefix optimality separately gains 26.6 points, whereas silent
+routing receives no gain: the decoder can traverse its invisible route
+structurally, but choosing between same-label visible transitions requires
+suffix-dependent evidence. Parallel versus explicit interleaving and canonical
+versus non-free-choice M-pattern representations have identical cost
+distributions in both modes.
 
 | equivalent representation pair | paired traces | guided candidate-cost agreement | unguided agreement | guided optimality agreement |
 |---|---:|---:|---:|---:|

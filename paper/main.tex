@@ -408,7 +408,7 @@ This design differs fundamentally from exact alignment. The bounded searches exp
 % Width of the toy training figure as a fraction of the text width:
 % adjust this single macro to resize the whole figure.
 \newcommand{\trainingfigwidth}{0.7\textwidth}
-\begin{figure}[b]
+\begin{figure}[H]
 \centering
 \resizebox{\trainingfigwidth}{!}{%
 \begin{tikzpicture}[font=\small]
@@ -490,13 +490,41 @@ This design differs fundamentally from exact alignment. The bounded searches exp
 \Description{Three stages show duplicate-label scores changing from nearly equal at initialization to a strong preference for the transition leading to c after exact-teacher training on trace b, c.}
 \end{figure}
 
-\subsection{Exact-Labeled Training}
+\subsection{Training Data Generation}
 \label{sec:data}
+
+The sampling unit is a \emph{behavior family}: one visible behavior, two Petri-net representations, and two observed traces shared by both nets, hence four rows. Table~\ref{tab:motifs} defines the four equally weighted motifs. The three controlled motifs receive the same two fresh sequential activities after the displayed core, making traces less degenerate without changing the paired comparison.
+
+\begin{table}[H]
+\centering
+\caption{Training motifs and their two representations. Core languages omit the shared two-activity suffix. ``Canonical'' denotes this generator's fixed block compiler, not a universal Petri-net normal form.}
+\label{tab:motifs}
+\footnotesize
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}lp{0.23\linewidth}p{0.54\linewidth}@{}}
+\toprule
+motif & core complete traces & representation pair \\
+\midrule
+ordinary tree & sampled process-tree language & canonical block compilation / isomorphic identifier rename \\
+duplicate / silent & $\langle A,B\rangle$, $\langle A,C\rangle$ & two concrete $A$ transitions leading to $B$ or $C$ / one $A$ followed by a $\tau$ choice \\
+concurrency & $\langle A,B\rangle$, $\langle B,A\rangle$ & true AND split--join / explicit XOR of the sequences $AB$ and $BA$ \\
+M-pattern & $\langle B\rangle$, $\langle A,C\rangle$, $\langle C,A\rangle$ & block XOR$(B,\mathrm{AND}(A,C))$ / non-free-choice M-net \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\textbf{Ordinary tree and canonical block.} ``Ordinary'' names the heterogeneous random class, not a Petri net whose graph is a tree. A process tree has 4--12 visible leaves, depth at most six, and sequence/XOR/AND operators sampled with probabilities .4/.3/.3. Its alphabet is about 70\% of the leaf count, so duplicate labels occur naturally. The deterministic block compiler maps a leaf to one visible transition, chains sequence children through places, lets XOR children share entry and exit places, and surrounds AND children with a $\tau$ split and join. Its output is called the canonical block representation only to distinguish it from the paired transformation.
+
+\textbf{Isomorphic rename.} The second ordinary-tree net is a clone in which only place and transition identifiers are permuted. Arcs, arc weights, visible labels, and initial/final markings are preserved under a bijection; its language and optimal costs are therefore identical. The perturbation is meaningful because unguided decoding breaks otherwise equal choices by transition-name order.
+
+\textbf{Controlled representation pairs.} Duplicate-prefix nets choose between two enabled transitions labeled $A$, whose markings determine whether $B$ or $C$ follows; silent-routing nets share one $A$ and make that choice through $\tau$ transitions. True concurrency enables $A$ and $B$ together between an invisible split and join, whereas explicit interleaving removes concurrency and encodes $AB$ and $BA$ as separate XOR paths. Finally, the canonical M representation compiles XOR$(B,\mathrm{AND}(A,C))$. In its non-free-choice equivalent, a $\tau$ split marks two places; $A$ consumes the first, $C$ the second, while $B$ requires both. Thus $B$ conflicts with each side despite unequal presets---the characteristic M relation---while the visible complete language remains $B$, $AC$, or $CA$.
+
+Families are assigned to train/validation/test before expansion. Complete visible languages are enumerated and mismatching, unreachable, or dead-transition pairs rejected. Up to 16 clean traces form a pool; two are selected and 20\% remain clean, while the rest receive one to three deletions, insertions, substitutions, repetitions, swaps, or prefix/suffix truncations. Corruption occurs once at label level and is reused across the two representations. The exact backend then aligns and replay-checks all four rows and rejects unequal paired optimal costs. The final corpus contains 2{,}048/512/512 train/validation/test rows; test traces average 3.6 events and optimal costs range from 0 to 7.
+
+\subsection{Exact Targets and Optimization}
 \label{sec:training}
 
-Synthetic traces are paired with Petri nets and labeled by exact, replay-checked alignments. The target records not only which labels match or are skipped, but which concrete transition the optimum fired. That identity supervision is what makes duplicate-label resolution learnable; Figure~\ref{fig:training} illustrates how suffix evidence separates two same-label branches during training. Hashed labels prevent the model from solving the task by memorizing a vocabulary.
-
-The generator first samples a behavior family, then creates two Petri-net representations and two traces for the same underlying pattern. Families cover block structure, duplicate labels, silent routing, parallel branches, interleavings, and non-free-choice patterns. Trace noise includes deletions, insertions, substitutions, repetitions, swaps, and prefix or suffix truncation. Reusing noisy traces across equivalent representations tests whether predictions follow behavior rather than surface topology. The exact backend aligns and replay-checks every pair; a group is discarded if equivalent variants receive inconsistent optimal costs. Splits are assigned before expanding related representations, preventing one behavior family from leaking across partitions. The corpus contains 2{,}048/512/512 train/validation/test examples; test traces average 3.6 events and optimal costs range from 0 to 7.
+Each generated row is labeled by an exact, replay-checked alignment. The target records not only which labels match or are skipped, but which concrete transition the optimum fired. That identity supervision makes duplicate-label resolution learnable; Figure~\ref{fig:training} illustrates how suffix evidence separates two same-label branches. Hashed labels prevent the model from solving the task by memorizing a vocabulary.
 
 The model imitates the exact teacher through
 \begin{equation*}
@@ -506,7 +534,7 @@ The first three terms answer the alignment questions of Section~\ref{sec:archite
 
 Training uses AdamW, random label remapping, and early stopping. The reference run takes about 41 seconds per epoch on one CPU and reaches its best validation loss at epoch 49 of 50 (Figure~\ref{fig:panels}, left). Validation loss is lower than training loss because dropout and label remapping remain active only in the training pass; recognizing which observed events are deviations remains the hardest subtask.
 
-\begin{figure}
+\begin{figure}[H]
 \centering
 \begin{minipage}[t]{0.48\linewidth}
 \centering
@@ -652,7 +680,7 @@ The cost-gap distribution (Figure~\ref{fig:panels}, right) is concentrated at ze
 
 \paragraph{Guidance ablation.}
 \label{sec:ablation}
-Disabling guidance leaves Algorithm~\ref{alg:decode} and its marking constraints unchanged but replaces both score-driven choices with deterministic transition-name order. Within catch-up search, invisible transitions still precede visible ones; only ordering inside each group changes. The comparison therefore isolates trace-dependent ranking from the strong legality prior supplied by the decoder. Table~\ref{tab:ablation} shows a targeted contribution: guidance adds 4.1 optimality points overall but 26.6 points on duplicate-prefix cases and 20.3 transition-identity points. This is precisely the setting in which structure alone cannot infer which branch the future trace supports (RQ3, RQ6).
+Disabling guidance leaves Algorithm~\ref{alg:decode} and its marking constraints unchanged but replaces score-driven choices with deterministic transition-name order. Invisible transitions still precede visible ones; only ordering inside each group changes. The ablation therefore isolates trace-dependent ranking from the strong legality prior. Guidance adds 4.1 optimality points overall (Table~\ref{tab:ablation}), but the sign and size depend on representation; Section~\ref{sec:classes} analyzes this rather than treating the duplicate-prefix gain as universal (RQ3, RQ6).
 
 \paragraph{Learned cost estimate.}
 \label{sec:costest}
@@ -661,11 +689,11 @@ The diagnostic estimate tracks exact cost ($r=0.82$) and separates fitting from 
 \subsection{Effect of Model Classes and Representations}
 \label{sec:classes}
 
-The aggregate result does not reveal where learning helps or whether equivalent Petri-net encodings receive equivalent candidates. We therefore partitioned the existing test run into the eight motif--representation cells used by the generator (Table~\ref{tab:classes}). This is a fixed-checkpoint analysis: no model was retrained. Guided and unguided modes process the same 64 rows in each cell, comprising two traces from each of 32 held-out behavior families. Every cell remains 100\% legal. To respect dependence between the two traces and two representations, uncertainty is obtained by 10{,}000 bootstrap resamples of whole behavior families. The overall 4.1-point guidance gain has a 95\% interval of $[2.3,6.1]$ points.
+We partition the fixed-checkpoint test run into the eight cells defined in Table~\ref{tab:motifs}; no model is retrained. Guided and unguided modes process the same 64 rows (32 families) per cell, and every output is legal. Confidence intervals resample whole families 10{,}000 times, respecting the four correlated rows per family. Table~\ref{tab:classes} reports the results.
 
-\begin{table}[t]
+\begin{table}[b]
 \centering
-\caption{Class-conditional assessment of the fixed checkpoint. G/U: guided/unguided; $\Delta={\rm G}-{\rm U}$; gaps and identity are for guided decoding; ``id.'' is the event-anchored concrete-transition accuracy on identifiable teacher-synchronous positions; times are median milliseconds for guided fast decoding and stored exact A* labeling. The lower panel compares candidate costs across each pair of equivalent representations.}
+\caption{Class-conditional fixed-checkpoint assessment. G/U: guided/unguided; $\Delta={\rm G}-{\rm U}$; gaps and event-anchored transition identity (id.) are for guided decoding; times are median ms for guided fast decoding/exact A*. The lower panel tests paired representation agreement.}
 \label{tab:classes}
 \scriptsize
 \setlength{\tabcolsep}{2.4pt}
@@ -698,29 +726,13 @@ canonical / non-free-choice M & 64 & 100.0\% & 100.0\% & 100.0\% \\
 \textbf{all pairs} & \textbf{256} & \textbf{99.2\%} & \textbf{90.2\%} & \textbf{99.2\%} \\
 \bottomrule
 \end{tabular}
-
-\vspace{4pt}
-\begin{tabular}{@{}lrrrr@{}}
-\toprule
-motif & mean $|T|$ (representation pair) & mean trace length & mean optimum & mean edits \\
-\midrule
-ordinary tree & 9.53 / 9.53 & 3.78 & 1.31 & 1.11 \\
-duplicate / silent & 6.00 / 7.00 & 3.64 & 1.58 & 1.25 \\
-concurrency & 6.00 / 6.00 & 3.64 & 1.70 & 1.38 \\
-M-pattern & 7.00 / 7.00 & 3.44 & 1.55 & 1.39 \\
-\bottomrule
-\end{tabular}
 \end{table}
 
-The learned contribution is highly localized. On duplicate-prefix nets, optimality rises from 68.8\% to 95.3\%, a 26.6-point gain with family-bootstrap interval $[17.2,34.4]$. The paired silent-routing form is already 98.4\% optimal without scores and receives no gain. This contrast isolates the mechanism: invisible-transition priority and marking constraints provide a structural route through the silent model, whereas two enabled visible transitions with the same label require trace-dependent suffix evidence. Event-anchored transition identity reaches 95.7\% on the duplicate-prefix cell. Thus the controlled motif supports a targeted ambiguity claim, not a claim that neural inference improves every alignment.
+The ordinary-tree pair is the most revealing attribution result. Guided decoding is 84.4\% optimal on both the canonical net and its isomorphic rename, with identical candidate costs on all 64 paired traces. Unguided decoding instead falls from 85.9\% on the canonical identifiers to 76.6\% after renaming, and its paired cost agreement is only 90.6\%. Consequently, guidance changes canonical performance by $-1.6$ points (95\% interval $[-4.7,0.0]$) but renamed performance by $+7.8$ points ($[1.6,15.6]$). These opposite signs do not indicate different behavior---the two nets are isomorphic. They show that the structural name-order baseline happens to be slightly better on the canonical numbering and substantially worse after a semantics-preserving renaming, whereas learned scores remove that identifier sensitivity. The observed canonical reduction, whose interval reaches zero, is therefore as informative as the renamed increase: learning does not dominate a favorable tie-break, but it yields stable quality across the pair.
 
-Equivalent encodings further separate behavioral guidance from incidental tie-breaking. Guided candidates agree in cost on both ordinary-tree representations for all 64 paired traces; unguided agreement falls to 90.6\% because deterministic transition-name order is not invariant to renaming. Correspondingly, guidance is neutral on canonical trees ($-1.6$ points, interval $[-4.7,0.0]$) but adds 7.8 points after isomorphic renaming (interval $[1.6,15.6]$), leaving guided quality identical at 84.4\%. Parallel and explicit-interleaving encodings have identical candidate costs, as do canonical and non-free-choice M-patterns, in both modes. Across all 256 paired traces, learned guidance raises candidate-cost agreement from 90.2\% to 99.2\%; its only two disagreements are in the duplicate/silent family. This is evidence of representation stability for encodings present in training, not yet for unseen compilations.
+The controlled motifs delimit this conclusion. Duplicate-prefix guidance does supply a genuine trace-dependent gain, from 68.8\% to 95.3\% ($[17.2,34.4]$), while the structurally determined silent route stays at 98.4\%. Guidance changes no candidate cost for parallel/interleaving or either M representation. Across all pairs it raises representation-cost agreement from 90.2\% to 99.2\%, but this evidence covers seen encodings rather than unseen compilations. Identity is diagnostic rather than certifying: renamed trees match only 63.0\% of teacher transition identities while retaining 84.4\% optimality and perfect paired cost agreement.
 
-The cost tails qualify the class rates. Ordinary trees account for 20 of the 46 non-optimal candidates and have mean/p95 gaps .344/2; concurrency contributes 12 with .219/2; the M-pattern family contributes 10 with .094/1; and duplicate/silent contributes only four. In the silent, concurrency, and M-pattern cells, guided and unguided costs are equal row by row. Their bootstrap intervals collapse to $[0,0]$ because the empirical decisions coincide, not because the sample proves zero effect outside this distribution. Conversely, the duplicate-prefix interval remains far from zero after resampling families, so its gain is not an artifact of treating four correlated rows as independent.
-
-Identity agreement and candidate quality answer different questions. The isomorphically renamed trees match only 63.0\% of teacher-synchronous transition identities, yet retain 84.4\% optimality and 100\% paired cost agreement. Parallel and interleaved forms likewise differ slightly in identity (86.8\% versus 83.7\%) while agreeing exactly in candidate cost. Alternative legal minimum-cost explanations therefore make teacher identity a diagnostic of the scorer, whereas cost and replay remain the behavioral criteria used for certification.
-
-Class rates must nevertheless be interpreted descriptively. Ordinary-tree nets average 9.53 transitions, versus 6--7 for the controlled motifs, and vary much more in structure; trace length, optimum cost, and edit count also differ modestly. Their lower 84.4\% rate cannot therefore be attributed to model class alone. Within a motif the paired comparison is stronger because both representations share the exact same corrupted traces and optimal costs. A causal statement about which generator class created each capability would require leave-one-class-out training, which is outside this fixed-checkpoint assessment. Finally, exact A* is 2.3--2.9$\times$ faster in these small cells (median .55--.76 ms versus 1.46--1.77 ms), confirming that learned latency becomes relevant only beyond the small in-distribution regime.
+Cross-motif rates remain descriptive because ordinary trees are larger and more varied than the controlled motifs. Within-motif pairs are stronger: they share the exact corrupted traces and optimal costs. Establishing which generator class caused a capability would require new training, which this fixed-checkpoint study does not perform. Exact A* also remains 2.3--2.9$\times$ faster in these small cells; the learned path matters only beyond this in-distribution regime.
 
 \subsection{Scaling Benchmark: The Speed and Quality Threshold}
 \label{sec:scaling}
@@ -842,7 +854,7 @@ In a representative gap-4 case, $\langle A,D,B,C,C,D\rangle$, the optimum skips 
 
 \textbf{Implications.} Separating proposal from trust preserves legality under distribution shift and turns poor candidates into visible repairs rather than silent errors. This is more than a defensive implementation detail. It permits one checkpoint to be used across logs while assurance remains selectable per workload: exploratory dashboards may consume verified upper bounds immediately, whereas audit-facing analyses can wait for exact cost equality or repair. Neural and exact components can consequently improve independently without changing what a certificate means.
 
-The ablation also changes how the accuracy results should be read. Constrained, marking-aware decoding is already a strong baseline because process semantics forces many moves. Learning must justify its latency on the residual choices where structure is blind. Here that evidence is concentrated in duplicate-label prefixes, not spread uniformly over all traces. Reporting only the 91.0\% overall optimum rate would obscure both facts: much of it comes from the decoder, while the learned scorer's clearest gain is targeted and substantial.
+The ablation also changes how accuracy should be read. Constrained decoding is already strong, and its transition-name tie-break can be accidentally favorable: guidance is observed 1.6 points lower on canonical ordinary trees but 7.8 points higher after an isomorphic identifier rename, producing identical 84.4\% guided quality on both. Learning therefore contributes representation stability rather than uniform improvement. Its separate 26.6-point duplicate-prefix gain identifies the residual case where trace context, not naming or marking constraints, resolves the choice. Reporting only 91.0\% aggregate optimality would obscure both roles.
 
 \textbf{Limitations.} At 40 activities only 30--44\% of candidates are optimal, and strong PM4Py approximations are closer to optimum. The current model also pays a roughly 5 ms forward-pass floor even when a simple exact or unguided method would finish sooner. LARA is therefore not a universal replacement for exact A* or for established approximations: its useful regime combines costly exact search with a tolerance for verified, possibly non-optimal candidates or a need for predictable first results.
 
@@ -855,7 +867,7 @@ The scaling cells contain only 10 samples and one exact timeout; they locate a c
 \section{Conclusion}
 \label{sec:conclusion}
 
-LARA combines a vocabulary-free move scorer with replay verification and exact certification. It returns legal alignments throughout the study, certifies 91.0\% in distribution, improves duplicate-prefix optimality from 68.8\% to 95.3\%, and overtakes exact search on larger or invisible-heavy models. Strong PM4Py approximations produce better candidates, however, so the contribution is the certifying learned architecture rather than a dominant decoder; improving search over its scores is the clearest next step.
+LARA combines a vocabulary-free move scorer with replay verification and exact certification. It returns legal alignments throughout the study, certifies 91.0\% in distribution, raises paired representation-cost agreement from 90.2\% to 99.2\%, improves duplicate-prefix optimality from 68.8\% to 95.3\%, and overtakes exact search on larger or invisible-heavy models. Strong PM4Py approximations produce better candidates, however, so the contribution is the certifying learned architecture rather than a dominant decoder; improving search over its scores is the clearest next step.
 
 \section*{Acknowledgements}
 
