@@ -208,10 +208,10 @@ Section~\ref{sec:relatedWork} positions LARA in the literature, Section~\ref{sec
 
 \textbf{Decomposition and recomposition.} Decomposing nets speeds up conformance checking \cite{Aalst2013}, local alignments can be merged \cite{Verbeek2016}, recomposition restores exact results or bounds \cite{Lee2018}, and automata with S-components offer another scalable route \cite{Reissner2020}. LARA is architecturally close to this family, but its regions are latent and trace-dependent rather than fixed structural decompositions.
 
-\textbf{Approximate conformance checking.} Token-based replay \cite{Rozinat2008,Berti2021}, alignment approximation for process trees \cite{Schuster2021}, and relaxation labeling \cite{Padro2022} occupy the same speed and accuracy space as LARA's fast mode. The distinctive feature of LARA is the certification boundary: candidates are replay-verified, then certified by cost equality or repaired exactly.
-\textbf{Neural methods in process mining.} Neural models of event data have mostly targeted prediction, with recurrent networks \cite{Tax2017}, transformers \cite{Vaswani2017,Bukhsh2021}, and graph neural networks for discovery \cite{Sommers2021}; a recent survey identifies conformance checking as an open opportunity for AI \cite{Genga2025}. None of these works constructs legal, costed alignments against an explicit Petri net; LARA is a concrete instance of that agenda.
+\textbf{Approximate conformance checking.} Discounted A* changes the cost function \cite{Boltenhagen2021}; fixed-horizon search commits bounded prefixes \cite{Dongen2017}; tandem repeats compress traces \cite{ReissnerTandem2020}; sliding windows retain promising boundary markings between subtraces \cite{Bogdanov2024}; and subset selection transfers representative alignments by edit distance \cite{FaniSani2020}. Token replay \cite{Rozinat2008,Berti2021}, process-tree decomposition \cite{Schuster2021}, and relaxation labeling \cite{Padro2022} provide further speed--quality trade-offs. LARA instead emphasizes a certification boundary: replay verifies candidates before cost equality certifies them or exact search repairs them. Section~\ref{sec:comparison} compares the five PM4Py approximations above.
+\textbf{Neural methods in process mining.} Neural models of event data mostly target prediction, through recurrent networks \cite{Tax2017} and transformers \cite{Bukhsh2021}; a recent survey identifies conformance checking as an open opportunity for AI \cite{Genga2025}. These works do not construct legal, costed alignments against an explicit Petri net; LARA is a concrete instance of that agenda.
 
-\textbf{Learning-augmented search.} Outside process mining, machine learning guides combinatorial optimization \cite{Bengio2021} and shortest-path search, as in Neural A* \cite{Yonetani2021}. LARA is deliberately more conservative: learned scores rank moves for a greedy decoder and are never used as admissible heuristics, so the trust model of exact conformance checking is preserved. The gap LARA addresses is thus \emph{certifiable neural guidance} for Petri net trace alignment.
+\textbf{Learning-augmented search.} Outside process mining, machine learning guides combinatorial optimization \cite{Bengio2021}. LARA is deliberately conservative: learned scores rank moves for a greedy decoder and are never used as admissible heuristics, so the trust model of exact conformance checking is preserved. The gap it addresses is \emph{certifiable neural guidance} for Petri net trace alignment.
 
 \section{Preliminaries}
 \label{sec:preliminaries}
@@ -610,6 +610,20 @@ LARA is implemented in Python on top of PyTorch and PM4Py \cite{Berti2023} and i
 
 \textbf{Protocol.} All experiments run on a single CPU. The learned method is always evaluated in \emph{fast} mode (verified neural candidate only), so no exact repair contaminates learned metrics; the exact optimum of the PM4Py state-equation A* aligner serves as ground truth for every sample. The metrics instantiate the research questions: the replayable (legal) rate (RQ1), the optimal-cost rate and the cost-gap distribution $c(\gamma) - \delta$ (RQ2), transition-sequence and label-level match rates (RQ3), per-family, scaling, and real-life breakdowns (RQ4), the certified-optimal rate (RQ5), and the guidance ablation (RQ6).
 
+\subsection{Interactive Tool Support}
+\label{sec:tool}
+
+An interactive Streamlit workbench exposes the certifying workflow without requiring code. It loads an event log and a supplied or discovered Petri net, summarizes trace variants, and runs fast candidates, progressive certification, or an exact baseline. The live view reports coverage, legality, costs, gaps, repairs, and timing. A trace inspector anchors candidate and exact moves to the same observed events, making move types and duplicate-label transition identities directly comparable while keeping replay, neural, and exact evidence separate. Results can also be exported for downstream analysis (Figure~\ref{fig:tool}).
+
+\begin{figure}[t]
+\centering
+\includegraphics[width=0.49\linewidth]{lara-tool-live-run.png}\hfill
+\includegraphics[width=0.49\linewidth]{lara-tool-trace-inspector.png}
+\caption{Interactive tool support. Left: live candidate verification and progressive certification. Right: candidate--exact comparison on shared event anchors.}
+\label{fig:tool}
+\Description{Two screenshots of the Streamlit workbench: a live alignment run with aggregate metrics, and a trace inspector comparing candidate and exact moves.}
+\end{figure}
+
 \subsection{In-Distribution Results}
 \label{sec:indist}
 
@@ -754,6 +768,34 @@ size & dev.\ & $|T|$ & legal & optimal & mean gap & fast med. & exact med. & spe
 \end{table}
 
 Three findings emerge from Table~\ref{tab:scaling} and Figure~\ref{fig:scaling}. First, LARA scales gently: the median stays between 4.6 and 8.7 ms across the ladder (the forward-pass floor plus a mild search term), while exact A* degrades super-linearly; the crossover appears at size 40 for deviation rate 0.15 and already at size 20 for deviation rate 0.35, with the first 30-second timeout at size 40. Second, legality is scale-invariant: 100\% replayable candidates at every size. Third, quality at scale remains the main limitation: the optimal-cost rate falls to 30--44\% at 40 activities. An unguided rerun shows why the learned component must justify its forward pass carefully: on this stress benchmark guidance adds little quality, while the unguided decoder runs at 0.2 to 1.2 ms per trace and overtakes exact search at every tested size.
+
+\subsection{Comparison with Alignment Approximations}
+\label{sec:comparison}
+
+We compared fast LARA with PM4Py 2.7.23.2 implementations of discounted A* \cite{Boltenhagen2021}, tandem-repeat compression \cite{ReissnerTandem2020}, sliding-window search \cite{Bogdanov2024}, fixed-horizon search \cite{Dongen2017}, and subset/edit-distance approximation \cite{FaniSani2020}. Outputs were independently replayed and rescored under unit costs on the 512-example held-out split and the 80-example scaling grid. Approximations had 5 seconds per trace; the 30-second exact reference solved 79 stress cases. Table~\ref{tab:approx} restricts exact-cost rates to legal cases with an exact reference.
+
+\begin{table}[t]
+\centering
+\caption{Fast-candidate comparison: exact-cost rate (opt.) and mean excess cost (gap). Held-out outputs were all legal; stress ``comp.'' counts legal outputs with an exact reference.}
+\label{tab:approx}
+\scriptsize
+\setlength{\tabcolsep}{3.2pt}
+\begin{tabular}{@{}lrr|rrrrr@{}}
+\toprule
+& \multicolumn{2}{c|}{held-out ($n=512$)} & \multicolumn{5}{c}{stress ($n=80$)} \\
+method & opt. & gap & legal & comp. & opt. & gap & med. ms \\
+\midrule
+LARA guided       & 91.0\%  & 0.180 & 100.0\% & 79 & 59.5\%  & 3.797 & 7.69 \\
+discounted A*     & 95.7\%  & 0.090 & 100.0\% & 79 & 75.9\%  & 1.468 & 1.17 \\
+tandem repeats    & 98.0\%  & 0.039 &  97.5\% & 78 & 93.6\%  & 0.128 & 1.37 \\
+sliding window    & 100.0\% & 0.000 &  98.8\% & 79 & 100.0\% & 0.000 & 1.27 \\
+fixed horizon     & 98.0\%  & 0.047 &  95.0\% & 76 & 82.9\%  & 2.263 & 82.37 \\
+subset/edit dist. & 70.3\%  & 0.637 & -- & -- & -- & -- & -- \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Every Petri-net approximation beats LARA's exact-cost rate on the short held-out traces; sliding window is perfect because the maximum length (11) fits one 20-event window, so no boundary decision is tested. LARA beats only the subset/edit-distance proxy. On the stress grid, sliding window and tandem repeats are much closer to optimal, while discounted A* is faster and more accurate on aggregate. LARA's narrower advantages are a legal result for every case and, at size 40, lower medians (9.04--10.77 ms) than tandem repeats (12.51--23.76), sliding window (13.69--40.02), and fixed horizon (437.50--1398.70); discounted A* remains faster. This is a speed--quality trade-off: LARA's stress p95/max gaps are 19/44. Greedy decoding is therefore the current bottleneck; neural-guided beam/A* and certifying strong approximate candidates are natural next steps.
 \subsection{Zero-Shot Validation on Real-Life Logs}
 \label{sec:reallife}
 
@@ -790,14 +832,14 @@ The largest-gap test cases share one pattern. In a representative worst case (ga
 
 \textbf{Implications.} The results support the central design decision: trust and tractability need not be traded off if the learned and exact components are given the right roles. The learned component is responsible only for speed and for guidance where structural reasoning is blind. Everything the user relies on, legality, costs, and optimality certificates, comes from replay and exact search. As a consequence, legality holds regardless of distribution shift, and lower quality appears as certified-or-repaired results rather than as silent errors. The guidance ablation carries a lesson beyond this system: constrained search alone is a strong baseline, so any learned aligner should demonstrate what learning adds.
 
-\textbf{Limitations.} The current checkpoint is trained on balanced behavior families, but the scaling benchmark still shows a quality-at-size gap: at 40 activities, only 30--44\% of the candidates remain optimal. Training directly on larger stress-net families is the natural next step, and the unguided decoder provides the baseline that a new checkpoint must clearly exceed. A second limitation is the greedy decoder itself: its irrevocable commitments produce the detours of Section~\ref{sec:failure}, and neural-guided beam or A* search over the same learned scores would attack these detours at their root. Finally, the assessment does not yet cover larger log collections, GPU batching, or further approximate aligners \cite{Schuster2021,Padro2022,Reissner2020}, and data-aware, declarative, and object-centric settings \cite{DeLeoni2013,Aalst2020ocpn} remain open.
+\textbf{Limitations.} At 40 activities only 30--44\% of LARA candidates remain optimal, and the strongest PM4Py candidates are substantially closer to optimum. Training on larger stress nets may help, but the ablation and comparison point directly to irrevocable greedy decisions; neural-guided beam or A* could reconsider them. Larger logs, GPU batching, process-tree and relaxation-based approximations \cite{Schuster2021,Padro2022}, and richer conformance settings remain open.
 
 \textbf{Threats to validity.} Internal validity is protected by the protocol: guided and unguided runs share generator seeds and inputs, and all quality metrics are computed against exact optima. The scaling benchmark uses only 10 samples per configuration, so individual cells carry sampling noise and only the overall trend should be read. External validity rests on two real-life logs, which cannot establish generality, but the zero-shot protocol makes each transfer test strict. Construct validity rests on cost equality as the certification rule (Section~\ref{sec:preliminaries}).
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-This paper introduced LARA, an approach to Petri net trace alignment in which learning proposes and exact reasoning certifies, so the result is never less trustworthy than classical conformance checking. The name spells out the design: alignments are \emph{Learned}, by a small vocabulary-free foundation model that scores alignment moves for any net and any log without per-log training; \emph{Adaptive}, because the scores and the latent decomposition are computed anew for every net and trace pair rather than fixed structurally, and the certifier adapts its guarantee (fast, certified, anytime) to the available time; and \emph{Recombined}, because per-region sketches and cost bounds are reassembled into a global estimate, in the decomposition-and-recomposition tradition of conformance checking. Empirically, the prototype produces legal alignments for every trace across three distributions, including zero-shot transfer to real-life logs; it attains and certifies the exact optimum for 91.0\% of in-distribution traces; its learned component measurably improves duplicate-label identity resolution (95.3\% versus 68.8\% optimality on duplicate-prefix representations); and its fast path overtakes exact search on larger stress nets and on real discovered models dominated by invisible transitions.
+This paper introduced LARA, in which a vocabulary-free foundation model proposes Petri-net trace alignments and replay plus exact search provides the guarantees. The design is \emph{Learned} through move scores, \emph{Adaptive} to each net--trace pair and assurance mode, and \emph{Recombined} through regional diagnostics. The prototype returns legal alignments across all tested distributions, attains and certifies the in-distribution optimum in 91.0\% of cases, and improves duplicate-prefix optimality from 68.8\% to 95.3\% over unguided decoding. It overtakes exact search on larger and invisible-heavy models. Comparison with PM4Py approximations qualifies this result: the current greedy candidate has lower cost quality than the strongest baselines, but reliable legal output and low large-case latency. LARA's main contribution is therefore the certifying learned architecture; improving its decoder is the clearest next step.
 
 \section*{Acknowledgements}
 
