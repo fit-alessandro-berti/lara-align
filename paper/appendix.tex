@@ -9,12 +9,15 @@ and the exact optimal alignment for that trace on that net. The relevant code
 path is \texttt{scripts/init\_data.py}, which calls the behavior-family
 generator in \texttt{lara\_align/families.py}, the PM4Py exact aligner in
 \texttt{lara\_align/exact.py}, and the replay verifier in
-\texttt{lara\_align/verify.py}.
+\texttt{lara\_align/verify.py}. The checked-in reference corpus uses dataset
+format version 2 and the defaults represented in
+\texttt{configs/behavior\_families.json}.
 
 \subsection{What One Training Row Contains}
 
 One generated row is an \texttt{AlignmentSample}. It contains:
 \begin{itemize}
+  \item a unique sample id and its split;
   \item a Petri net $SN$ with its initial and final markings;
   \item one observed trace $\sigma$;
   \item an optimal alignment $\gamma^\ast$ computed by the exact backend;
@@ -52,6 +55,14 @@ and two observed traces. Therefore each family expands to four rows:
 \]
 The reference corpus uses four family motifs with equal weight. Table
 \ref{tab:appendix-motifs} summarizes them.
+
+Before generation, the requested family count is converted into a deterministic
+motif quota. The quota reserves the configured per-motif minimum, distributes
+the remaining families according to the motif weights, and shuffles the plan
+with a split-specific seed. If an attempted family is rejected, the next family
+index is tried for the same planned motif. Consequently, rejection does not
+silently change the requested class balance. The family id, rather than an
+individual row id, is the split key.
 
 \begin{table}
 \centering
@@ -112,11 +123,16 @@ representations.
 
 \subsection{Checking That Representations Match}
 
-After the two representations are built, the generator enumerates their
-complete visible trace languages. The default limits for this check are 5,000
-states, 10,000 traces, and visible length 20. A family is rejected if the
-visible languages disagree. A family is also rejected if the language is empty,
-the final marking is unreachable, or any transition is dead.
+After the representations are built, the generator enumerates their visible
+complete-trace languages. The default limits for this check are 5,000 search
+states, 10,000 traces, and visible length 20; a separate firing bound prevents
+unbounded silent exploration. The certificate is \texttt{exact} only when the
+enumeration finishes without hitting a bound, and is otherwise
+\texttt{bounded}. A family is rejected if the enumerated languages disagree.
+A family is also rejected if the reference language is empty, the final
+marking is unreachable, or any transition is dead. By default, bounded
+certificates are additionally rejected for training; presets intended for
+bounded loops can relax that requirement.
 
 The reference corpus is small enough that all accepted train, validation, and
 test rows have an exact visible-language certificate. In other words, the
@@ -124,11 +140,11 @@ language comparison completed within the limits for every accepted row.
 
 \subsection{Clean Trace Pool}
 
-For each accepted family, the generator sorts the complete visible language and
-keeps at most 16 clean traces. If the language has more than 16 traces, a
-deterministic sample of 16 traces is selected using the family seed. These
-clean traces are not training rows yet. They are the fitting traces from which
-observed traces are produced.
+For each accepted family, the generator sorts the enumerated visible language
+and keeps at most 16 clean traces. If the language has more than 16 traces, a
+deterministic sample of 16 indices is selected with the family model RNG and
+then restored to language order. These clean traces are not training rows yet.
+They are the fitting traces from which observed traces are produced.
 
 The default configuration creates two observed traces per family. The first two
 clean traces in the selected pool are used, wrapping around if the pool is
@@ -158,21 +174,30 @@ and 0.2. The edit operations are:
 \end{itemize}
 The first five operations have weight 0.15 each, prefix and suffix truncation
 have weight 0.10 each, and outside insertion has weight 0.05. Generated traces
-are capped at length 128.
+are capped at length 128. An operation is drawn independently at every edit. If
+the selected operation is inapplicable to the current trace---for example, a
+deletion from an empty trace or a swap in a one-event trace---the implementation
+falls back to outside insertion, so every requested edit still produces a
+recorded operation. Consequently, the realized outside-insertion frequency can
+be higher than its nominal weight on very short traces.
 
 \subsection{Exact Labeling}
 
 The initializer expands every accepted family into trace-net pairs and sends
-each pair to the PM4Py state-equation A* aligner. The aligner is run with
-transition-aware output enabled, so the returned alignment identifies the
-actual Petri-net transition used by each synchronous or model move.
+each pair to the PM4Py state-equation A* aligner. The reference generation uses
+no per-trace timeout. The aligner is run with transition-aware output enabled,
+so the returned alignment identifies the actual Petri-net transition used by
+each synchronous or model move. Exact results are cached by net signature,
+observed label sequence, and cost-model version within each split.
 
 Every exact result is replay-checked by LARA's verifier. Replay checking starts
 from the initial marking, fires the model side of the alignment move by move,
 checks that the log projection equals the observed trace, and checks that the
 final marking is reached. If replay fails, the row is rejected. If PM4Py does
 not return an optimal alignment, the whole family is rejected and another
-family index is tried.
+family index is tried. Rows are buffered until every trace--representation pair
+in the family passes, so no partial family is written under the default strict
+coverage mode.
 
 For families whose representation equivalence was certified exactly, the
 initializer also checks cost consistency: the same observed trace must have the
@@ -184,12 +209,14 @@ visible behavior.
 \subsection{Masked Transition-Identity Targets}
 
 Most synchronous targets can be used directly. One corner case occurs in the
-duplicate-prefix representation. If noise removes the suffix that distinguishes
-the two branches, the observed trace may no longer identify which $A$
-transition was intended. In that case the transition-identity target is masked
-for the sync loss. The row is still kept: log-move targets, model-move targets,
-legality, and optimal-cost supervision remain valid. The metadata records this
-as \texttt{transition\_identity\_loss\_masked}.
+duplicate-prefix representation. Its $A$ transition is considered identifiable
+exactly when the observed labels contain $B$ or $C$, but not both. Noise can
+remove both distinguishing labels or introduce both, in which case a particular
+optimal $A$ witness is not an identifiable target. The implementation then
+masks all synchronous transition-identity targets for that row from the sync
+loss. The row is still kept: log-move targets, model-move targets, legality, and
+optimal-cost supervision remain valid. The metadata records this as
+\texttt{transition\_identity\_loss\_masked}.
 
 \subsection{Reference Split Sizes}
 
@@ -225,23 +252,31 @@ Strict class coverage is used by default. This means the requested split size
 must contain complete families, and every active motif must meet its required
 minimum. In the reference corpus all four motifs are exactly balanced in every
 split. The manifest records one generation detail that does not affect the
-dataset: 25 attempted families were rejected during generation and replaced by
-later accepted families.
+accepted corpus: 25 attempted families raised a generation-time
+\texttt{ValueError} and were replaced by later accepted families of the same
+planned motifs. No exact-alignment, replay, or paired-cost rejection was
+recorded for this run.
 
 \subsection{Metadata and Reproducibility}
 
-Each row stores metadata that makes the corpus auditable. The metadata includes
-the split, family id, motif, representation kind, representation slot, trace
-id, clean trace, observed trace, trace-edit list, structural statistics,
-equivalence certificate, exact-aligner diagnostics, and buckets for cost, model
-size, duplicate labels, and invisible transitions. The split metadata also
-records motif counts, representation counts, edit-count counts, and move
-signature counts.
+Each row stores fields and metadata that make the corpus auditable. Its fields
+include the sample id and split; its metadata includes the family id, motif,
+representation kind, representation slot, trace id, clean trace, observed
+trace, trace-edit list, structural statistics, equivalence certificate,
+exact-aligner diagnostics, and buckets for cost, model size, duplicate labels,
+and invisible transitions. Dataset-level metadata records motif and
+representation counts, edit-count and move-signature counts, requested
+configuration, rejection counters, and the family counts for all splits.
 
-The seeds are derived from the global seed, the split name, and the family
-index. Separate seeds are used for model construction, representation choices,
-playout, log view, and noise. This makes the generated files reproducible while
-keeping the different random choices independent.
+The family seed is a stable BLAKE2b-derived integer of the global seed, split
+name, and attempted family index. The stored seed bundle reserves independent
+streams for model construction, representation choices, playout, log view, and
+noise. The current reference path consumes the model stream for the ordinary
+tree and clean-pool sample and the noise stream (further split by trace index)
+for corruption; its paired representations and complete-language trace source
+are deterministic and therefore do not consume the reserved representation,
+playout, or log-view streams. Rejected attempts keep their indices, making a
+rerun with the same software and options reproducible.
 
 The result is a corpus in which every training row has a legal, exact,
 transition-aware alignment target, while the split structure prevents related
