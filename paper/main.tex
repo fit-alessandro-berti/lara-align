@@ -770,7 +770,79 @@ receipt      & 0.5 & 25 / 24+19 & 100\% &  55.2\% &  74.6\% & 0.82 / 7 & \textbf
 
 \paragraph{Failure mechanism.}
 \label{sec:failure}
-In a representative gap-4 case, $\langle A,D,B,C,C,D\rangle$, the optimum skips the early $D$ and the duplicate $C$. LARA instead inserts model moves to synchronize the early $D$, committing the marking to a branch that forces later skips. The checkpoint produces a log score for this event, but Algorithm~\ref{alg:decode} never compares it with the available catch-up path. This case first motivates joint ranking of the log move and catch-up candidates; beam search is the next step if a locally preferred action still causes a poor suffix.
+Figure~\ref{fig:failure-mechanism} contrasts the alignments for a representative gap-4 case, $\langle A,D,B,C,C,D\rangle$. The optimum skips the early $D$ and duplicate $C$ (cost 2). LARA inserts $B,C$ to synchronize the early $D$, reaches $m_f$, and forces four later log moves (cost 6). Because Algorithm~\ref{alg:decode} never compares the checkpoint's log score for the early $D$ with the catch-up path, this case motivates joint ranking and, when a greedy choice harms the suffix, beam search.
+
+\begin{figure}[!t]
+\centering
+\resizebox{0.75\textwidth}{!}{%
+\begin{tikzpicture}[
+  font=\scriptsize,
+  aligncell/.style={rectangle, draw=black!45, minimum width=7.2mm,
+    minimum height=5.5mm, inner sep=0.7pt, line width=0.5pt},
+  synccell/.style={aligncell, draw=seriesaqua!65!black, fill=seriesaqua!11},
+  larasynccell/.style={aligncell, draw=seriesblue!70!black, fill=seriesblue!10},
+  catchcell/.style={aligncell, draw=seriesblue!80!black, fill=seriesblue!22,
+    line width=0.7pt},
+  skipcell/.style={aligncell, draw=regamber!85!black, fill=regamber!18,
+    line width=0.7pt},
+  costbadge/.style={rounded corners=2pt, minimum width=12mm, minimum height=6mm,
+    font=\scriptsize\bfseries, line width=0.7pt},
+]
+% Compact side-by-side visible-move alignments. The subscripts distinguish the
+% early D, duplicate C, and late D without requiring a separate trace row.
+\node[font=\small\bfseries, text=seriesaqua!45!black] at (3.25,0.98)
+  {Optimal: skip $D_e$ and $C_2$};
+\node[font=\tiny, text=black!55, anchor=east] at (0.42,0.34) {log};
+\node[font=\tiny, text=black!55, anchor=east] at (0.42,-0.24) {model};
+\node[synccell] (oL1) at (0.85,0.34) {$A$};
+\node[synccell] (oM1) at (0.85,-0.24) {$A$};
+\node[skipcell] (oL2) at (1.65,0.34) {$D_e$};
+\node[skipcell] (oM2) at (1.65,-0.24) {$\gg$};
+\node[synccell] (oL3) at (2.45,0.34) {$B$};
+\node[synccell] (oM3) at (2.45,-0.24) {$B$};
+\node[synccell] (oL4) at (3.25,0.34) {$C$};
+\node[synccell] (oM4) at (3.25,-0.24) {$C$};
+\node[skipcell] (oL5) at (4.05,0.34) {$C_2$};
+\node[skipcell] (oM5) at (4.05,-0.24) {$\gg$};
+\node[synccell] (oL6) at (4.85,0.34) {$D_l$};
+\node[synccell] (oM6) at (4.85,-0.24) {$D$};
+\node[costbadge, draw=seriesaqua!70!black, fill=seriesaqua!14] (optcost)
+  at (5.85,0.05) {$c(\gamma^*)=2$};
+
+\node[font=\small\bfseries, text=seriesblue!70!black] at (10.55,0.98)
+  {LARA: model $B,C$; sync $D_e\Rightarrow m_f$};
+\node[font=\tiny, text=black!55, anchor=east] at (7.05,0.34) {log};
+\node[font=\tiny, text=black!55, anchor=east] at (7.05,-0.24) {model};
+\node[larasynccell] (lL1) at (7.48,0.34) {$A$};
+\node[larasynccell] (lM1) at (7.48,-0.24) {$A$};
+\node[catchcell] (lL2) at (8.28,0.34) {$\gg$};
+\node[catchcell] (lM2) at (8.28,-0.24) {$B$};
+\node[catchcell] (lL3) at (9.08,0.34) {$\gg$};
+\node[catchcell] (lM3) at (9.08,-0.24) {$C$};
+\node[larasynccell] (lL4) at (9.88,0.34) {$D_e$};
+\node[larasynccell] (lM4) at (9.88,-0.24) {$D$};
+\node[skipcell] (lL5) at (10.68,0.34) {$B$};
+\node[skipcell] (lM5) at (10.68,-0.24) {$\gg$};
+\node[skipcell] (lL6) at (11.48,0.34) {$C$};
+\node[skipcell] (lM6) at (11.48,-0.24) {$\gg$};
+\node[skipcell] (lL7) at (12.28,0.34) {$C_2$};
+\node[skipcell] (lM7) at (12.28,-0.24) {$\gg$};
+\node[skipcell] (lL8) at (13.08,0.34) {$D_l$};
+\node[skipcell] (lM8) at (13.08,-0.24) {$\gg$};
+\node[costbadge, draw=seriesblue!75!black, fill=seriesblue!13] (laracost)
+  at (14.08,0.05) {$c(\gamma)=6$};
+% Soft boundaries separate the exact and learned alternatives.
+\begin{scope}[on background layer]
+\node[rounded corners=4pt, fill=seriesaqua!4, draw=seriesaqua!35,
+  inner xsep=2mm, inner ysep=1.5mm, fit=(oL1)(oM1)(oL6)(oM6)(optcost)] {};
+\node[rounded corners=4pt, fill=seriesblue!3, draw=seriesblue!30,
+  inner xsep=2mm, inner ysep=1.5mm, fit=(lL1)(lM1)(lL8)(lM8)(laracost)] {};
+\end{scope}
+\end{tikzpicture}}
+\caption{Gap-4 failure (invisible routing omitted): the optimal alignment costs 2; LARA's catch-up reaches $m_f$ and costs 6.}
+\label{fig:failure-mechanism}
+\Description{The observed trace A, early D, B, C, duplicate C, late D is compared across two alignment tables. The optimum skips the early D and duplicate C for cost two. LARA inserts B and C as model moves, synchronizes the early D, reaches the final marking, and must skip the remaining B, C, C, D events, producing cost six and a gap of four.}
+\end{figure}
 
 \section{Discussion}
 \label{sec:discussion}
@@ -786,15 +858,14 @@ In a representative gap-4 case, $\langle A,D,B,C,C,D\rangle$, the optimum skips 
 \section{Conclusion}
 \label{sec:conclusion}
 
-LARA shows that reusable learned guidance can assist alignment without becoming its authority. Its current value is a verified candidate architecture: replay accepted every evaluated output, 91.0\% of held-out candidates were already optimal, guidance improved representation stability and duplicate-label decisions, and the same checkpoint processed unseen labels and discovered nets. Exact A* still runs for every certified result, and strong approximations produce better candidates, so LARA is neither a certified-mode speedup nor the new default decoder.
+LARA shows that reusable learned guidance can assist alignment without becoming its authority. Replay accepted every evaluated output, 91.0\% of held-out candidates were optimal, guidance improved representation stability and duplicate-label decisions, and one checkpoint processed unseen labels and nets. Because exact A* still runs for every certified result and strong approximations return better candidates, LARA is neither a certified-mode speedup nor the default decoder.
 
-Its potential follows from separating proposal from proof. Joint log and catch-up ranking, beams, learned queue ordering, incumbent pruning, classical candidates, portfolios, and batched inference can improve quality or total work before the verifier, while replay and exact cost retain final authority. This gives a concrete path toward progressive alignment services that return a safe proposal immediately and exact evidence when required.
+Its potential follows from separating proposal from proof. Joint ranking, beams, learned queue ordering, incumbent pruning, classical candidates, portfolios, and batching can improve candidate quality or exact work while replay and exact cost retain final authority. This points to progressive alignment services that return a safe proposal immediately and exact evidence on demand.
 
 \section*{Acknowledgements}
 
 Funded by the European Union. This work has received funding from the European High Performance Computing Joint Undertaking (JU) and from the German Federal Ministry of Research, Technology and Space (BMFTR), the Ministry of Culture and Science of North Rhine-Westphalia (MKW NRW), and the Hessian Ministry of Science and Research, Arts and Culture (HMWK) under grant agreement No 101250682.
 
-\clearpage
 \bibliographystyle{ACM-Reference-Format}
 \bibliography{references}
 
