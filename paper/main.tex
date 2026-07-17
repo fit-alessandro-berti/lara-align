@@ -545,11 +545,11 @@ Training uses AdamW, random label remapping, and early stopping. The reference r
 \subsection{Implementation and Reproducibility}
 \label{sec:implementation}
 
-The open-source PyTorch/PM4Py implementation \cite{Berti2023} is available at \url{https://github.com/fit-alessandro-berti/lara-align}, with the checkpoint, result artifacts, and reproduction scripts. Command-line and Python interfaces accept XES/PNML or PM4Py objects and return candidates, replay status, costs, and exact status.
+The open-source PyTorch/PM4Py implementation \cite{Berti2023} is available at \url{https://github.com/fit-alessandro-berti/lara-align}, with result artifacts and reproduction scripts. The data used to train and test the model, together with the latest checkpoint, are available online.\footnote{\url{https://github.com/fit-alessandro-berti/lara-align/tree/main/dist_data}} Command-line and Python interfaces accept XES/PNML or PM4Py objects and return candidates, replay status, costs, and exact status.
 
 \textbf{Protocol.} Measurements use a 13th-generation Intel Core i7-1355U, CPU-only execution, PyTorch's 10 intra-operation and 10 inter-operation threads, and sequential trace calls. The model is loaded once before timing. Candidate times include feature and per-net runtime construction, the forward pass, decoding, and replay; exact times include PM4Py heuristic initialization and search. Each row is one end-to-end call rather than a repeated warmed microbenchmark, and tables report medians across inputs. Learned metrics use fast mode, so exact repair never contaminates candidate quality or timing; state-equation A* supplies reference optima. We report legality and cost gaps (RQ1), paired guidance and identity diagnostics (RQ2), and representation, scaling, approximation, and real-log results (RQ3).
 
-The accompanying Streamlit workbench runs verified candidates, exact certification, or an exact baseline and keeps candidate, replay, and exact evidence distinct. Screenshots and usage details are provided with the artifact.
+The accompanying Streamlit workbench runs verified candidates, exact certification, or an exact baseline and keeps candidate, replay, and exact evidence distinct. A hosted version is available online.\footnote{\url{https://www.lara-pm.app}} Screenshots and usage details are provided with the artifact.
 
 \subsection{In-Distribution Results}
 \label{sec:indist}
