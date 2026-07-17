@@ -23,7 +23,7 @@ whether that tension can be dissolved rather than traded off.
 
 ## Main Contribution
 
-**LARA (Learned Adaptive Recombined Alignments): a neural-guided alignment
+**LARA (Learned Alignment with Replay Assurance): a neural-guided alignment
 system in which learning proposes and exact reasoning certifies — so that
 speed comes from the model, but correctness never depends on it.**
 

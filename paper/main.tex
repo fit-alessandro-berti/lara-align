@@ -1,6 +1,6 @@
 \documentclass[manuscript,screen,nonacm]{acmart}
 
-% LARA: Learned Adaptive Recombined Alignments.
+% LARA: Learned Alignment with Replay Assurance.
 % ACM single-column manuscript scaffold for an ICPM 2027 submission.
 
 \usepackage{booktabs}
@@ -134,7 +134,7 @@
 \renewcommand{\shortauthors}{Alessandro Berti et al.}
 
 \begin{abstract}
-Alignments explain how observed behavior deviates from a process model, but computing an optimum requires exact search and can make interactive conformance checking unpredictable. Learned guidance offers predictable candidate generation, yet a neural prediction may be illegal or silently suboptimal. LARA (Learned Adaptive Recombined Alignments) addresses this tension through a strict separation of roles. A vocabulary-independent neural scorer proposes moves for previously unseen net and trace pairs, a marking-aware decoder constructs a candidate, replay checks its legality and cost, and an exact backend remains the sole authority for certification and repair. The evaluation shows that the semantic wrapper consistently yields legal candidates, learned guidance is most useful for duplicate-label ambiguity and identifier-stable decisions, and fast candidate generation can outperform exact search on harder tested models, although established approximations generally return better candidates. LARA therefore contributes a reusable, progressive alignment architecture that combines learned proposals with an explicit semantic trust boundary rather than replacing exact or classical alignment methods.
+Alignments explain how observed behavior deviates from a process model, but computing an optimum requires exact search and can make interactive conformance checking unpredictable. Learned guidance offers predictable candidate generation, yet a neural prediction may be illegal or silently suboptimal. LARA (Learned Alignment with Replay Assurance) addresses this tension through a strict separation of roles. A vocabulary-independent neural scorer proposes moves for previously unseen net and trace pairs, a marking-aware decoder constructs a candidate, replay checks its legality and cost, and an exact backend remains the sole authority for certification and repair. The evaluation shows that the semantic wrapper consistently yields legal candidates, learned guidance is most useful for duplicate-label ambiguity and identifier-stable decisions, and fast candidate generation can outperform exact search on harder tested models, although established approximations generally return better candidates. LARA therefore contributes a reusable, progressive alignment architecture that combines learned proposals with an explicit semantic trust boundary rather than replacing exact or classical alignment methods.
 \end{abstract}
 
 \ccsdesc[500]{Information systems~Business process management}
@@ -151,7 +151,7 @@ Alignments explain how observed behavior deviates from a process model, but comp
 
 Process mining relates event data to process models \cite{Aalst2016}; conformance checking compares their behavior, and alignments explain each event through synchronous, log, and model moves \cite{Adriansyah2011}. An optimal alignment minimizes deviation cost, yielding both a fitness value and a diagnostic account of disagreement. Computing it requires shortest-path search over a synchronous product, commonly guided by marking-equation heuristics \cite{Dongen2018,Zelst2018}. The state space grows with concurrency, loops, duplicate labels, and invisible transitions, making exact alignment intrinsically hard \cite{Schwanen2026}. These constructs are common in discovered models, so one difficult variant can dominate log-level running time and make interactive analysis unpredictable.
 
-Learned guidance can provide low-latency candidates, but a prediction may be illegal or silently suboptimal. Either failure is consequential: an illegal sequence is not an explanation of the observed case, while an unreported cost gap distorts fitness and downstream diagnostics. LARA (Learned Adaptive Recombined Alignments) therefore enforces one invariant: \emph{neural output is never a certificate}. A neural model scores moves; a marking-aware greedy decoder constructs a candidate; replay verifies legality and cost; and an exact backend certifies it by cost equality or repairs it. Thus learning proposes, while process semantics supplies every guarantee.
+Learned guidance can provide low-latency candidates, but a prediction may be illegal or silently suboptimal. Either failure is consequential: an illegal sequence is not an explanation of the observed case, while an unreported cost gap distorts fitness and downstream diagnostics. LARA (Learned Alignment with Replay Assurance) therefore enforces one invariant: \emph{neural output is never a certificate}. A neural model scores moves; a marking-aware greedy decoder constructs a candidate; replay verifies legality and cost; and an exact backend certifies it by cost equality or repairs it. Thus learning proposes, while process semantics supplies every guarantee.
 
 The neural component is a reusable, topology- and trace-conditioned move scorer. It is trained once on exact-labeled synthetic data and accepts unseen labels and Petri nets without retraining under the stated system-net and unit-cost setting. Its latency is dominated by feature construction and one forward pass, while exact search may be heavy-tailed. The contributions are (1) this vocabulary-independent scorer; (2) a trust architecture that separates learned proposal, replay verification, and exact proof (Section~\ref{sec:approach}); (3) an exact-labeled synthetic pipeline with transition-identity supervision; and (4) an assessment that isolates the 4.1-point learned contribution, locates the scaling threshold, compares established approximations, and tests transfer (Section~\ref{sec:assessment}).
 
@@ -196,47 +196,62 @@ LARA separates learned, fast candidate generation from exact, trusted certificat
 
 \begin{figure}
 \centering
-\resizebox{0.76\textwidth}{!}{%
-\begin{tikzpicture}[font=\small, node distance=4mm and 9mm]
-% --- feature extraction ---
-\node[iobox] (bip) {typed bipartite graph\\5 place / 6 transition features\\4 typed edge directions};
-\node[iobox, below=17mm of bip] (hash) {hashed label sequence\\BLAKE2b $\to$ 8{,}192 ids};
-\node[iobox, below=3.5mm of hash] (mask) {compatibility mask\\$C \in \{0,1\}^{n \times |T|}$};
-% --- neural model ---
-\node[learnedbox, right=of bip] (gt) {typed graph transformer\\2 layers: self-attention\\$+$ typed messages};
-\node[learnedbox] (tt) at (gt |- hash) {trace transformer\\1 layer $+$ positions};
-\node[learnedbox, right=of gt] (rec) {move-scoring heads\\sync $n {\times} |T|$ (masked by $C$),\\model $|T|$};
-\node[learnedbox, right=of rec] (dec) {constrained greedy\\decoder: marking-tracked,\\bounded search};
-% --- exact trust ---
-\node[exactbox, right=16mm of dec] (ver) {replay verifier\\$m_0 \to m_f$, log\\projection $= \sigma$};
-\node[exactbox, below=3.5mm of ver] (cert) {fast verification /\\exact certification};
-\node[exactbox, below=3.5mm of cert] (exact) {exact backend\\A* $+$ state equation};
-\node[iobox, right=9mm of cert] (out) {verified candidate /\\certified optimum / repair};
-% --- flows ---
-\draw[flow] (bip) -- node[flowlab, above=0.5mm] {$|P| {\times} 5$\\$|T| {\times} 6$} (gt);
-\draw[flow] (hash) -- node[flowlab, above] {$n$ ids} (tt);
-\draw[biflow] (gt) -- node[flowlab, fill=white] {bidirectional\\cross-attention} (tt);
-\draw[flow] (gt) -- node[flowlab, above] {$|T| {\times} d$} (rec);
-\draw[flow] (tt.east) -| node[flowlab, below, pos=0.22] {$n {\times} d$} (rec.south);
-\draw[flow, dashed] (mask.east) -| node[flowlab, below, pos=0.22] {hard mask} (rec.south);
-\draw[flow] (rec.east) -| node[flowlab, below, pos=0.22] {move scores} (dec.south);
-\draw[flow] (dec) -- node[flowlab, above, xshift=-1.5mm] {candidate $\gamma$} (ver);
-\draw[flow] (ver) -- node[flowlab, left] {legal, $c(\gamma)$} (cert);
-\draw[biflow] (cert) -- node[flowlab, left] {$\delta$, repair} (exact);
-\draw[flow] (cert) -- (out);
+\resizebox{0.98\textwidth}{!}{%
+\begin{tikzpicture}[font=\small]
+% --- problem instance ---
+\node[iobox, text width=25mm] (net) at (0,1.2) {system net $SN$\\typed graph features};
+\node[iobox, text width=25mm] (trace) at (0,-0.55) {trace $\sigma$\\hashed label tokens};
+\node[iobox, text width=25mm, minimum height=7.5mm] (mask) at (0,-1.9)
+  {exact label mask $C$};
+% --- learned proposal ---
+\node[learnedbox, text width=27mm] (genc) at (3.7,1.2)
+  {graph encoder\\typed messages + attention};
+\node[learnedbox, text width=27mm] (tenc) at (3.7,-0.55)
+  {trace encoder\\positions + attention};
+\node[learnedbox, text width=27mm] (score) at (7.2,1.2)
+  {coupled move scorer\\synchronous + model scores};
+\node[learnedbox, text width=27mm] (dec) at (7.2,-0.55)
+  {marking-aware decoder\\bounded catch-up + completion};
+% --- semantic assurance ---
+\node[exactbox, text width=27mm] (replay) at (10.9,-0.55)
+  {replay verifier\\legality + $c(\gamma)$};
+\node[iobox, text width=28mm] (fast) at (14.7,1.0)
+  {fast result\\verified upper bound};
+\node[exactbox, text width=27mm] (exact) at (10.9,-2.25)
+  {exact A* backend\\optimal cost $\delta$};
+\node[iobox, text width=28mm] (result) at (14.7,-2.25)
+  {certified result\\retain $\gamma$ or repair};
+% --- information flow ---
+\draw[flow] (net) -- node[flowlab, above] {net tokens} (genc);
+\draw[flow] (trace) -- node[flowlab, above] {event tokens} (tenc);
+\draw[biflow] (genc) -- node[flowlab, fill=white] {cross-attention} (tenc);
+\draw[flow] (genc) -- (score);
+\draw[flow] (tenc.east) to[out=0,in=205] (score.south west);
+\draw[flow, dashed] (mask.east) -| node[flowlab, below, pos=0.2] {hard mask}
+  ([xshift=-4mm]score.west) -- (score.west);
+\draw[flow] (score) -- node[flowlab, right] {ranked moves} (dec);
+\draw[flow] (dec) -- node[flowlab, above] {candidate $\gamma$} (replay);
+\draw[flow] (replay) -- node[flowlab, above, sloped] {legal, $c(\gamma)$} (fast);
+\draw[flow] (replay) -- node[flowlab, right] {certified mode} (exact);
+\draw[flow] (exact) -- node[flowlab, above] {$c(\gamma)=\delta$?} (result);
 % --- stage backgrounds ---
 \begin{scope}[on background layer]
-\node[stagebg, fill=black!3, draw=black!30] (featbg) [fit=(bip)(hash)(mask)] {};
-\node[stagebg, fill=seriesblue!5, draw=seriesblue!40] (learnbg) [fit=(gt)(tt)(rec)(dec)] {};
-\node[stagebg, fill=seriesaqua!6, draw=seriesaqua!45] (trustbg) [fit=(ver)(cert)(exact)] {};
+\node[stagebg, fill=black!3, draw=black!30] (inputbg) [fit=(net)(trace)(mask)] {};
+\node[stagebg, fill=seriesblue!5, draw=seriesblue!40] (learnbg)
+  [fit=(genc)(tenc)(score)(dec)] {};
+\node[stagebg, fill=seriesaqua!6, draw=seriesaqua!45] (trustbg)
+  [fit=(replay)(fast)(exact)(result)] {};
 \end{scope}
-\node[stagelab, text=black!60, anchor=south] at (featbg.north) {feature extraction};
-\node[stagelab, text=seriesblue!60!black, anchor=south] at (learnbg.north) {neural proposal ($d = 96$, ${\approx}1.7$M parameters): learned, fast, uncertified};
-\node[stagelab, text=seriesaqua!45!black, anchor=south] at (trustbg.north) {exact trust: verified, certified};
+\node[font=\small\bfseries, text=black!60, anchor=south] at (inputbg.north)
+  {input representation};
+\node[font=\small\bfseries, text=seriesblue!60!black, anchor=south] at (learnbg.north)
+  {learned proposal: fast, uncertified};
+\node[font=\small\bfseries, text=seriesaqua!45!black, anchor=south] at (trustbg.north)
+  {semantic assurance: replay + exact};
 \end{tikzpicture}}
-\caption{The LARA architecture: coupled net and trace encoders feed the scoring heads; a constrained greedy decoder emits a candidate that replay checks and the exact backend certifies or repairs.}
+\caption{LARA separates a reusable learned proposal from semantic assurance. Replay establishes legality and a candidate upper bound; certified mode independently runs exact A* and retains or repairs the candidate.}
 \label{fig:architecture}
-\Description{Pipeline from typed Petri-net and hashed trace inputs through coupled graph and trace encoders, move-scoring heads, a constrained decoder, replay verification, and exact certification or repair.}
+\Description{Three grouped stages show net and trace inputs, a coupled learned move scorer and marking-aware decoder, and a semantic-assurance stage with replay verification, a fast verified result, and exact certification or repair.}
 \end{figure}
 
 \subsection{Neural Move Scoring}

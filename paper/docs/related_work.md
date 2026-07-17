@@ -1,6 +1,6 @@
 # Related Work for `lara-align`
 
-This document identifies related work for **Learned Adaptive Recombined Alignments (LARA)**, an experimental system for neural-guided, certifying Petri-net trace alignment. The project sits at the intersection of alignment-based conformance checking, efficient exact search, decomposition/recomposition, approximate replay, process-mining tooling, and neural models for event-log/process-model data.
+This document identifies related work for **Learned Alignment with Replay Assurance (LARA)**, an experimental system for neural-guided, certifying Petri-net trace alignment. The project sits at the intersection of alignment-based conformance checking, efficient exact search, approximate replay, process-mining tooling, and neural models for event-log/process-model data.
 
 The key positioning is that LARA does **not** replace exact conformance checking with a neural network. Instead, it learns to propose and rank candidate alignments, while exact Petri-net replay and a pm4py state-equation A* backend remain responsible for legality checking, repair, and optimality certification.
 

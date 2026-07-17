@@ -1,6 +1,6 @@
 # Approach: The LARA Foundation Model
 
-LARA (Learned Adaptive Recombined Alignments) is a neural-guided, *certifying*
+LARA (Learned Alignment with Replay Assurance) is a neural-guided, *certifying*
 system for Petri-net trace alignment. The design separates **candidate
 generation** (learned, fast, uncertified) from **certification** (exact,
 pm4py-based, trusted). This document details (1) the architecture of the

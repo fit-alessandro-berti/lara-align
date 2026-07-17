@@ -1,7 +1,8 @@
-# lara-align
+# LARA: A Reusable Learned Candidate Generator with Exact Certification for Petri Net Trace Alignment
 
-Learned Adaptive Recombined Alignments (LARA) is an experimental system for
-neural-guided, certifying Petri-net trace alignment.
+Learned Alignment with Replay Assurance (LARA) is an experimental system for
+neural-guided Petri-net trace alignment with replay verification and exact
+certification.
 
 ## Abstract
 
@@ -13,12 +14,12 @@ minimum-cost path. Exact methods are trustworthy, but their search space can gro
 quickly in the presence of concurrency, loops, duplicate labels, and invisible
 transitions.
 
-This repository studies a hybrid alternative. LARA trains a PyTorch model to
-encode a Petri net and trace, predict trace-dependent latent regions, score local
-alignment sketches, and produce a strong legal candidate. A pm4py-based exact
-layer remains responsible for legality checks, repair, and optimality
-certification. The neural model is therefore used as guidance, not as an
-uncertified replacement for exact conformance checking.
+This repository studies a hybrid alternative. LARA uses a reusable PyTorch
+checkpoint to encode a Petri net and trace and score alignment moves. A
+marking-aware decoder turns these scores into a candidate, replay independently
+checks legality and cost, and a pm4py-based exact layer remains responsible for
+optimality certification and repair. The neural model is therefore guidance,
+not an uncertified replacement for exact conformance checking.
 
 ## Problem
 
@@ -51,37 +52,36 @@ must be fireable from the initial marking `m0` to the final marking `mf`.
 
 ## Hypothesis
 
-The central hypothesis is that a learned model can reduce the practical burden
-of exact alignment search by learning:
+The central hypothesis is that a learned model can provide a useful, predictable
+first candidate while semantic checks retain authority. It learns:
 
 - which duplicate-labeled transition is likely intended;
-- where invisible transitions are needed;
-- where local deviations are likely;
-- which regions of the net and trace should be considered together;
-- which candidate alignments are promising enough to verify first.
+- which model-move path can connect the current marking to an observed event;
+- which trace context distinguishes otherwise similar structural choices.
 
-Correctness is preserved by keeping exact Petri-net simulation and pm4py
-alignment in the loop. Learned scores may rank candidates, but they are not used
-as admissible lower bounds.
+Replay rejects illegal candidates and establishes the cost of legal ones. Exact
+pm4py alignment remains the sole authority for optimality. Learned scores are
+neither admissible lower bounds nor certificates.
 
 ## Proposed Solution
 
 LARA separates candidate generation from certification.
 
 1. `LARANeuralModel` encodes a typed Petri-net graph and event sequence.
-2. A learned router assigns transitions and events to latent regions.
-3. Local expert heads score alignment sketches, lower/upper cost estimates, and
-   uncertainty.
-4. A recomposer head scores synchronous/log/model moves.
-5. `GreedyCandidateDecoder` builds a replayable candidate when possible.
-6. `verify_alignment` simulates the transition projection and checks trace
+2. Coupled graph and trace encoders produce trace-dependent representations.
+3. Move heads score synchronous and model moves; the current decoder treats the
+   trained log-move head as auxiliary.
+4. `GreedyCandidateDecoder` builds a marking-aware candidate with bounded
+   catch-up and completion searches.
+5. `verify_alignment` simulates the transition projection and checks trace
    reconstruction.
-7. `CertifyingAlignmentSystem` compares the candidate with pm4py's exact
+6. `CertifyingAlignmentSystem` compares a legal candidate with pm4py's exact
    state-equation A* alignment and certifies optimality when costs match.
 
 The important design constraint is that neural output is never trusted as a
-certificate. Fast mode evaluates the learned candidate. Certified mode invokes
-pm4py and returns an exact repair if the candidate is not already optimal.
+certificate. Fast mode returns a replay-verified upper bound when decoding
+succeeds. Certified mode still invokes pm4py for every trace and returns an exact
+repair if the candidate is not already optimal.
 
 ## Interactive conformance workbench
 
@@ -463,8 +463,8 @@ print(result.alignment.to_pm4py_label_alignment())
 ## Package Map
 
 - `lara_align/features.py`: typed pm4py-to-tensor conversion.
-- `lara_align/model.py`: graph/trace encoder, learned router, local experts,
-  and recomposer heads.
+- `lara_align/model.py`: coupled graph/trace encoder, move-scoring heads, and
+  auxiliary diagnostic heads.
 - `lara_align/decode.py`: constrained greedy candidate decoder.
 - `lara_align/verify.py`: Petri-net replay and alignment legality checks.
 - `lara_align/exact.py`: pm4py exact alignment backend.
@@ -483,8 +483,7 @@ print(result.alignment.to_pm4py_label_alignment())
 
 ## Current Limitations
 
-This is a research prototype. The synthetic generator is still small compared
-with the process-model diversity required for a foundation model, and the fast
-decoder is a constrained greedy decoder rather than a full neural-guided A*
-implementation. The exact pm4py backend remains the source of truth for
-optimality certification.
+This is a research prototype. The training corpus covers limited process-model
+and representation families, and the fast decoder is a constrained greedy
+decoder rather than a full neural-guided A* implementation. The exact pm4py
+backend remains the source of truth for optimality certification.

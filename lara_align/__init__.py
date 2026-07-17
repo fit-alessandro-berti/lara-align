@@ -1,4 +1,4 @@
-"""Learned Adaptive Recombined Alignments (LARA)."""
+"""Learned Alignment with Replay Assurance (LARA)."""
 
 from lara_align.certifier import CertifyingAlignmentSystem, LARAMode
 from lara_align.data import AlignmentSample
