@@ -658,6 +658,70 @@ Disabling guidance leaves Algorithm~\ref{alg:decode} and its marking constraints
 \label{sec:costest}
 The diagnostic estimate tracks exact cost ($r=0.82$) and separates fitting from deviating traces: thresholding it at 0.5 detects any deviation with 89.8\% accuracy (Table~\ref{tab:costest}). It is therefore useful for prioritizing traces before alignment. Its intervals are not calibrated, however: only 29.1\% contain the optimum. This empirical distinction between a useful point estimate and an unsafe bound justifies keeping the diagnostic branch outside both decoding and exact search.
 
+\subsection{Effect of Model Classes and Representations}
+\label{sec:classes}
+
+The aggregate result does not reveal where learning helps or whether equivalent Petri-net encodings receive equivalent candidates. We therefore partitioned the existing test run into the eight motif--representation cells used by the generator (Table~\ref{tab:classes}). This is a fixed-checkpoint analysis: no model was retrained. Guided and unguided modes process the same 64 rows in each cell, comprising two traces from each of 32 held-out behavior families. Every cell remains 100\% legal. To respect dependence between the two traces and two representations, uncertainty is obtained by 10{,}000 bootstrap resamples of whole behavior families. The overall 4.1-point guidance gain has a 95\% interval of $[2.3,6.1]$ points.
+
+\begin{table}[t]
+\centering
+\caption{Class-conditional assessment of the fixed checkpoint. G/U: guided/unguided; $\Delta={\rm G}-{\rm U}$; gaps and identity are for guided decoding; ``id.'' is the event-anchored concrete-transition accuracy on identifiable teacher-synchronous positions; times are median milliseconds for guided fast decoding and stored exact A* labeling. The lower panel compares candidate costs across each pair of equivalent representations.}
+\label{tab:classes}
+\scriptsize
+\setlength{\tabcolsep}{2.4pt}
+\begin{tabular}{@{}llrrrrrrrr@{}}
+\toprule
+& & \multicolumn{2}{c}{optimal cost} & & \multicolumn{2}{c}{gap} & & \multicolumn{2}{c}{median ms} \\
+motif & representation & G & U & $\Delta$ pp & mean & p95 & id. & G & A* \\
+\midrule
+ordinary tree & canonical block & 84.4\% & 85.9\% & $-1.6$ & .344 & 2 & 72.6\% & 1.77 & .76 \\
+ordinary tree & isomorphic rename & 84.4\% & 76.6\% & $+7.8$ & .344 & 2 & 63.0\% & 1.74 & .63 \\
+duplicate/silent & duplicate prefix & 95.3\% & 68.8\% & \textbf{$+26.6$} & .094 & 0 & 95.7\% & 1.46 & .57 \\
+duplicate/silent & silent routing & 98.4\% & 98.4\% & $0.0$ & .031 & 0 & 94.8\% & 1.53 & .58 \\
+concurrency & parallel & 90.6\% & 90.6\% & $0.0$ & .219 & 2 & 86.8\% & 1.55 & .59 \\
+concurrency & interleaving & 90.6\% & 90.6\% & $0.0$ & .219 & 2 & 83.7\% & 1.49 & .56 \\
+M-pattern & canonical block & 92.2\% & 92.2\% & $0.0$ & .094 & 1 & 92.9\% & 1.56 & .55 \\
+M-pattern & non-free-choice & 92.2\% & 92.2\% & $0.0$ & .094 & 1 & 93.5\% & 1.58 & .58 \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+equivalent representation pair & $n$ & \multicolumn{2}{c}{candidate-cost agreement} & G optimality agreement \\
+& & G & U & \\
+\midrule
+ordinary / isomorphic & 64 & 100.0\% & 90.6\% & 100.0\% \\
+duplicate prefix / silent routing & 64 & 96.9\% & 70.3\% & 96.9\% \\
+parallel / explicit interleaving & 64 & 100.0\% & 100.0\% & 100.0\% \\
+canonical / non-free-choice M & 64 & 100.0\% & 100.0\% & 100.0\% \\
+\textbf{all pairs} & \textbf{256} & \textbf{99.2\%} & \textbf{90.2\%} & \textbf{99.2\%} \\
+\bottomrule
+\end{tabular}
+
+\vspace{4pt}
+\begin{tabular}{@{}lrrrr@{}}
+\toprule
+motif & mean $|T|$ (representation pair) & mean trace length & mean optimum & mean edits \\
+\midrule
+ordinary tree & 9.53 / 9.53 & 3.78 & 1.31 & 1.11 \\
+duplicate / silent & 6.00 / 7.00 & 3.64 & 1.58 & 1.25 \\
+concurrency & 6.00 / 6.00 & 3.64 & 1.70 & 1.38 \\
+M-pattern & 7.00 / 7.00 & 3.44 & 1.55 & 1.39 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+The learned contribution is highly localized. On duplicate-prefix nets, optimality rises from 68.8\% to 95.3\%, a 26.6-point gain with family-bootstrap interval $[17.2,34.4]$. The paired silent-routing form is already 98.4\% optimal without scores and receives no gain. This contrast isolates the mechanism: invisible-transition priority and marking constraints provide a structural route through the silent model, whereas two enabled visible transitions with the same label require trace-dependent suffix evidence. Event-anchored transition identity reaches 95.7\% on the duplicate-prefix cell. Thus the controlled motif supports a targeted ambiguity claim, not a claim that neural inference improves every alignment.
+
+Equivalent encodings further separate behavioral guidance from incidental tie-breaking. Guided candidates agree in cost on both ordinary-tree representations for all 64 paired traces; unguided agreement falls to 90.6\% because deterministic transition-name order is not invariant to renaming. Correspondingly, guidance is neutral on canonical trees ($-1.6$ points, interval $[-4.7,0.0]$) but adds 7.8 points after isomorphic renaming (interval $[1.6,15.6]$), leaving guided quality identical at 84.4\%. Parallel and explicit-interleaving encodings have identical candidate costs, as do canonical and non-free-choice M-patterns, in both modes. Across all 256 paired traces, learned guidance raises candidate-cost agreement from 90.2\% to 99.2\%; its only two disagreements are in the duplicate/silent family. This is evidence of representation stability for encodings present in training, not yet for unseen compilations.
+
+The cost tails qualify the class rates. Ordinary trees account for 20 of the 46 non-optimal candidates and have mean/p95 gaps .344/2; concurrency contributes 12 with .219/2; the M-pattern family contributes 10 with .094/1; and duplicate/silent contributes only four. In the silent, concurrency, and M-pattern cells, guided and unguided costs are equal row by row. Their bootstrap intervals collapse to $[0,0]$ because the empirical decisions coincide, not because the sample proves zero effect outside this distribution. Conversely, the duplicate-prefix interval remains far from zero after resampling families, so its gain is not an artifact of treating four correlated rows as independent.
+
+Identity agreement and candidate quality answer different questions. The isomorphically renamed trees match only 63.0\% of teacher-synchronous transition identities, yet retain 84.4\% optimality and 100\% paired cost agreement. Parallel and interleaved forms likewise differ slightly in identity (86.8\% versus 83.7\%) while agreeing exactly in candidate cost. Alternative legal minimum-cost explanations therefore make teacher identity a diagnostic of the scorer, whereas cost and replay remain the behavioral criteria used for certification.
+
+Class rates must nevertheless be interpreted descriptively. Ordinary-tree nets average 9.53 transitions, versus 6--7 for the controlled motifs, and vary much more in structure; trace length, optimum cost, and edit count also differ modestly. Their lower 84.4\% rate cannot therefore be attributed to model class alone. Within a motif the paired comparison is stronger because both representations share the exact same corrupted traces and optimal costs. A causal statement about which generator class created each capability would require leave-one-class-out training, which is outside this fixed-checkpoint assessment. Finally, exact A* is 2.3--2.9$\times$ faster in these small cells (median .55--.76 ms versus 1.46--1.77 ms), confirming that learned latency becomes relevant only beyond the small in-distribution regime.
+
 \subsection{Scaling Benchmark: The Speed and Quality Threshold}
 \label{sec:scaling}
 

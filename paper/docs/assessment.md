@@ -89,31 +89,90 @@ motifs, it produces both odd and even gaps: failures combine visible model
 moves, log moves, and routing detours rather than only paired model/log
 fast-forward errors.
 
-## 4. Results by Synthetic Family and Representation
+## 4. Fixed-Checkpoint Results by Model Class and Representation
 
-| family | n | replayable | optimal cost | mean gap | max gap |
-|---|---:|---:|---:|---:|---:|
-| ordinary tree / isomorphic renaming | 128 | 100.0% | 84.4% | 0.344 | 4 |
-| duplicate prefix / silent routing | 128 | 100.0% | 96.9% | 0.063 | 2 |
-| concurrent vs. interleaved | 128 | 100.0% | 90.6% | 0.219 | 4 |
-| M-pattern non-free-choice | 128 | 100.0% | 92.2% | 0.094 | 2 |
+This analysis uses only the existing epoch-49 checkpoint. No model was retrained.
+Guided and unguided decoding were rerun on the same 512 held-out rows and the
+same exact teacher alignments. Each representation cell contains 64 rows from
+32 behavior families and two traces per family. Uncertainty for the guidance
+delta is a percentile 95% interval from 10,000 bootstrap resamples of whole
+behavior families, not individual rows. `id.` is event-anchored concrete
+transition identity accuracy on teacher-synchronous event positions in samples
+where identity is marked identifiable. Timing columns are median milliseconds
+per trace for guided fast decoding and the stored exact A* labeling run.
 
-| representation | n | replayable | optimal cost | mean gap | max gap |
-|---|---:|---:|---:|---:|---:|
-| canonical block | 128 | 100.0% | 88.3% | 0.219 | 4 |
-| duplicate prefix | 64 | 100.0% | 95.3% | 0.094 | 2 |
-| silent routing | 64 | 100.0% | 98.4% | 0.031 | 2 |
-| explicit interleaving | 64 | 100.0% | 90.6% | 0.219 | 4 |
-| parallel | 64 | 100.0% | 90.6% | 0.219 | 4 |
-| isomorphic renaming | 64 | 100.0% | 84.4% | 0.344 | 4 |
-| M-pattern non-free-choice | 64 | 100.0% | 92.2% | 0.094 | 2 |
+Every cell remains 100% replayable, so legality is omitted from the table.
 
-Paired equivalent representations are exact-cost consistent by construction
-(100.0%). The fast candidate is legal for every representation in every pair,
-and predicted costs are consistent across equivalent representations in 99.2%
-of paired traces. For the duplicate-prefix/silent-routing pair, duplicate
-transition selection accuracy is 79.7% and the silent-routing label alignment
-accuracy is 85.9%.
+| motif | representation | guided opt. | unguided opt. | delta pp [family 95% CI] | guided gap mean / p95 | id. (events) | median ms LARA / A* |
+|---|---|---:|---:|---:|---:|---:|---:|
+| ordinary tree | canonical block | 84.4% | 85.9% | -1.6 [-4.7, 0.0] | 0.344 / 2 | 72.6% (208) | 1.77 / 0.76 |
+| ordinary tree | isomorphic renaming | 84.4% | 76.6% | +7.8 [1.6, 15.6] | 0.344 / 2 | 63.0% (208) | 1.74 / 0.63 |
+| duplicate / silent | duplicate prefix | 95.3% | 68.8% | **+26.6 [17.2, 34.4]** | 0.094 / 0 | 95.7% (164) | 1.46 / 0.57 |
+| duplicate / silent | silent routing | 98.4% | 98.4% | 0.0 [0.0, 0.0] | 0.031 / 0 | 94.8% (194) | 1.53 / 0.58 |
+| concurrency | parallel | 90.6% | 90.6% | 0.0 [0.0, 0.0] | 0.219 / 2 | 86.8% (190) | 1.55 / 0.59 |
+| concurrency | explicit interleaving | 90.6% | 90.6% | 0.0 [0.0, 0.0] | 0.219 / 2 | 83.7% (190) | 1.49 / 0.56 |
+| M-pattern | canonical block | 92.2% | 92.2% | 0.0 [0.0, 0.0] | 0.094 / 1 | 92.9% (170) | 1.56 / 0.55 |
+| M-pattern | non-free-choice | 92.2% | 92.2% | 0.0 [0.0, 0.0] | 0.094 / 1 | 93.5% (170) | 1.58 / 0.58 |
+
+The cell-wise result localizes the learned contribution. Duplicate-prefix
+optimality gains 26.6 points, whereas silent routing receives no gain: the
+decoder can traverse its invisible route structurally, but choosing between
+same-label visible transitions requires suffix-dependent evidence. Guidance is
+also insensitive to an isomorphic renaming: the two ordinary-tree candidates
+always have equal cost. The unguided transition-name tie-break is not invariant
+and loses 9.4 points of pairwise candidate-cost agreement on the renamed form.
+Parallel versus explicit interleaving and canonical versus non-free-choice
+M-pattern representations have identical cost distributions in both modes.
+
+| equivalent representation pair | paired traces | guided candidate-cost agreement | unguided agreement | guided optimality agreement |
+|---|---:|---:|---:|---:|
+| ordinary / isomorphic | 64 | 100.0% | 90.6% | 100.0% |
+| duplicate prefix / silent routing | 64 | 96.9% | 70.3% | 96.9% |
+| parallel / explicit interleaving | 64 | 100.0% | 100.0% | 100.0% |
+| canonical / non-free-choice M | 64 | 100.0% | 100.0% | 100.0% |
+| **all pairs** | **256** | **99.2% (254/256)** | **90.2% (231/256)** | **99.2% (254/256)** |
+
+Thus the representation result is stronger than the aggregate family rates:
+learned scores raise equivalent-representation candidate-cost agreement by
+9.0 points while preserving 100% legality. The only two guided disagreements
+are in the duplicate/silent pair. This supports behavioral rather than surface
+topology transfer for the representations present in training, but it does not
+establish transfer to unseen encodings.
+
+The 46 non-optimal candidates are distributed unevenly: 20 belong to ordinary
+trees, 12 to concurrency/interleaving, 10 to the M-pattern family, and only 4
+to duplicate/silent routing. In the silent, concurrency, and M-pattern cells,
+guided and unguided costs are equal row by row; their bootstrap intervals are
+exactly [0, 0] for this empirical sample. The duplicate-prefix interval remains
+far from zero after resampling whole families.
+
+Transition identity is diagnostic rather than the certification criterion.
+The isomorphically renamed trees reproduce only 63.0% of teacher-synchronous
+transition identities, yet retain 84.4% optimality and 100% paired candidate-
+cost agreement. Parallel and interleaved forms similarly differ in identity
+(86.8% versus 83.7%) while agreeing exactly in cost. Multiple legal optimal
+alignments can therefore lower teacher-identity agreement without lowering
+candidate quality; replay and cost remain the behavioral criteria.
+
+### Difficulty and interpretation limits
+
+| motif | mean transitions in the two representations | mean trace length | mean optimum | mean edits |
+|---|---:|---:|---:|---:|
+| ordinary tree | 9.53 / 9.53 | 3.78 | 1.31 | 1.11 |
+| duplicate / silent | 6.00 / 7.00 | 3.64 | 1.58 | 1.25 |
+| concurrency | 6.00 / 6.00 | 3.64 | 1.70 | 1.38 |
+| M-pattern | 7.00 / 7.00 | 3.44 | 1.55 | 1.39 |
+
+Within each motif, the two representations share the same noisy traces and
+exact costs, so their comparison controls trace length, deviation count, and
+alignment difficulty. Across motifs, however, ordinary trees are larger and
+structurally more varied. Their lower 84.4% rate is therefore descriptive, not
+an isolated causal effect of the class. Likewise, this fixed-checkpoint study
+shows where guidance helps but cannot show which training motif created that
+ability. A leave-one-class-out study would require new training and was not
+performed. The evidence supports the narrower claim that, for the existing
+checkpoint and seen representation classes, learned guidance is useful chiefly
+when a legal structural decoder faces trace-dependent transition ambiguity.
 
 ## 5. Training Dynamics
 
