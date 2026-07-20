@@ -28,3 +28,4 @@ runs/
 
 !dist_data/*.tar.gz
 
+!data_generation.pdf
