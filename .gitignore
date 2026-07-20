@@ -25,3 +25,6 @@ runs/
 *.toc
 
 *.tar.gz
+
+!dist_data/*.tar.gz
+
