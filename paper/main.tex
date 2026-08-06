@@ -7,7 +7,7 @@
 \usepackage{tikz}
 \usetikzlibrary{positioning,fit,backgrounds,arrows.meta,calc}
 \usepackage{pgfplots}
-\pgfplotsset{compat=1.16}
+\pgfplotsset{compat=1.18}
 \usepackage{algorithm}
 \usepackage{algpseudocode}
 
@@ -143,6 +143,7 @@ Alignments explain how observed behavior deviates from a process model, but comp
 \keywords{process mining, conformance checking, alignments, Petri nets, neural networks, certification}
 
 \begin{document}
+\raggedbottom
 
 \maketitle
 
@@ -660,10 +661,11 @@ The controlled motifs delimit this conclusion. Guidance for the duplicate prefix
 
 We generated block structured stress nets with sequence, choice, parallelism, loops, duplicate labels, and invisible routing; injected deviations at rates 0.15 and 0.35; and timed 10 traces per configuration with an exact timeout of 30 seconds. This generator is separate from training.
 
-\begin{table}
+\begin{center}
 \begin{minipage}[t]{0.58\textwidth}
 \centering
-\caption{Scaling benchmark on random block structured nets (10 samples per configuration; exact timeout 30 s, timeouts counted at the timeout).}
+\captionsetup{hypcap=false}
+\captionof{table}{Scaling benchmark on random block structured nets (10 samples per configuration; exact timeout 30 s, timeouts counted at the timeout).}
 \label{tab:scaling}
 \footnotesize
 \setlength{\tabcolsep}{3pt}
@@ -683,9 +685,8 @@ size & dev.\ & $|T|$ & legal & optimal & mean gap & fast med. & exact med. & spe
 \end{tabular}
 \end{minipage}\hfill
 \begin{minipage}[t]{0.38\textwidth}
-\vspace{0pt}
 \centering
-\begin{tikzpicture}
+\begin{tikzpicture}[baseline=(current bounding box.north)]
 \begin{axis}[
   larachart,
   width=\linewidth,
@@ -708,10 +709,11 @@ size & dev.\ & $|T|$ & legal & optimal & mean gap & fast med. & exact med. & spe
 \addlegendentry{exact A*, dev.\ 0.35}
 \end{axis}
 \end{tikzpicture}
+\captionsetup{hypcap=false}
 \captionof{figure}{Median alignment time per trace versus net size on block structured nets (both axes use a logarithmic scale). LARA stays at the forward pass floor; exact A* degrades superlinearly, with first timeouts at size 40.}
 \label{fig:scaling}
 \end{minipage}
-\end{table}
+\end{center}
 
 Table~\ref{tab:scaling} and Figure~\ref{fig:scaling} expose a threshold between quality and latency. LARA stays at 4.6 to 8.7 ms as net size grows because the forward pass is predictable; exact A* is faster on the small cells but crosses over at size 20 for deviation 0.35 and size 40 for 0.15, where the first timeout appears. Replay accepts every stress candidate, but the exact cost rate falls to 30 to 44\% at size 40 and mean gaps reach 8.1 to 11.7. Guidance adds little on this random stress distribution: unguided decoding takes 0.2 to 1.2 ms and beats exact search throughout. Learned inference therefore pays only when its choices informed by the trace improve quality enough to justify the forward pass floor.
 
