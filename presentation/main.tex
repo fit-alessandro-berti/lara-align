@@ -37,7 +37,7 @@
 }
 
 \title[LARA]{\textbf{LARA}: Learned Alignment with Replay Assurance}
-\subtitle{A Certifying Foundation Model for Petri Net Trace Alignment}
+\subtitle{A Reusable Learned Candidate Generator with Exact Certification}
 \author[Berti, van der Aalst]{Alessandro Berti \and Wil M.P. van der Aalst}
 \institute[PADS, RWTH]{Process and Data Science (PADS), RWTH Aachen University}
 \date{ICPM 2027}
@@ -67,17 +67,17 @@
 
 % ---------------------------------------------------------------- 3
 \begin{frame}{The Goal}
-  \begin{block}{Fast alignments that are never less trustworthy}
-    A small neural \keyc{foundation model}, trained \keyc{once} on synthetic data,
+  \begin{block}{Reusable candidates that stay semantically trustworthy}
+    A small neural \keyc{candidate generator}, trained \keyc{once} on synthetic data,
     scores alignment moves for \keyg{any Petri net and any log};
-    exact methods \keyg{verify, certify, or repair} every answer.
+    replay and exact methods \keyg{verify, certify, or repair} every answer.
   \end{block}
   \vspace{4mm}
   \begin{itemize}\setlength{\itemsep}{7pt}
-    \item One invariant: \keya{neural output is never trusted as a certificate}
+    \item One invariant: \keya{neural output is never a certificate}
     \item Every answer is a \keyg{legal alignment with a known cost};
       optionally a \keyg{certified optimal} one
-    \item \keyc{Vocabulary-free}: no retraining, no configuration per log
+    \item \keyc{Vocabulary-independent}: no retraining, no configuration per log
   \end{itemize}
 \end{frame}
 
@@ -89,8 +89,8 @@
     \node[iob, minimum width=22mm] (net) at (0,0.8) {\textbf{Petri net}};
     \node[iob, minimum width=22mm] (trc) at (0,-0.8) {\textbf{trace} $\langle a,b,c\rangle$};
     % learned stage
-    \node[lrn, minimum width=26mm] (fm) at (3.6,0) {\textbf{foundation model}\\move scores};
-    \node[lrn, minimum width=26mm] (dec) at (7.4,0) {\textbf{constrained}\\\textbf{greedy decoder}};
+    \node[lrn, minimum width=26mm] (fm) at (3.6,0) {\textbf{learned scorer}\\move scores};
+    \node[lrn, minimum width=26mm] (dec) at (7.4,0) {\textbf{marking-aware}\\\textbf{greedy decoder}};
     \node[iob, minimum width=24mm] (cand) at (10.9,0) {candidate $\gamma$\\\keyc{fireable}};
     % exact stage
     \node[exa, minimum width=22mm] (ver) at (10.9,-2.1) {\textbf{replay verifier}\\legal? cost $c(\gamma)$};
@@ -120,7 +120,7 @@
 \end{frame}
 
 % ---------------------------------------------------------------- 5
-\begin{frame}{Architecture of the Foundation Model}
+\begin{frame}{Architecture of the Learned Scorer}
   \begin{center}
   \resizebox{0.98\textwidth}{!}{%
   \begin{tikzpicture}[font=\small]
@@ -128,15 +128,15 @@
     \node[iob, minimum width=28mm] (g) at (0,1.4) {Petri net as \textbf{typed graph}\\markings, costs, degrees};
     \node[iob, minimum width=28mm] (h) at (0,-1.4) {trace as \textbf{hashed labels}\\no vocabulary};
     % encoders
-    \node[lrn, minimum width=30mm] (gt) at (4.6,1.4) {\textbf{graph transformer}\\3 layers, typed edges};
-    \node[lrn, minimum width=30mm] (tt) at (4.6,-1.4) {\textbf{trace transformer}\\2 layers};
+    \node[lrn, minimum width=30mm] (gt) at (4.6,1.4) {\textbf{graph transformer}\\two layers, typed edges};
+    \node[lrn, minimum width=30mm] (tt) at (4.6,-1.4) {\textbf{trace transformer}\\1 layer};
     \draw[flow, {Stealth[length=2.2mm]}-{Stealth[length=2.2mm]}]
       (gt) -- node[flab, fill=white] {cross-attention} (tt);
     % heads
     \node[lrn, minimum width=32mm] (heads) at (9.5,1.4)
-      {\textbf{scoring heads}\\one score per possible\\sync / log / model move};
+      {\textbf{scoring heads}\\sync + model scores\\steer the decoder};
     \node[lrn, minimum width=32mm, dashed] (diag) at (9.5,-1.4)
-      {\textbf{diagnostic branch}\\deviation regions and\\estimated alignment cost};
+      {\textbf{unused by search}\\log-move head and\\diagnostic intervals};
     \draw[flow] (g) -- (gt);
     \draw[flow] (h) -- (tt);
     \draw[flow] (gt) -- (heads);
@@ -144,22 +144,21 @@
     \draw[flow] (gt.east) -- (diag.north west);
     % out
     \node[iob, minimum width=36mm] (dec) at (14.9,1.4)
-      {\textbf{to the decoder}:\\move scores \keyc{build}\\\keyc{the alignment}};
+      {\textbf{to the decoder}:\\sync / model scores\\build the candidate};
     \node[iob, minimum width=36mm] (ana) at (14.9,-1.4)
-      {\textbf{to the analyst}:\\\keya{information only},\\never in the search};
+      {\textbf{not in the search}:\\\keya{auxiliary / experimental},\\never a certificate};
     \draw[flow] (heads) -- node[flab, above] {move scores} (dec);
     \draw[flow, dashed] (diag) -- node[flab, above] {diagnostics} (ana);
   \end{tikzpicture}}
   \end{center}
   \vspace{1mm}
   \begin{itemize}\setlength{\itemsep}{4pt}
-    \item Two outputs, two roles: the \keyc{move scores} continue down the
-      pipeline and steer the decoder; the \keyc{diagnostics} (where the trace
-      deviates, at what estimated cost) go to the \keya{analyst only}
-    \item The diagnostics carry \keya{no guarantee}, so they never influence
-      the search or the result
-    \item Small model: about \keyc{3M parameters}, runs on \keyc{CPU};
-      all scores are \keyc{trace-dependent}
+    \item Coupled encoders: \keyc{two graph layers} plus a \keyc{1-layer}
+      trace transformer exchange messages; scores are \keyc{trace-dependent}
+    \item The decoder consumes only \keyc{synchronous and model-move} scores;
+      the \keya{log-move head} and \keya{diagnostic intervals} do not steer search
+    \item Small model: about \keyc{1.7M} parameters, \keyc{two graph layers}
+      ($d=96$), runs on \keyc{CPU}
   \end{itemize}
 \end{frame}
 
@@ -173,7 +172,7 @@
     \;+\; \underbrace{w_c\,\mathcal{L}_{\mathrm{cost}}
       + w_b\,\mathcal{L}_{\mathrm{bound}} + w_\ell\,\mathcal{L}_{\mathrm{bal}}
       + w_e\,\mathcal{L}_{\mathrm{ent}}}_{
-      \textcolor{laraamber!85!black}{\textbf{diagnostic branch}},\;
+      \textcolor{laraamber!85!black}{\textbf{unused by search}},\;
       w \le 0.03}
   \end{equation*}
   \vspace{1mm}
@@ -183,17 +182,17 @@
       fire? This is what teaches \keya{duplicate-label} resolution
     \item $\mathcal{L}_{\mathrm{log}}$ / $\mathcal{L}_{\mathrm{model}}$:
       which events did the optimum \keyc{skip}, which transitions did it fire
-      \keyc{without a matching event}?
-    \item $\mathcal{L}_{\mathrm{cost}}$: the summed regional cost bounds must
-      match the \keyg{optimal cost} $\delta$
-    \item $\mathcal{L}_{\mathrm{bound}}, \mathcal{L}_{\mathrm{bal}},
-      \mathcal{L}_{\mathrm{ent}}$: regions stay \keyc{connected},
-      \keyc{balanced} in size, and \keyc{decisive}
+      \keyc{without a matching event}? Only model scores enter the decoder;
+      $\mathcal{L}_{\mathrm{log}}$ is \keya{auxiliary}
+    \item $\mathcal{L}_{\mathrm{cost}}$, $\mathcal{L}_{\mathrm{bound}}$,
+      $\mathcal{L}_{\mathrm{bal}}$, $\mathcal{L}_{\mathrm{ent}}$ supervise
+      experimental intervals and router regularization; they
+      \keya{never enter decoding, replay, or exact search}
   \end{itemize}
   \vspace{1mm}
   \centering \small
-  The weights keep \keyc{move imitation dominant}; the decomposition is a
-  regularized \keya{diagnostic}, not the primary objective.
+  Move imitation is dominant; diagnostics and the unused log-move head
+  \keya{do not} steer the candidate.
 \end{frame}
 
 % ---------------------------------------------------------------- 7
@@ -205,16 +204,16 @@
     \node[iob, minimum width=28mm] (net) at (0,1.55)
       {\textbf{typed Petri graph}\\places: $m_0,m_f$, degrees\\transitions: label, $\tau$, costs};
     \node[lrn, minimum width=27mm] (graph) at (3.7,1.55)
-      {\textbf{graph transformer}\\3 layers; 4 arc types\\forward + reverse};
+      {\textbf{graph transformer}\\two layers; typed arcs\\forward + reverse};
     \node[lrn, minimum width=20mm] (trans) at (7.05,1.55)
-      {$h_j\in\mathbb{R}^{128}$\\per transition $t_j$};
+      {$h_j\in\mathbb{R}^{96}$\\per transition $t_j$};
     % Trace branch
     \node[iob, minimum width=28mm] (trace) at (0,-1.05)
       {\textbf{trace} $\sigma=\langle a_1,\ldots,a_n\rangle$\\BLAKE2b label ids\\shared with transitions};
     \node[lrn, minimum width=27mm] (seq) at (3.7,-1.05)
-      {\textbf{trace transformer}\\2 layers; positions\\global trace context};
+      {\textbf{trace transformer}\\1 layer; positions\\global trace context};
     \node[lrn, minimum width=20mm] (events) at (7.05,-1.05)
-      {$e_i\in\mathbb{R}^{128}$\\per event $a_i$};
+      {$e_i\in\mathbb{R}^{96}$\\per event $a_i$};
     % Coupling and output
     \draw[flow] (net) -- (graph);
     \draw[flow] (graph) -- (trans);
@@ -225,7 +224,7 @@
       {bidirectional\\cross-attention} (events);
     \node[lrn, minimum width=31mm, minimum height=21mm] (score) at (10.7,0.25)
       {\textbf{label-masked}\\\textbf{bilinear score}\\[1mm]
-       $s_{ij}=\dfrac{(W e_i)^\top h_j}{\sqrt{128}}$\\
+       $s_{ij}=\dfrac{(W e_i)^\top h_j}{\sqrt{96}}$\\
        $s_{ij}=-\infty$ if $\ell(a_i)\ne\ell(t_j)$};
     \node[exa, minimum width=28mm] (prob) at (14.45,0.25)
       {\textbf{transition likelihood}\\
@@ -266,7 +265,7 @@
       \item If \keyc{no} such transition is enabled, the \keyc{model-move
         scores} guide a short search that lets the Petri net catch up
       \item If even that fails, the event is a deviation:
-        it becomes a \keya{log move}
+        it becomes a \keya{log move} (the log-move head is unused)
     \end{itemize}
   \end{column}
   \begin{column}{0.42\textwidth}
@@ -295,19 +294,20 @@
   The candidate is always \keyg{replayable}; \keyg{optimality} is checked by the exact layer.
 \end{frame}
 
-% ---------------------------------------------------------------- 7
+% ---------------------------------------------------------------- 9
 \begin{frame}{Training and Validation Data}
-  \textbf{Exact-labeled synthetic pipeline} (imitation of the exact aligner):
+  \textbf{Exact-labeled behavior families} (imitation of the exact aligner):
   \vspace{2mm}
-  \begin{enumerate}\setlength{\itemsep}{6pt}
-    \item \keyc{draw a Petri net} from a curriculum: 80\% linear workflows,
-      20\% \keya{duplicate-label} choices differing only in their suffixes
-    \item \keyc{perturb} a fitting trace with controlled deviations
-      (rate 0.25: delete, insert, duplicate, swap, append)
+  \begin{enumerate}\setlength{\itemsep}{5pt}
+    \item \keyc{draw a family}: one visible behavior, two Petri-net encodings,
+      two shared traces (four rows); four equally weighted motifs
+      (ordinary tree, duplicate/silent, concurrency, M pattern)
+    \item \keyc{perturb} most traces with 1--3 deletions, insertions,
+      substitutions, repetitions, swaps, or truncations (20\% stay clean)
     \item \keyc{label} with exact A*: optimal alignment \keyg{with transition identities},
       replay-verified
   \end{enumerate}
-  \vspace{4mm}
+  \vspace{3mm}
   \begin{columns}[T]
   \begin{column}{0.5\textwidth}
     \begin{center}
@@ -315,9 +315,9 @@
       \toprule
       Split & Examples \\
       \midrule
-      \keyc{Training} & 400 \\
-      \keyc{Validation} & 100 \\
-      \keyc{Test} & 100 \\
+      \keyc{Training} & 2,048 \\
+      \keyc{Validation} & 512 \\
+      \keyc{Test} & 512 \\
       \bottomrule
     \end{tabular}
     \end{center}
@@ -326,12 +326,13 @@
     \small
     \keyc{Hashed labels} $\Rightarrow$ the model learns \keyg{structure},
     never vocabulary: one checkpoint for any log.\\[2mm]
-    Training: 22 epochs, about 32 s each, \keyc{single CPU}.
+    Corpus \keyc{2,048 / 512 / 512}. Best validation loss at
+    \keyc{epoch 49 of 50}, about 41\,s each, \keyc{single CPU}.
   \end{column}
-  \end{columns}
+\end{columns}
 \end{frame}
 
-% ---------------------------------------------------------------- 8
+% ---------------------------------------------------------------- 10
 \begin{frame}{Evaluation: How}
   \small
   \textbf{Protocol}: all runs on a \keyc{single CPU}. LARA always in
@@ -339,25 +340,23 @@
   never repaired, so no exact result contaminates the learned metrics.
   The \keyg{exact A* optimum} $\delta$ is the ground truth for every sample.
   \vspace{2mm}
-  \begin{itemize}\setlength{\itemsep}{7pt}
-    \item \keyc{In-distribution quality}: 100 held-out examples from the
-      training distribution; measures whether every candidate is
+  \begin{itemize}\setlength{\itemsep}{6pt}
+    \item \keyc{In-distribution quality}: 512 held-out rows from unseen
+      behavior families; measures whether every candidate is
       \keyg{legal} (replayable), how often its cost \keyg{equals} the
       optimum $\delta$, and \keyg{how far off} it is otherwise
     \item \keyc{Guidance ablation}: identical inputs, but the neural scores are
       replaced by fixed structural tie-breaks; isolates what \keyg{learning}
       adds over constrained search alone
-    \item \keyc{Scaling benchmark}: random block-structured Petri nets with 5 to
-      40 activities, a family \keya{never seen in training}; locates where the
-      fast path \keyg{overtakes exact A*} in wall time
+    \item \keyc{Scaling and approximations}: random block-structured Petri nets
+      never seen in training, plus PM4Py approximations on the same grids
     \item \keyc{Zero-shot real life}: two public logs (building permits,
       road traffic fines) with Petri nets discovered by the inductive miner;
-      \keya{unseen vocabularies, no fine-tuning}; tests foundation-model
-      \keyg{transfer}
+      \keya{unseen vocabularies, no fine-tuning}
   \end{itemize}
 \end{frame}
 
-% ---------------------------------------------------------------- 9
+% ---------------------------------------------------------------- 11
 \begin{frame}{Evaluation: Results}
   \begin{columns}[T]
   \begin{column}{0.5\textwidth}
@@ -365,35 +364,39 @@
     \small
     \begin{tabular}{lr}
       \toprule
-      In-distribution ($n = 100$) & \\
+      In-distribution ($n = 512$) & \\
       \midrule
       legal alignments & \keyg{100\%} \\
-      certified optimal & \keyc{88\%} \\
-      mean cost gap & 0.38 \\
+      already optimal & \keyc{91.0\%} \\
+      mean cost gap & 0.18 \\
       \bottomrule
     \end{tabular}
     \end{center}
     \vspace{2mm}
-    \small Ablation: learning adds \keyc{$+$27.7 points} on the
-    \keya{duplicate-label} family (94.4\% vs.\ 66.7\%); zero elsewhere.
+    \small Ablation: learning adds \keyc{$+$4.1} overall and
+    \keyc{$+$26.6} on \keya{duplicate-prefix} nets
+    (95.3\% vs.\ 68.8\%); it also keeps quality
+    \keyg{identifier-stable} at 84.4\%.
   \end{column}
   \begin{column}{0.46\textwidth}
-    \begin{itemize}\setlength{\itemsep}{6pt}
+    \begin{itemize}\setlength{\itemsep}{5pt}
       \item \keyg{Legality transfers everywhere}: 100\% on unseen families
         and real logs
-      \item Fast path \keyc{overtakes exact A*} at about 40 activities
-        (3.7$\times$; 7 to 12$\times$ at 80)
-      \item Real discovered Petri net (invisible-heavy): \keyc{18.5 ms} vs.\ 27.4 ms median
-      \item But: optimal-cost rate \keya{drops to about 30\%} on large unseen Petri nets
+      \item Fast path stays at \keyc{4.6--8.7\,ms}; at size 40,
+        \keya{30--44\%} optimal, but faster than exact A*
+      \item Receipt (invisible-heavy): \keyc{16.0 vs.\ 31.0\,ms}
+        and \keyc{6.7 vs.\ 12.7\,ms}
+      \item Established Petri-net approximations
+        \keya{generally return better candidates}
     \end{itemize}
   \end{column}
   \end{columns}
 \end{frame}
 
-% ---------------------------------------------------------------- 10
+% ---------------------------------------------------------------- 12
 \begin{frame}{Why Consider LARA in Process Mining?}
-  \begin{block}{When exact alignment is the bottleneck, LARA changes the
-    speed--trust trade-off without changing what an alignment means.}
+  \begin{block}{A reusable candidate plus replay and exact certification,
+    not a replacement for exact or classical aligners.}
     \centering
     \keyc{learned proposal} $\longrightarrow$ \keyg{replay check}
     $\longrightarrow$ \keyg{exact certificate or repair}
@@ -401,11 +404,11 @@
   \vspace{2mm}
   \begin{columns}[T]
   \begin{column}{0.31\textwidth}
-    \centering \keyc{Faster interaction}\par
+    \centering \keyc{Portable first result}\par
     \vspace{1mm}\small
-    A near-fixed CPU forward pass avoids the heavy tail of exact search;
-    the fast path overtakes A* on larger models and already helps on an
-    invisible-heavy discovered net.
+    One vocabulary-independent checkpoint proposes a legal candidate
+    with predictable latency; the fast path overtakes A* on harder
+    tested models and the receipt nets.
   \end{column}
   \begin{column}{0.31\textwidth}
     \centering \keyg{Same conformance object}\par
@@ -415,33 +418,36 @@
     fitness prediction.
   \end{column}
   \begin{column}{0.31\textwidth}
-    \centering \keya{Low adoption risk}\par
+    \centering \keya{Narrower learning gain}\par
     \vspace{1mm}\small
-    One vocabulary-free checkpoint applies without per-log retraining;
-    certification can be requested whenever optimality matters, and failures
-    fall back to exact repair.
+    Learning pays on \keyc{duplicate prefixes} and
+    \keyc{identifier-stable scoring}. Marking-aware search is already
+    strong; classical approximations usually have better quality.
   \end{column}
   \end{columns}
-  \vspace{5mm}
+  \vspace{4mm}
   \centering
-  \textbf{Practical role:} a safe accelerator in front of the exact aligner,
-  \keya{not a replacement for formal guarantees}.
+  \textbf{Practical role:} a reusable proposal in front of replay and the
+  exact aligner, \keya{not a replacement for formal guarantees}.
 \end{frame}
 
-% ---------------------------------------------------------------- 11
-\begin{frame}{What Can Be Improved: Data}
-  \begin{itemize}\setlength{\itemsep}{9pt}
-    \item Training Petri nets are \keya{tiny} (3 to 9 transitions):
-      train on the richer \keyc{block-structured generator}
-      (loops, concurrency, invisible routing at scale)
-    \item Quality does \keya{not transfer to large Petri nets} (about 30\% optimal
-      at 40 activities): \keyc{broader training distributions} are the clear next step
-    \item Only \keya{two real-life logs} tested:
-      validate on \keyc{larger log collections}
+% ---------------------------------------------------------------- 13
+\begin{frame}{What Can Be Improved}
+  \begin{itemize}\setlength{\itemsep}{8pt}
+    \item Quality does \keya{not transfer to large Petri nets}
+      (30--44\% optimal at size 40): classical approximations stay
+      much closer to the optimum; broader training and stronger
+      decoding are the next steps
+    \item The decoder never compares the trained \keya{log-move score}
+      with catch-up paths, and it never revises an early commitment:
+      joint ranking and beam search are the direct improvements
+    \item Only \keya{two real-life logs} tested, and certified mode
+      still runs exact A* on every trace: no end-to-end certified speedup
+      is demonstrated
   \end{itemize}
 \end{frame}
 
-% ---------------------------------------------------------------- 12
+% ---------------------------------------------------------------- 14
 \begin{frame}{Takeaway}
   \begin{block}{}
     \centering \keyc{Learning proposes}, \keyg{exact reasoning certifies}:
@@ -449,22 +455,23 @@
   \end{block}
   \vspace{2mm}
   \small
-  \begin{itemize}\setlength{\itemsep}{7pt}
+  \begin{itemize}\setlength{\itemsep}{6pt}
     \item \keyg{Legality is unconditional}: every produced alignment can be
       replayed from the initial to the final marking, and this held in
       \keyg{100\%} of the cases on synthetic families, on larger unseen
       Petri nets, and on real-life logs alike
-    \item \keyc{88\%} of in-distribution candidates already carry the
-      \keyc{exact optimal cost}, so one cheap exact call (about 1 ms) certifies
-      them; the other 12\% are \keyg{repaired exactly}, never returned wrong
-    \item The learned scores pay off exactly on \keya{duplicate labels}:
-      \keyc{94.4\%} optimal with guidance vs.\ 66.7\% without;
-      everywhere else, constrained search alone is already strong
-    \item The fast path stays at the \keyc{forward-pass floor} (8 to 12 ms per
-      trace) and \keyc{overtakes exact A*} at about 40 activities, and already
-      on a real discovered Petri net full of invisible transitions
+    \item \keyc{91.0\%} of the 512-row test split already carry the
+      \keyc{exact optimal cost}; the other 9.0\% are \keyg{repaired exactly},
+      never returned wrong. Certified mode still invokes A* on every trace
+    \item Learning pays on \keya{duplicate prefixes}
+      (\keyc{95.3\%} vs.\ 68.8\%, $+26.6$) and keeps ordinary-tree quality
+      \keyc{identifier-stable} at 84.4\%; overall $+4.1$.
+      Approximations generally beat this candidate quality
+    \item The fast path stays at \keyc{4.6--8.7\,ms} and overtakes exact A*
+      on larger stress nets; on receipt it is
+      \keyc{16.0 vs.\ 31.0\,ms} and \keyc{6.7 vs.\ 12.7\,ms}
   \end{itemize}
-  \vspace{2mm}
+  \vspace{1mm}
   \centering\small Checkpoint, scripts, and results:
   \url{https://github.com/fit-alessandro-berti/lara-align}
 \end{frame}
@@ -488,38 +495,39 @@
     \small
     \begin{tabular}{lr}
       \toprule
-      Held-out test split ($n = 100$) & \\
+      Held-out test split ($n = 512$) & \\
       \midrule
       replayable (legal) & \keyg{100.0\%} \\
-      certified optimal & \keyc{88.0\%} \\
-      exact transition-sequence match & 68.0\% \\
-      mean / median cost gap & 0.38 / 0.00 \\
-      p95 / max cost gap & 4.0 / 6.0 \\
+      already optimal / no repair & \keyc{91.0\%} \\
+      exact transition-sequence match & 61.1\% \\
+      mean / median cost gap & 0.18 / 0.00 \\
+      p90 / p95 / max cost gap & 0.0 / 2.0 / 4.0 \\
       \bottomrule
     \end{tabular}
     \end{center}
     \vspace{3mm}
-    \small All non-zero gaps are \keya{even}: the signature of the greedy
-    decoder trading $k$ synchronous moves for $k$ model $+$ $k$ log moves,
-    a penalty of exactly $2k$.
+    \small 466 of 512 candidates are optimal; 95\% lie within two
+    cost units, and \keya{no gap exceeds four}. Sequence match is
+    lower because several legal alignments can share the same cost.
   \end{column}
   \begin{column}{0.5\textwidth}
     \begin{center}
     \begin{tikzpicture}
     \begin{axis}[
       ybar, bar width=13pt,
-      width=\linewidth, height=5.2cm,
+      width=0.78\linewidth, height=5.0cm,
       xlabel={cost gap (candidate minus optimal)},
       ylabel={number of traces},
-      xmin=-0.7, xmax=6.7, ymin=0, ymax=100,
-      xtick={0,1,2,3,4,5,6},
+      xmin=-0.7, xmax=4.7, ymin=0, ymax=520,
+      xtick={0,1,2,3,4},
+      ytick={0,250,500},
       axis lines=left, axis line style={black!45},
       ticklabel style={font=\footnotesize},
       label style={font=\footnotesize},
       nodes near coords,
       every node near coord/.append style={font=\footnotesize, color=black!70},
     ]
-    \addplot[fill=larablue, draw=none] coordinates {(0,88)(2,6)(4,5)(6,1)};
+    \addplot[fill=larablue, draw=none] coordinates {(0,466)(1,14)(2,24)(3,2)(4,6)};
     \end{axis}
     \end{tikzpicture}
     \end{center}
@@ -536,57 +544,61 @@
   \small
   \begin{tabular}{lrrr}
     \toprule
-    Metric ($n = 100$) & unguided & guided & $\Delta$ \\
+    Metric ($n = 512$) & unguided & guided & $\Delta$ \\
     \midrule
     replayable & 100.0\% & 100.0\% & 0.0 \\
-    equal to optimum cost & 83.0\% & \keyc{88.0\%} & $+$5.0 \\
-    exact transition-sequence match & 63.0\% & \keyc{68.0\%} & $+$5.0 \\
-    mean cost gap & 0.48 & \keyc{0.38} & $-$0.10 \\
-    sequence family, optimal ($n = 82$) & 86.6\% & 86.6\% & 0.0 \\
-    duplicate-label family, optimal ($n = 18$) & 66.7\% & \keyc{94.4\%} & \keyg{$+$27.7} \\
+    equal to optimum cost & 86.9\% & \keyc{91.0\%} & $+4.1$ \\
+    exact transition-sequence match & 57.8\% & \keyc{61.1\%} & $+3.3$ \\
+    mean cost gap & 0.26 & \keyc{0.18} & $-$0.08 \\
+    duplicate-prefix, optimal & 68.8\% & \keyc{95.3\%} & \keyg{$+$26.6} \\
+    ordinary tree, isomorphic rename & 76.6\% & \keyc{84.4\%} & $+7.8$ \\
     \bottomrule
   \end{tabular}
   \end{center}
-  \vspace{3mm}
+  \vspace{2mm}
   \begin{itemize}\setlength{\itemsep}{4pt}
-    \item On \keyc{sequence} Petri nets every event has at most one matching
-      transition, so guidance changes \keya{nothing}
-    \item The \keyg{entire} in-distribution contribution of learning sits in
-      \keya{duplicate-label} identity resolution, exactly as the mechanism predicts
+    \item On most motifs, marking-aware search already determines the
+      candidate; guidance changes \keya{no cost} for silent routing,
+      concurrency, or either M representation
+    \item Learning's documented gains are \keyc{duplicate-prefix}
+      disambiguation and \keyg{identifier-stable} scoring (84.4\% on
+      both the canonical tree and its rename)
   \end{itemize}
 \end{frame}
 
 % ---------------------------------------------------------------- A4
 \begin{frame}{Appendix: Scaling Benchmark}
   Random block-structured Petri nets, \keya{never seen in training}
-  (10 samples per configuration, 30 s exact timeout):
+  (10 samples per configuration, 30\,s exact timeout):
   \vspace{1mm}
   \begin{columns}[T]
-  \begin{column}{0.5\textwidth}
+  \begin{column}{0.52\textwidth}
     \begin{center}
     \footnotesize
     \begin{tabular}{rrrrr}
       \toprule
-      size & legal & optimal & fast med. & exact med. \\
+      size / dev. & legal & optimal & fast med. & exact med. \\
       \midrule
-       5 & 100\% & 80\% & 14.9 ms & 1.0 ms \\
-      10 & 100\% & 80\% &  7.9 ms & 1.4 ms \\
-      20 & 100\% & 60\% &  9.9 ms & 2.2 ms \\
-      40 & 100\% & 30\% & 12.1 ms & \keya{44.0 ms} \\
+       5 / 0.15 & 100\% & 90\% & 5.5 ms & 1.3 ms \\
+      10 / 0.15 & 100\% & 80\% & 5.0 ms & 1.8 ms \\
+      20 / 0.15 & 100\% & 60\% & 6.9 ms & 2.9 ms \\
+      40 / 0.15 & 100\% & 30\% & 8.7 ms & \keya{63.9 ms} \\
+      40 / 0.35 & 100\% & 44\% & 8.6 ms & 24.7 ms \\
       \bottomrule
     \end{tabular}
     \end{center}
-    \vspace{2mm}
-    \small (deviation rate 0.15 shown)\\[2mm]
-    \keyg{Legality is scale-invariant}; the optimal-cost rate
-    \keya{drops} out of distribution, while the fast path stays at the
-    \keyc{forward-pass floor}.
+    \vspace{1.5mm}
+    \small Fast path stays at \keyc{4.6--8.7\,ms};
+    at size 40, \keya{30--44\%} optimal.
+    \keyg{Legality is scale-invariant}.
+    Crossover near \keyc{size 40} (dev.\ 0.15); first exact
+    \keya{timeout} appears there (dev.\ 0.35).
   \end{column}
-  \begin{column}{0.46\textwidth}
+  \begin{column}{0.44\textwidth}
     \begin{center}
     \begin{tikzpicture}
     \begin{axis}[
-      width=\linewidth, height=5.4cm,
+      width=\linewidth, height=4.6cm,
       xlabel={visible activities},
       ylabel={median ms per trace},
       xmode=log, log ticks with fixed point, xtick={5,10,20,40},
@@ -599,16 +611,14 @@
       every axis plot/.append style={line width=1.1pt},
     ]
     \addplot[larablue, mark=*, mark size=1.5pt]
-      coordinates {(5,14.9)(10,7.9)(20,9.9)(40,12.1)};
-    \addlegendentry{LARA fast}
+      coordinates {(5,5.5)(10,5.0)(20,6.9)(40,8.7)};
+    \addlegendentry{LARA 0.15}
     \addplot[laraaqua, mark=square*, mark size=1.4pt]
-      coordinates {(5,1.0)(10,1.4)(20,2.2)(40,44.0)};
-    \addlegendentry{exact A*}
+      coordinates {(5,1.3)(10,1.8)(20,2.9)(40,63.9)};
+    \addlegendentry{A* 0.15}
     \end{axis}
     \end{tikzpicture}
     \end{center}
-    \small Crossover at about \keyc{40 activities}; first exact
-    \keya{timeouts} appear there.
   \end{column}
   \end{columns}
 \end{frame}
@@ -624,10 +634,10 @@
     \toprule
     Log & Noise & Legal & Optimal (trace-wtd.) & Max gap & Median LARA / exact \\
     \midrule
-    road traffic & 0.0 & \keyg{100\%} & 100.0\% & 0 & 8.0 / 1.7 ms \\
-    road traffic & 0.5 & \keyg{100\%} & 94.0\%  & 3 & 7.9 / 1.3 ms \\
-    receipt      & 0.0 & \keyg{100\%} & 82.6\%  & 5 & \keyc{18.5 / 27.4 ms} \\
-    receipt      & 0.5 & \keyg{100\%} & 74.6\%  & 7 & 8.9 / 8.1 ms \\
+    road traffic & 0.0 & \keyg{100\%} & 100.0\% & 0 & 5.4 / 1.9 ms \\
+    road traffic & 0.5 & \keyg{100\%} & 94.0\%  & 3 & 5.2 / 1.6 ms \\
+    receipt      & 0.0 & \keyg{100\%} & 82.6\%  & 5 & \keyc{16.0 / 31.0 ms} \\
+    receipt      & 0.5 & \keyg{100\%} & 74.6\%  & 7 & \keyc{6.7 / 12.7 ms} \\
     \bottomrule
   \end{tabular}
   \end{center}
@@ -636,10 +646,42 @@
     \item \keyg{Legality transfers perfectly} to unseen vocabularies and
       invisible-heavy discovered models (47 invisible vs.\ 27 visible
       transitions on the fitting receipt net)
-    \item Optimality is strong on \keyc{frequent} behavior; misses concentrate
+    \item Optimality is stronger when weighted by traces; misses concentrate
       in \keya{rare, long variants} and remain safe upper bounds
-    \item On the largest discovered Petri net, the fast path \keyc{beats exact
-      A*} on a real log (18.5 vs.\ 27.4 ms median)
+    \item Guided and unguided quality coincide here: these nets have
+      \keya{no duplicate labels}, so the scorer's main ambiguity gain is
+      not exercised
+  \end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------- A6
+\begin{frame}{Appendix: Approximations Beat Current Candidate Quality}
+  Independent replay of PM4Py approximations vs.\ LARA on the same
+  held-out split and stress grid:
+  \vspace{2mm}
+  \begin{center}
+  \small
+  \begin{tabular}{lrrrr}
+    \toprule
+    Method & Held-out opt. & Held-out gap & Stress opt. & Stress med. \\
+    \midrule
+    LARA guided & 91.0\% & 0.180 & 59.5\% & 7.69 ms \\
+    discounted A* & 95.7\% & 0.090 & 75.9\% & 1.17 ms \\
+    tandem repeats & 98.0\% & 0.039 & 93.6\% & 1.37 ms \\
+    sliding window & 100.0\% & 0.000 & 100.0\% & 1.27 ms \\
+    fixed horizon & 98.0\% & 0.047 & 82.9\% & 82.37 ms \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{3mm}
+  \begin{itemize}\setlength{\itemsep}{5pt}
+    \item All tested Petri-net approximations beat LARA's exact-cost rate
+      on held-out data; sliding window is perfect because every test
+      trace fits one window of 20 events
+    \item LARA's distinct advantage is \keyc{coverage} (legal in every case)
+      plus a \keyg{reusable scorer} behind an explicit trust boundary
+    \item The current decoder is \keya{not} claimed to replace exact A*
+      or these approximations
   \end{itemize}
 \end{frame}
 

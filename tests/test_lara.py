@@ -1,4 +1,7 @@
 import csv
+import re
+from pathlib import Path
+
 import pytest
 from random import Random
 
@@ -66,6 +69,79 @@ def test_default_data_sizes_match_the_minimum_recommended_experiment():
     assert args.train_size // rows_per_family // 4 == 128
     assert args.val_size // rows_per_family // 4 == 32
     assert args.test_size // rows_per_family // 4 == 32
+
+
+def test_presentation_headline_figures_match_the_current_paper():
+    repo = Path(__file__).resolve().parents[1]
+    talk = (repo / "presentation" / "main.tex").read_text()
+    paper = (repo / "paper" / "main.tex").read_text().replace("{,}", ",")
+
+    required_in_talk = [
+        r"n = 512",
+        r"91.0\%",
+        "+4.1",
+        "+26.6",
+        "2,048 / 512 / 512",
+        "1.7M",
+        "two graph layers",
+        r"trace transformer}\\1 layer",
+        "epoch 49 of 50",
+        r"30--44\%",
+        "4.6--8.7",
+        "16.0",
+        "31.0",
+        "6.7",
+        "12.7",
+        "neural output is never a certificate",
+        "identifier-stable",
+        "duplicate-prefix",
+        "generally return better candidates",
+    ]
+    missing_from_talk = [needle for needle in required_in_talk if needle not in talk]
+    assert missing_from_talk == []
+
+    required_in_paper = [
+        "91.0",
+        "+4.1",
+        "+26.6",
+        "1.7M",
+        "epoch 49 of 50",
+        "16.0 vs. 31.0 ms",
+        "6.7 vs. 12.7 ms",
+        "2,048/512/512",
+    ]
+    missing_from_paper = [needle for needle in required_in_paper if needle not in paper]
+    assert missing_from_paper == []
+
+    stale_in_talk = [
+        r"88\%",
+        r"88.0\%",
+        "n = 100",
+        r"3M",
+        "d=128",
+        r"\mathbb{R}^{128}",
+        "22 epochs",
+        "+27.7",
+        r"94.4\%",
+        r"66.7\%",
+        "14.9 ms",
+        "18.5",
+        "27.4",
+        "foundation model",
+        "Foundation Model",
+        r"trace transformer}\\2 layers",
+        r"trace transformer}\\two layers",
+        "2-layer trace",
+        "two-layer trace",
+        "two layer trace",
+    ]
+    leftover = [needle for needle in stale_in_talk if needle in talk]
+    assert leftover == []
+
+    talk_plain = re.sub(r"\s+", " ", re.sub(r"[{}\\]", " ", talk)).lower()
+    assert "trace transformer 1 layer" in talk_plain
+    assert "trace transformer 2 layers" not in talk_plain
+    assert "trace transformer two layers" not in talk_plain
 
 
 def test_verifier_accepts_legal_sequence_alignment():
