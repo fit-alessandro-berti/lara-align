@@ -13,6 +13,15 @@
 \definecolor{larablue}{HTML}{2A78D6}
 \definecolor{laraaqua}{HTML}{1BAF7A}
 \definecolor{laraamber}{HTML}{D97E22}
+\definecolor{laraBlue}{HTML}{2D6A9F}
+\definecolor{laraBlueLight}{HTML}{E8F2F8}
+\definecolor{laraGreen}{HTML}{3E8060}
+\definecolor{laraGreenLight}{HTML}{EAF5EF}
+\definecolor{laraOrange}{HTML}{B76B24}
+\definecolor{laraOrangeLight}{HTML}{FBF0E4}
+\definecolor{laraPurple}{HTML}{74549B}
+\definecolor{laraPurpleLight}{HTML}{F0EBF7}
+\definecolor{laraGray}{HTML}{4F5B66}
 
 \setbeamercolor{structure}{fg=larablue}
 \setbeamercolor{frametitle}{bg=larablue!12, fg=larablue!50!black}
@@ -34,6 +43,35 @@
   flab/.style={font=\scriptsize, text=black!60, align=center},
   stbg/.style={rounded corners=5pt, inner sep=2.5mm},
   stlab/.style={font=\scriptsize\itshape, inner sep=1.5pt},
+  petri arc/.style={-{Stealth[length=1.8mm]}, thick, draw=laraGray},
+  data box/.style={draw=laraBlue, fill=laraBlueLight, rounded corners=2pt,
+    align=center, minimum height=7mm, inner xsep=5pt, inner ysep=3pt,
+    font=\scriptsize},
+  process box/.style={draw=laraGreen, fill=laraGreenLight,
+    rounded corners=2pt, align=center, minimum height=7mm,
+    inner xsep=5pt, inner ysep=3pt, font=\scriptsize},
+  decision box/.style={draw=laraOrange, fill=laraOrangeLight,
+    rounded corners=2pt, align=center, minimum height=7mm,
+    inner xsep=5pt, inner ysep=3pt, font=\scriptsize},
+  output box/.style={draw=laraPurple, fill=laraPurpleLight,
+    rounded corners=2pt, align=center, minimum height=7mm,
+    inner xsep=5pt, inner ysep=3pt, font=\scriptsize},
+  place/.style={circle, draw=laraGray, thick, fill=white,
+    minimum size=5.5mm, inner sep=0pt},
+  marked place/.style={place, font=\scriptsize},
+  visible transition/.style={rectangle, draw=laraBlue, thick,
+    fill=laraBlueLight, minimum width=6mm, minimum height=6mm,
+    inner sep=1pt, font=\scriptsize\sffamily},
+  silent transition/.style={rectangle, draw=laraGray, thick,
+    fill=laraGray, text=white, minimum width=3.5mm,
+    minimum height=6mm, inner sep=0pt, font=\scriptsize\sffamily},
+  event/.style={draw=laraBlue, fill=laraBlueLight, rounded corners=1.5pt,
+    minimum width=7mm, minimum height=6mm, inner sep=1pt,
+    font=\scriptsize\sffamily},
+  operation/.style={draw=laraOrange, fill=laraOrangeLight,
+    rounded corners=1.5pt, align=center, minimum height=6mm,
+    inner xsep=4pt, font=\scriptsize\sffamily},
+  tiny label/.style={font=\scriptsize\sffamily, text=laraGray},
 }
 
 \title[LARA]{\textbf{LARA}: Learned Alignment with Replay Assurance}
@@ -683,6 +721,460 @@
     \item The current decoder is \keya{not} claimed to replace exact A*
       or these approximations
   \end{itemize}
+\end{frame}
+
+% ================================================================ data gen
+\begin{frame}
+  \centering
+  {\LARGE \textbf{\textcolor{larablue}{Appendix}}}\\[3mm]
+  {\large Training Data Generation}\\[5mm]
+  \small High-level tour of \texttt{paper/appendix.tex}:
+  families, motifs, and the reference split.
+\end{frame}
+
+% ---------------------------------------------------------------- D1
+\begin{frame}{Appendix: What One Training Row Contains}
+  \begin{columns}[T]
+  \begin{column}{0.48\textwidth}
+    \small
+    Every row is an \keyc{AlignmentSample}: one net, one trace, and the
+    exact optimum for that pair.
+    \vspace{2mm}
+    \begin{itemize}\setlength{\itemsep}{3pt}
+      \item Petri net $SN$ with $m_0$ and $m_f$
+      \item observed trace $\sigma$
+      \item exact alignment $\gamma^\ast$ (transition identities)
+      \item cost $\delta=c(\gamma^\ast)$
+      \item generation metadata
+    \end{itemize}
+    \vspace{1mm}
+    \small Unit costs: sync / silent $=0$, visible log / model $=1$.
+  \end{column}
+  \begin{column}{0.5\textwidth}
+    \begin{center}
+    \resizebox{\linewidth}{!}{%
+    \begin{tikzpicture}[node distance=6mm]
+      \node[data box] (net) {system net $SN$};
+      \node[data box, below=of net] (trc) {trace $\sigma$};
+      \node[process box, right=14mm of net, yshift=-7mm] (exact)
+        {PM4Py $A^\ast$\\transition-aware};
+      \node[output box, right=12mm of exact] (row)
+        {row: $\gamma^\ast$, $\delta$\\sync / log / model targets};
+      \draw[flow] (net.east) -- ++(4mm,0) |- (exact.west);
+      \draw[flow] (trc.east) -- ++(4mm,0) |- (exact.west);
+      \draw[flow] (exact) -- (row);
+    \end{tikzpicture}}
+    \end{center}
+    \vspace{1mm}
+    \centering\small
+    Code path: \texttt{init\_data.py} $\to$ families, exact, verify.
+  \end{column}
+  \end{columns}
+\end{frame}
+
+% ---------------------------------------------------------------- D2
+\begin{frame}{Appendix: A Behavior Family Expands to Four Rows}
+  \small
+  The split is chosen at \keyc{family} level: two Petri-net encodings of the
+  same visible behavior share two observed traces.
+  \begin{center}
+  \resizebox{0.92\textwidth}{!}{%
+  \begin{tikzpicture}[node distance=6mm and 9mm]
+    \node[data box, minimum width=31mm] (family)
+      {one behavior family\\assigned to one split};
+    \node[process box, right=of family, yshift=12mm] (r1)
+      {representation 1\\$SN_1$};
+    \node[process box, right=of family, yshift=-12mm] (r2)
+      {representation 2\\$SN_2$};
+    \node[data box, right=20mm of r1, yshift=7mm] (r1t1)
+      {row $(SN_1,\sigma_1)$};
+    \node[data box, below=4mm of r1t1] (r1t2)
+      {row $(SN_1,\sigma_2)$};
+    \node[data box, right=20mm of r2, yshift=7mm] (r2t1)
+      {row $(SN_2,\sigma_1)$};
+    \node[data box, below=4mm of r2t1] (r2t2)
+      {row $(SN_2,\sigma_2)$};
+    \draw[flow] (family.east) -- ++(5mm,0) |- (r1.west);
+    \draw[flow] (family.east) -- ++(5mm,0) |- (r2.west);
+    \draw[flow] (r1.east) -- ++(5mm,0) |- (r1t1.west);
+    \draw[flow] (r1.east) -- ++(5mm,0) |- (r1t2.west);
+    \draw[flow] (r2.east) -- ++(5mm,0) |- (r2t1.west);
+    \draw[flow] (r2.east) -- ++(5mm,0) |- (r2t2.west);
+    \node[tiny label, above=1.5mm of r1t1] {the same observations are reused};
+  \end{tikzpicture}}
+  \end{center}
+\end{frame}
+
+% ---------------------------------------------------------------- D3
+\begin{frame}{Appendix: Four Equally Weighted Motifs}
+  \begin{center}
+  \small
+  \begin{tabular}{lll}
+    \toprule
+    motif & representation 1 & representation 2 \\
+    \midrule
+    ordinary tree & canonical block net & isomorphic renaming \\
+    duplicate versus silent & duplicate-prefix net & silent-routing net \\
+    concurrent versus interleaved & parallel net & explicit interleaving net \\
+    M-pattern & canonical block net & non-free-choice M-pattern net \\
+    \bottomrule
+  \end{tabular}
+  \end{center}
+  \vspace{3mm}
+  \begin{itemize}\setlength{\itemsep}{5pt}
+    \item A deterministic quota keeps every motif balanced inside each split
+    \item Rejected attempts are replaced \keya{without} changing the planned motif
+    \item Controlled motifs get a shared suffix of two fresh activities
+  \end{itemize}
+\end{frame}
+
+% ---------------------------------------------------------------- D4
+\begin{frame}{Appendix: Ordinary Tree --- Canonical vs Rename}
+  \small $\mathsf{seq}(A,\mathsf{and}(B,C),D)$: same language, new identifiers.
+  \vspace{1mm}
+  \begin{center}
+  \resizebox{0.98\textwidth}{!}{%
+  \begin{tikzpicture}
+    \node[decision box] (seq) at (10.05,2.8) {$\mathsf{seq}$};
+    \node[data box] (ta) at (7.8,1.85) {$A$};
+    \node[decision box] (and) at (10.8,1.85) {$\mathsf{and}$};
+    \node[data box] (td) at (13.1,1.85) {$D$};
+    \node[data box] (tb) at (10.15,0.85) {$B$};
+    \node[data box] (tc) at (11.45,0.85) {$C$};
+    \draw[flow] (seq) -- (ta);
+    \draw[flow] (seq) -- (and);
+    \draw[flow] (seq) -- (td);
+    \draw[flow] (and) -- (tb);
+    \draw[flow] (and) -- (tc);
+
+    \draw[draw=black!25, rounded corners=3pt, fill=black!1]
+      (-0.45,-2.05) rectangle (10.0,-0.05);
+    \node[font=\small\sffamily\bfseries, text=laraGreen] at (4.8,-0.35)
+      {canonical block net};
+    \node[marked place] (l0) at (0.1,-1.05) {$\bullet$};
+    \node[visible transition] (la) at (1.05,-1.05) {$A$};
+    \node[place] (l1) at (2.0,-1.05) {};
+    \node[silent transition] (ls) at (2.95,-1.05) {$\tau$};
+    \node[place] (lpb) at (3.9,-0.72) {};
+    \node[place] (lpc) at (3.9,-1.38) {};
+    \node[visible transition] (lb) at (4.85,-0.72) {$B$};
+    \node[visible transition] (lc) at (4.85,-1.38) {$C$};
+    \node[place] (lqb) at (5.8,-0.72) {};
+    \node[place] (lqc) at (5.8,-1.38) {};
+    \node[silent transition] (lj) at (6.75,-1.05) {$\tau$};
+    \node[place] (lf) at (7.7,-1.05) {};
+    \node[visible transition] (ld) at (8.65,-1.05) {$D$};
+    \node[place] (lff) at (9.6,-1.05) {};
+    \draw[petri arc] (l0) -- (la); \draw[petri arc] (la) -- (l1);
+    \draw[petri arc] (l1) -- (ls);
+    \draw[petri arc] (ls) -- (lpb); \draw[petri arc] (ls) -- (lpc);
+    \draw[petri arc] (lpb) -- (lb); \draw[petri arc] (lb) -- (lqb);
+    \draw[petri arc] (lpc) -- (lc); \draw[petri arc] (lc) -- (lqc);
+    \draw[petri arc] (lqb) -- (lj); \draw[petri arc] (lqc) -- (lj);
+    \draw[petri arc] (lj) -- (lf);
+    \draw[petri arc] (lf) -- (ld); \draw[petri arc] (ld) -- (lff);
+    \node[tiny label, below=2mm of l0] {$p_0$};
+    \node[tiny label, below=2mm of lff] {$p_f$};
+
+    \draw[draw=black!25, rounded corners=3pt, fill=black!1]
+      (10.45,-2.05) rectangle (20.9,-0.05);
+    \node[font=\small\sffamily\bfseries, text=laraGreen] at (15.7,-0.35)
+      {isomorphic renaming};
+    \node[marked place] (r0) at (10.6,-1.05) {$\bullet$};
+    \node[visible transition] (ra) at (11.55,-1.05) {$A$};
+    \node[place] (r1) at (12.5,-1.05) {};
+    \node[silent transition] (rs) at (13.45,-1.05) {$\tau$};
+    \node[place] (rpb) at (14.4,-0.72) {};
+    \node[place] (rpc) at (14.4,-1.38) {};
+    \node[visible transition] (rb) at (15.35,-0.72) {$B$};
+    \node[visible transition] (rc) at (15.35,-1.38) {$C$};
+    \node[place] (rqb) at (16.3,-0.72) {};
+    \node[place] (rqc) at (16.3,-1.38) {};
+    \node[silent transition] (rj) at (17.25,-1.05) {$\tau$};
+    \node[place] (rf) at (18.2,-1.05) {};
+    \node[visible transition] (rd) at (19.15,-1.05) {$D$};
+    \node[place] (rff) at (20.1,-1.05) {};
+    \draw[petri arc] (r0) -- (ra); \draw[petri arc] (ra) -- (r1);
+    \draw[petri arc] (r1) -- (rs);
+    \draw[petri arc] (rs) -- (rpb); \draw[petri arc] (rs) -- (rpc);
+    \draw[petri arc] (rpb) -- (rb); \draw[petri arc] (rb) -- (rqb);
+    \draw[petri arc] (rpc) -- (rc); \draw[petri arc] (rc) -- (rqc);
+    \draw[petri arc] (rqb) -- (rj); \draw[petri arc] (rqc) -- (rj);
+    \draw[petri arc] (rj) -- (rf);
+    \draw[petri arc] (rf) -- (rd); \draw[petri arc] (rd) -- (rff);
+    \node[tiny label, below=2mm of r0] {$q_7$};
+    \node[tiny label, below=2mm of rff] {$q_{19}$};
+    \node[tiny label, below=1mm of ra] {$u_{11}$};
+  \end{tikzpicture}}
+  \end{center}
+\end{frame}
+
+% ---------------------------------------------------------------- D5
+\begin{frame}{Appendix: Duplicate Prefix vs Silent Routing}
+  \small Same core language $\{AB,AC\}$; only the $A$ identity differs.
+  \vspace{2mm}
+  \begin{center}
+  \resizebox{0.98\textwidth}{!}{%
+  \begin{tikzpicture}
+    \draw[draw=black!25, rounded corners=3pt, fill=black!1]
+      (-0.45,-1.4) rectangle (7.95,1.4);
+    \node[font=\small\sffamily\bfseries, text=laraGreen] at (3.75,1.05)
+      {duplicate prefix};
+    \node[marked place] (d0) at (0.15,0) {$\bullet$};
+    \node[visible transition] (dab) at (1.55,0.58) {$A$};
+    \node[visible transition] (dac) at (1.55,-0.58) {$A$};
+    \node[place] (dpb) at (2.95,0.58) {};
+    \node[place] (dpc) at (2.95,-0.58) {};
+    \node[visible transition] (db) at (4.35,0.58) {$B$};
+    \node[visible transition] (dc) at (4.35,-0.58) {$C$};
+    \node[place] (df) at (5.75,0) {};
+    \draw[petri arc] (d0) -- (dab); \draw[petri arc] (d0) -- (dac);
+    \draw[petri arc] (dab) -- (dpb); \draw[petri arc] (dac) -- (dpc);
+    \draw[petri arc] (dpb) -- (db); \draw[petri arc] (dpc) -- (dc);
+    \draw[petri arc] (db) -- (df); \draw[petri arc] (dc) -- (df);
+    \node[tiny label, above=1mm of dab] {$t_{A,B}$};
+    \node[tiny label, below=1mm of dac] {$t_{A,C}$};
+
+    \draw[draw=black!25, rounded corners=3pt, fill=black!1]
+      (8.55,-1.4) rectangle (18.1,1.4);
+    \node[font=\small\sffamily\bfseries, text=laraGreen] at (13.3,1.05)
+      {silent routing};
+    \node[marked place] (s0) at (9.1,0) {$\bullet$};
+    \node[visible transition] (sa) at (10.2,0) {$A$};
+    \node[place] (s1) at (11.3,0) {};
+    \node[silent transition] (stb) at (12.4,0.58) {$\tau$};
+    \node[silent transition] (stc) at (12.4,-0.58) {$\tau$};
+    \node[place] (spb) at (13.5,0.58) {};
+    \node[place] (spc) at (13.5,-0.58) {};
+    \node[visible transition] (sb) at (14.6,0.58) {$B$};
+    \node[visible transition] (sc) at (14.6,-0.58) {$C$};
+    \node[place] (sf) at (15.8,0) {};
+    \draw[petri arc] (s0) -- (sa); \draw[petri arc] (sa) -- (s1);
+    \draw[petri arc] (s1) -- (stb); \draw[petri arc] (s1) -- (stc);
+    \draw[petri arc] (stb) -- (spb); \draw[petri arc] (stc) -- (spc);
+    \draw[petri arc] (spb) -- (sb); \draw[petri arc] (spc) -- (sc);
+    \draw[petri arc] (sb) -- (sf); \draw[petri arc] (sc) -- (sf);
+    \node[output box] at (8.85,-2.25)
+      {both representations: $L_{\mathrm{core}}=\{AB,AC\}$};
+  \end{tikzpicture}}
+  \end{center}
+\end{frame}
+
+% ---------------------------------------------------------------- D6
+\begin{frame}{Appendix: True Concurrency vs Explicit Interleaving}
+  \small Same language $\{AB,BA\}$; different causal structure.
+  \vspace{2mm}
+  \begin{center}
+  \resizebox{0.98\textwidth}{!}{%
+  \begin{tikzpicture}
+    \draw[draw=black!25, rounded corners=3pt, fill=black!1]
+      (-0.45,-1.4) rectangle (8.2,1.4);
+    \node[font=\small\sffamily\bfseries, text=laraGreen] at (3.9,1.05)
+      {true concurrency};
+    \node[marked place] (c0) at (0.1,0) {$\bullet$};
+    \node[silent transition] (cs) at (1.2,0) {$\tau$};
+    \node[place] (cpa) at (2.35,0.58) {};
+    \node[place] (cpb) at (2.35,-0.58) {};
+    \node[visible transition] (ca) at (3.55,0.58) {$A$};
+    \node[visible transition] (cb) at (3.55,-0.58) {$B$};
+    \node[place] (cqa) at (4.75,0.58) {};
+    \node[place] (cqb) at (4.75,-0.58) {};
+    \node[silent transition] (cj) at (5.9,0) {$\tau$};
+    \node[place] (cf) at (7.0,0) {};
+    \draw[petri arc] (c0) -- (cs);
+    \draw[petri arc] (cs) -- (cpa); \draw[petri arc] (cs) -- (cpb);
+    \draw[petri arc] (cpa) -- (ca); \draw[petri arc] (ca) -- (cqa);
+    \draw[petri arc] (cpb) -- (cb); \draw[petri arc] (cb) -- (cqb);
+    \draw[petri arc] (cqa) -- (cj); \draw[petri arc] (cqb) -- (cj);
+    \draw[petri arc] (cj) -- (cf);
+
+    \draw[draw=black!25, rounded corners=3pt, fill=black!1]
+      (8.8,-1.4) rectangle (18.25,1.4);
+    \node[font=\small\sffamily\bfseries, text=laraGreen] at (13.5,1.05)
+      {explicit interleavings};
+    \node[marked place] (i0) at (9.35,0) {$\bullet$};
+    \node[visible transition] (ia1) at (10.65,0.58) {$A$};
+    \node[visible transition] (ib1) at (10.65,-0.58) {$B$};
+    \node[place] (ipab) at (12.0,0.58) {};
+    \node[place] (ipba) at (12.0,-0.58) {};
+    \node[visible transition] (ib2) at (13.35,0.58) {$B$};
+    \node[visible transition] (ia2) at (13.35,-0.58) {$A$};
+    \node[place] (if) at (14.7,0) {};
+    \draw[petri arc] (i0) -- (ia1); \draw[petri arc] (i0) -- (ib1);
+    \draw[petri arc] (ia1) -- (ipab); \draw[petri arc] (ib1) -- (ipba);
+    \draw[petri arc] (ipab) -- (ib2); \draw[petri arc] (ipba) -- (ia2);
+    \draw[petri arc] (ib2) -- (if); \draw[petri arc] (ia2) -- (if);
+    \node[output box] at (8.9,-2.25)
+      {both representations: $L_{\mathrm{core}}=\{AB,BA\}$};
+  \end{tikzpicture}}
+  \end{center}
+\end{frame}
+
+% ---------------------------------------------------------------- D7
+\begin{frame}{Appendix: M-pattern --- Block vs Non-free-choice}
+  \small Same language $\{B,AC,CA\}$; the right net is not free-choice.
+  \vspace{1mm}
+  \begin{center}
+  \resizebox{0.98\textwidth}{!}{%
+  \begin{tikzpicture}
+    \draw[draw=black!25, rounded corners=3pt, fill=black!1]
+      (-0.45,-1.85) rectangle (8.45,1.75);
+    \node[font=\small\sffamily\bfseries, text=laraGreen] at (4.0,1.4)
+      {canonical block structure};
+    \node[marked place] (m0) at (0.1,0) {$\bullet$};
+    \node[visible transition] (mb) at (3.65,0.95) {$B$};
+    \node[silent transition] (ms) at (1.25,-0.65) {$\tau$};
+    \node[place] (mpa) at (2.35,-0.35) {};
+    \node[place] (mpc) at (2.35,-1.18) {};
+    \node[visible transition] (ma) at (3.55,-0.35) {$A$};
+    \node[visible transition] (mc) at (3.55,-1.18) {$C$};
+    \node[place] (mqa) at (4.75,-0.35) {};
+    \node[place] (mqc) at (4.75,-1.18) {};
+    \node[silent transition] (mj) at (5.95,-0.75) {$\tau$};
+    \node[place] (mf) at (7.2,0) {};
+    \draw[petri arc] (m0) to[bend left=18] (mb);
+    \draw[petri arc] (mb) to[bend left=18] (mf);
+    \draw[petri arc] (m0) -- (ms);
+    \draw[petri arc] (ms) -- (mpa); \draw[petri arc] (ms) -- (mpc);
+    \draw[petri arc] (mpa) -- (ma); \draw[petri arc] (ma) -- (mqa);
+    \draw[petri arc] (mpc) -- (mc); \draw[petri arc] (mc) -- (mqc);
+    \draw[petri arc] (mqa) -- (mj); \draw[petri arc] (mqc) -- (mj);
+    \draw[petri arc] (mj) -- (mf);
+
+    \draw[draw=black!25, rounded corners=3pt, fill=black!1]
+      (9.05,-1.85) rectangle (18.55,1.75);
+    \node[font=\small\sffamily\bfseries, text=laraGreen] at (13.8,1.4)
+      {non-free-choice M structure};
+    \node[marked place] (n0) at (9.55,0) {$\bullet$};
+    \node[silent transition] (ns) at (10.65,0) {$\tau$};
+    \node[place] (np1) at (11.85,0.58) {};
+    \node[place] (np2) at (11.85,-0.58) {};
+    \node[visible transition] (na) at (13.05,0.58) {$A$};
+    \node[visible transition] (nc) at (13.05,-0.58) {$C$};
+    \node[place] (nq1) at (14.25,0.58) {};
+    \node[place] (nq2) at (14.25,-0.58) {};
+    \node[visible transition] (nb) at (13.4,-1.35) {$B$};
+    \node[silent transition] (nj) at (15.45,0) {$\tau$};
+    \node[place] (nf) at (17.0,0) {};
+    \draw[petri arc] (n0) -- (ns);
+    \draw[petri arc] (ns) -- (np1); \draw[petri arc] (ns) -- (np2);
+    \draw[petri arc] (np1) -- (na); \draw[petri arc] (na) -- (nq1);
+    \draw[petri arc] (np2) -- (nc); \draw[petri arc] (nc) -- (nq2);
+    \draw[petri arc] (np1) to[bend right=24] (nb);
+    \draw[petri arc] (np2) to[bend left=14] (nb);
+    \draw[petri arc] (nb) to[bend right=24] (nf);
+    \draw[petri arc] (nq1) -- (nj); \draw[petri arc] (nq2) -- (nj);
+    \draw[petri arc] (nj) -- (nf);
+    \node[output box] at (9.0,-2.3)
+      {both representations: $L_{\mathrm{core}}=\{B,AC,CA\}$};
+  \end{tikzpicture}}
+  \end{center}
+\end{frame}
+
+% ---------------------------------------------------------------- D8
+\begin{frame}{Appendix: Shared Suffix on Controlled Motifs}
+  \small Both encodings of a controlled motif receive the same two fresh
+  activities, so the comparison stays structural.
+  \vspace{4mm}
+  \begin{center}
+  \begin{tikzpicture}[node distance=8mm]
+    \node[process box] (core1) {representation 1\\core};
+    \node[event, right=of core1] (d1) {$D$};
+    \node[event, right=of d1] (e1) {$E$};
+    \node[output box, right=of e1] (final1) {final marking};
+    \node[process box, below=7mm of core1] (core2) {representation 2\\core};
+    \node[event, right=of core2] (d2) {$D$};
+    \node[event, right=of d2] (e2) {$E$};
+    \node[output box, right=of e2] (final2) {final marking};
+    \draw[flow] (core1) -- (d1); \draw[flow] (d1) -- (e1);
+    \draw[flow] (e1) -- (final1);
+    \draw[flow] (core2) -- (d2); \draw[flow] (d2) -- (e2);
+    \draw[flow] (e2) -- (final2);
+    \node[tiny label, above=2mm of d1] {same fresh labels};
+  \end{tikzpicture}
+  \end{center}
+\end{frame}
+
+% ---------------------------------------------------------------- D9
+\begin{frame}{Appendix: Representations Must Match}
+  \small Enumerate visible complete traces; reject empty, dead, or unequal
+  languages (limits: 5{,}000 states, 10{,}000 traces, length 20).
+  \vspace{2mm}
+  \begin{center}
+  \resizebox{0.96\textwidth}{!}{%
+  \begin{tikzpicture}[font=\scriptsize]
+    \node[process box, minimum width=24mm] (rep1) at (0,1.35) {representation 1};
+    \node[data box, minimum width=26mm] (enum1) at (3.4,1.35) {enumerate visible\\complete traces};
+    \node[output box, minimum width=22mm] (lang1) at (6.7,1.35) {$L_1$ and\\certificate};
+    \node[process box, minimum width=24mm] (rep2) at (0,-1.35) {representation 2};
+    \node[data box, minimum width=26mm] (enum2) at (3.4,-1.35) {enumerate visible\\complete traces};
+    \node[output box, minimum width=22mm] (lang2) at (6.7,-1.35) {$L_2$ and\\certificate};
+    \node[decision box, minimum width=32mm] (gate) at (10.15,0)
+      {$L_1=L_2\ne\emptyset$?\\final reachable?\\no dead transition?};
+    \node[process box, minimum width=22mm] (accept) at (13.7,1.15) {accept family};
+    \node[decision box, minimum width=22mm] (reject) at (13.7,-1.15) {reject attempt};
+    \draw[flow] (rep1) -- (enum1);
+    \draw[flow] (enum1) -- (lang1);
+    \draw[flow] (rep2) -- (enum2);
+    \draw[flow] (enum2) -- (lang2);
+    \draw[flow] (lang1.east) -- ++(4mm,0) |- (gate.west);
+    \draw[flow] (lang2.east) -- ++(4mm,0) |- (gate.west);
+    \draw[flow] (gate.east) -- ++(3.5mm,0) |- node[tiny label, pos=0.75, above] {yes} (accept.west);
+    \draw[flow] (gate.east) -- ++(3.5mm,0) |- node[tiny label, pos=0.75, below] {no} (reject.west);
+  \end{tikzpicture}}
+  \end{center}
+\end{frame}
+
+% ---------------------------------------------------------------- D14
+\begin{frame}{Appendix: Reference Split Quotas}
+  \small Seed 13; every motif stays inside its split; each family contributes
+  four rows ($512\times4=2{,}048$ train).
+  \vspace{2mm}
+  \begin{center}
+  \resizebox{0.98\textwidth}{!}{%
+  \begin{tikzpicture}
+    \node[tiny label] at (0.7,0.65) {split};
+    \node[tiny label] at (2.55,0.65) {ordinary tree};
+    \node[tiny label] at (5.05,0.65) {duplicate/silent};
+    \node[tiny label] at (7.55,0.65) {concurrent/interleaved};
+    \node[tiny label] at (10.05,0.65) {M-pattern};
+    \node[tiny label] at (12.55,0.65) {families};
+    \node[tiny label] at (15.0,0.65) {rows};
+
+    \node[font=\small\sffamily\bfseries, anchor=east] (train) at (1.15,0) {train};
+    \node[data box, minimum width=21mm] (to) at (2.55,0) {128};
+    \node[process box, minimum width=21mm] (td) at (5.05,0) {128};
+    \node[decision box, minimum width=21mm] (tc) at (7.55,0) {128};
+    \node[output box, minimum width=21mm] (tm) at (10.05,0) {128};
+    \node[draw=none, fit=(to)(tm), inner sep=0pt] (tgroup) {};
+    \node[data box] (tf) at (12.55,0) {$512$};
+    \node[output box] (tr) at (15.0,0) {$2{,}048$};
+    \draw[flow] (tgroup.east) -- (tf.west);
+    \draw[flow] (tf) -- node[tiny label, above] {$\times4$} (tr);
+
+    \node[font=\small\sffamily\bfseries, anchor=east] (val) at (1.15,-1.0) {validation};
+    \node[data box, minimum width=21mm] (vo) at (2.55,-1.0) {32};
+    \node[process box, minimum width=21mm] (vd) at (5.05,-1.0) {32};
+    \node[decision box, minimum width=21mm] (vc) at (7.55,-1.0) {32};
+    \node[output box, minimum width=21mm] (vm) at (10.05,-1.0) {32};
+    \node[draw=none, fit=(vo)(vm), inner sep=0pt] (vgroup) {};
+    \node[data box] (vf) at (12.55,-1.0) {$128$};
+    \node[output box] (vr) at (15.0,-1.0) {$512$};
+    \draw[flow] (vgroup.east) -- (vf.west);
+    \draw[flow] (vf) -- node[tiny label, above] {$\times4$} (vr);
+
+    \node[font=\small\sffamily\bfseries, anchor=east] (test) at (1.15,-2.0) {test};
+    \node[data box, minimum width=21mm] (eo) at (2.55,-2.0) {32};
+    \node[process box, minimum width=21mm] (ed) at (5.05,-2.0) {32};
+    \node[decision box, minimum width=21mm] (ec) at (7.55,-2.0) {32};
+    \node[output box, minimum width=21mm] (em) at (10.05,-2.0) {32};
+    \node[draw=none, fit=(eo)(em), inner sep=0pt] (egroup) {};
+    \node[data box] (ef) at (12.55,-2.0) {$128$};
+    \node[output box] (er) at (15.0,-2.0) {$512$};
+    \draw[flow] (egroup.east) -- (ef.west);
+    \draw[flow] (ef) -- node[tiny label, above] {$\times4$} (er);
+  \end{tikzpicture}}
+  \end{center}
 \end{frame}
 
 \end{document}

@@ -125,8 +125,9 @@ def test_presentation_headline_figures_match_the_current_paper():
         r"94.4\%",
         r"66.7\%",
         "14.9 ms",
-        "18.5",
-        "27.4",
+        "18.5 ms",
+        "18.5 /",
+        "27.4 ms",
         "foundation model",
         "Foundation Model",
         r"trace transformer}\\2 layers",
@@ -142,6 +143,49 @@ def test_presentation_headline_figures_match_the_current_paper():
     assert "trace transformer 1 layer" in talk_plain
     assert "trace transformer 2 layers" not in talk_plain
     assert "trace transformer two layers" not in talk_plain
+
+
+def test_presentation_appendix_covers_training_data_generation():
+    repo = Path(__file__).resolve().parents[1]
+    talk = (repo / "presentation" / "main.tex").read_text()
+    appendix = (repo / "paper" / "appendix.tex").read_text()
+
+    assert r"\section{Training Data Generation}" in appendix
+    assert "behavior family" in appendix
+    assert r"fig:ordinary-tree-pair" in appendix
+    assert r"fig:duplicate-silent-pair" in appendix
+    assert r"fig:concurrent-interleaved-pair" in appendix
+    assert r"fig:m-pattern-pair" in appendix
+
+    eval_anchor = talk.rfind("Approximations Beat Current Candidate Quality")
+    data_anchor = talk.find("Training Data Generation")
+    assert eval_anchor != -1
+    assert data_anchor != -1
+    assert data_anchor > eval_anchor
+
+    data_section = talk[data_anchor:]
+    required_from_appendix = [
+        "behavior family",
+        "canonical block net",
+        "isomorphic renaming",
+        "duplicate prefix",
+        "silent routing",
+        "true concurrency",
+        "explicit interleavings",
+        "non-free-choice M structure",
+        "same fresh labels",
+        r"L_1=L_2",
+        r"2{,}048",
+    ]
+    missing = [needle for needle in required_from_appendix if needle not in data_section]
+    assert missing == []
+    assert "Clean Trace Pool" not in data_section
+    assert "Trace Noise" not in data_section
+    assert "Exact Labeling and Replay" not in data_section
+    assert "Masked Transition-Identity Targets" not in data_section
+    assert data_section.count(r"\begin{tikzpicture}") >= 8
+    assert data_section.count("visible transition") >= 8
+    assert data_section.count("silent transition") >= 4
 
 
 def test_verifier_accepts_legal_sequence_alignment():
