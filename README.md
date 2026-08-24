@@ -266,6 +266,20 @@ diagnostic data; its manifest explicitly reports deficits.
 - `data/lara_synthetic/metadata.pkl`
 - `data/lara_synthetic/metadata.json` (human-readable manifest)
 
+Export the complete foundation-model corpus to portable process-mining files
+with PM4Py:
+
+```bash
+python scripts/export_foundation_data.py
+```
+
+The command creates one self-contained directory per sample identifier under
+`data/foundation_model_pm4py_export/{train,val,test}/<sample_id>/`. Each such
+directory contains `<sample_id>.pnml`, `<sample_id>.bpmn`, and `<sample_id>.xes`.
+The generated `samples.csv` and `manifest.json` describe every sample and
+`SHA256SUMS` covers every exported file. Existing output is preserved unless
+`--overwrite` is supplied.
+
 For a quick smoke dataset:
 
 ```bash
