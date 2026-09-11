@@ -1,0 +1,86 @@
+\documentclass[applsci,article,submit,pdftex,moreauthors]{Definitions/mdpi}
+% Expanded journal manuscript. Official MDPI class; no compressed spacing.
+\firstpage{1}
+\pubvolume{1}
+\issuenum{1}
+\articlenumber{0}
+\pubyear{2026}
+\copyrightyear{2026}
+\datereceived{ }
+\daterevised{ }
+\dateaccepted{ }
+\datepublished{ }
+\hreflink{https://doi.org/}
+\doinum{}
+% Suppress publication placeholders in this unsubmitted manuscript.
+\renewcommand{\leftcolDates}{}
+\renewcommand{\leftcolUpdateCitation}{\leftcolFont\raggedright
+  \textbf{Manuscript prepared for:} Applied Sciences, special issue
+  ``Process Mining: Theory and Applications''.}
+\fancypagestyle{plain}{%
+  \fancyhf{}\renewcommand{\footrulewidth}{0.4pt}
+  \fancyfoot[L]{\fontsize{8}{8}\selectfont Manuscript prepared for \textit{Applied Sciences}}
+  \fancyfoot[R]{\fontsize{8}{8}\selectfont\today}}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage[section]{placeins}
+\usepackage{flafter}
+\usepackage{longtable}
+\usetikzlibrary{arrows.meta,positioning,fit,calc,backgrounds,patterns}
+\input{figures/styles}
+\newcommand{\skipmove}{\gg}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\ind}{\mathbf{1}}
+\newcommand{\softmax}{\operatorname{softmax}}
+\newcommand{\LN}{\operatorname{LN}}
+\newcommand{\Att}{\operatorname{Att}}
+\newcommand{\BCE}{\operatorname{BCE}}
+\newcommand{\Fast}{\textsc{Fast}}
+\newcommand{\Certified}{\textsc{Certified}}
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\setlength{\emergencystretch}{2em}
+\setlength{\headheight}{25pt}
+\Title{Learning to Propose, Replaying to Verify: Reusable Neural Guidance for Petri Net Alignments}
+\TitleCitation{Reusable Neural Guidance for Petri Net Alignments}
+\newcommand{\orcidauthorA}{0000-0002-3279-4795}
+\newcommand{\orcidauthorB}{0000-0002-0955-6940}
+\Author{Alessandro Berti $^{1,}$*\orcidA{} and Wil M. P. van der Aalst $^{1,2}$\orcidB{}}
+\AuthorNames{Alessandro Berti and Wil M. P. van der Aalst}
+\AuthorCitation{Berti, A.; van der Aalst, W.M.P.}
+\address{%
+$^{1}$ \quad Process and Data Science (PADS), RWTH Aachen University, Aachen, Germany; wvdaalst@pads.rwth-aachen.de\\
+$^{2}$ \quad Celonis, Munich, Germany}
+\corres{Correspondence: a.berti@pads.rwth-aachen.de}
+\abstract{Alignments explain deviations between an event trace and a process model, but difficult traces can make exact computation slow. This paper studies whether one pretrained neural scorer can be reused to propose alignments for different Petri nets and activity vocabularies. LARA (Learned Alignment with Replay Assurance) encodes the net and the complete trace, scores possible moves, and constructs a candidate using a decoder that tracks the marking. Independent replay checks executability and computes the candidate cost. Optional exact search establishes optimality or supplies a replacement. We explain the neural machinery, synthetic training procedure, and verification contract for readers familiar with process mining. On 512 synthetic test inputs, all candidates are legal and 91.0\% have optimal cost, compared with 86.9\% for the same decoder without learned guidance. The largest improvement occurs when duplicate activity labels require a choice informed by the trace suffix. Experiments on larger synthetic models and two public event logs expose a trade-off between candidate latency and quality. Established approximations generally produce better candidates, and certified mode still runs exact search on every trace. The results support a limited but useful role for reusable learned scoring, with guarantees supplied by process semantics.}
+\keyword{process mining; conformance checking; alignments; Petri nets; neural networks; foundation models; replay verification}
+\featuredapplication{Interactive conformance checking in which a replay-verified candidate is shown first and exact optimality evidence is added when available.}
+
+\begin{document}
+\raggedbottom
+\input{sections/01_introduction}
+\input{sections/02_preliminaries}
+\input{sections/03_related_work}
+\input{sections/04_method}
+\input{sections/05_training}
+\input{sections/06_implementation}
+\input{sections/07_evaluation}
+\input{sections/08_discussion}
+\input{sections/09_conclusion}
+\dataavailability{The implementation, synthetic data, pretrained checkpoint, and experiment scripts are available in the LARA repository at \url{https://github.com/fit-alessandro-berti/lara-align}. The journal source includes the numerical inputs used to draw its result figures. The public event-log sources are cited in Section~\ref{sec:real}.}
+% Funding, CRediT roles, conflicts, and author-approved AI disclosure:
+% see README.md. These author declarations are not inferred from the software.
+\abbreviations{Abbreviations}{The following abbreviations are used in this manuscript:\\
+\begin{tabular}{@{}ll}
+A* & Heuristic shortest-path search\\
+BFS & Breadth-first search\\
+CPU & Central processing unit\\
+GNN & Graph neural network\\
+LARA & Learned Alignment with Replay Assurance\\
+PNML & Petri Net Markup Language\\
+RQ & Research question\\
+XES & eXtensible Event Stream
+\end{tabular}}
+\reftitle{References}
+\bibliography{references}
+\end{document}

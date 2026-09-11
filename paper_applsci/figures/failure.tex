@@ -1,0 +1,25 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[paneltitle] at (0,.95) {A. Skip the early $D$ and one repeated $C$};
+\node[annotation,anchor=east] at (1,0) {log};
+\node[annotation,anchor=east] at (1,-.7) {model};
+\foreach \x/\l/\m in {1.7/A/A,3.9/B/B,5/C/C,7.2/D/D}{
+\node[alcell] at (\x,0) {$\l$};\node[alcell] at (\x,-.7) {$\m$};}
+\foreach \x/\l in {2.8/D,6.1/C}{
+\node[devcell] at (\x,0) {$\l$};\node[devcell] at (\x,-.7) {$\skipmove$};}
+\node[verifybox,text width=16mm] at (9.35,-.35) {optimal\\cost $2$};
+\node[annotation,anchor=west] at (1.15,-1.4) {4 synchronous moves + 2 log moves};
+\node[paneltitle] at (0,-2.35) {B. Catch up to the early $D$, then finish too soon};
+\node[annotation,anchor=east] at (1,-3.3) {log};
+\node[annotation,anchor=east] at (1,-4) {model};
+\foreach \x/\l/\m in {1.7/A/A,5/D/D}{
+\node[alcell,fill=softblue] at (\x,-3.3) {$\l$};\node[alcell,fill=softblue] at (\x,-4) {$\m$};}
+\foreach \x/\m in {2.8/B,3.9/C}{
+\node[devcell] at (\x,-3.3) {$\skipmove$};\node[devcell] at (\x,-4) {$\m$};}
+\foreach \x/\l in {6.1/B,7.2/C,8.3/C,9.4/D}{
+\node[devcell] at (\x,-3.3) {$\l$};\node[devcell] at (\x,-4) {$\skipmove$};}
+\draw[devamber,line width=1pt] (2.25,-4.55) -- (4.45,-4.55);
+\draw[devamber,line width=1pt] (5.55,-4.55) -- (9.95,-4.55);
+\node[annotation,text=devamber] at (3.35,-4.95) {2 model moves};
+\node[annotation,text=devamber] at (7.75,-4.95) {4 log moves after completion};
+\node[warnbox,text width=100mm] at (5.5,-6) {Candidate cost $2+4=6$; optimal cost $2$; gap $4$.\\Every firing is legal, but the early decision harms the suffix.};
+\end{tikzpicture}

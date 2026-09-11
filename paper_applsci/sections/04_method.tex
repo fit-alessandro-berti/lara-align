@@ -1,0 +1,198 @@
+\section{Method: From a Net and Trace to a Verified Alignment}
+\label{sec:method}
+
+The method is designed around a practical division of work. Neural scoring can exploit patterns across solved problems, while explicit firing rules keep the candidate tied to the supplied process model. This section follows one input through representation, scoring, decoding, and verification. At each step, we state both the calculation and why it is needed. Figure~\ref{fig:pipeline} gives the overall flow; training is described separately in Section~\ref{sec:training} because it changes parameters offline, not during alignment of a target trace.
+
+\begin{figure}[tb]
+\centering
+\input{figures/pipeline}
+\caption{The inference pipeline and its sources of evidence. Blue components produce preferences and a candidate; green components check the candidate or establish an optimum. The upper-bound output is available after replay. Exact search is an additional computation, and a timeout does not turn an unchecked optimum into a certificate. The trained checkpoint is reused across net--trace pairs.}
+\label{fig:pipeline}
+\end{figure}
+
+\subsection{Input Representation}
+\label{sec:encoding}
+
+The encoder must accept a variable number of places, transitions, and events while preserving the distinctions relevant to alignment. For a pair $(SN,\sigma)$, it constructs
+\begin{equation}
+ X=(X_P,X_T,E,r,z_T,z_\sigma,C).
+ \label{eq:input}
+\end{equation}
+Table~\ref{tab:inputs} summarizes these objects. Place and transition identifiers are sorted to define tensor indices; their strings are not embedded as semantic features. This convention makes the mapping between scores and concrete transitions recoverable during decoding.
+
+\begin{table}[tb]
+\caption{Neural inputs. A tensor is a numerical array; its dimensions indicate which process objects index its entries. The teacher alignment is absent from this list.}
+\label{tab:inputs}
+\centering
+\begin{tabularx}{\linewidth}{@{}l l Y@{}}
+\toprule
+Object & Shape & Contents and purpose\\
+\midrule
+$X_P$ & $|P|\times5$ & Initial/final tokens and place degrees.\\
+$X_T$ & $|T|\times6$ & Visibility, transition degrees, costs, and shared input/output context.\\
+$E,r$ & $2\times2|F|$; $2|F|$ & Directed edge endpoints and four relation types.\\
+$z_T$ & $|T|$ & Integer label IDs for transitions.\\
+$z_\sigma$ & $n$ & Integer label IDs for observed events.\\
+$C$ & $n\times|T|$ & Exact event--transition label compatibility.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Let $d^-(v)$ and $d^+(v)$ be the incoming and outgoing arc counts of node $v$. The feature rows are
+\begin{align}
+ x_p&=(m_0(p),m_f(p),d^-(p),d^+(p),d^-(p)+d^+(p)),\label{eq:placefeatures}\\
+ x_t&=(\ind[\lambda(t)=\tau],d^-(t),d^+(t),c_M(t),c_S(t),s_t),\label{eq:transitionfeatures}
+\end{align}
+where $c_M(t)$ and $c_S(t)$ are the model and synchronous costs, and $s_t=1$ when $t$ has a place that is both an input and an output. Initial and final markings tell the network where execution starts and where it should end. Intermediate markings are not input features: they are maintained later by the decoder.
+
+Graph nodes are places followed by transitions. Every original arc is represented in both directions, with four types: place-to-transition consumption, transition-to-place production, reverse consumption, and reverse production. These reverse edges transmit information about a transition's continuation back toward it. In the running example, the two $b$ transitions have the same immediate input place; information from their different output branches helps distinguish them. The encoder reads the graph directly and does not enumerate reachable markings.
+
+To handle labels outside the training vocabulary, a visible label is converted to an integer by
+\begin{equation}
+ h(a)=1+\bigl(\operatorname{int}(\operatorname{BLAKE2b}_8(\operatorname{UTF8}(a)))\bmod8191\bigr),
+ \qquad h(\tau)=0.
+ \label{eq:hash}
+\end{equation}
+The eight-byte digest is interpreted as an unsigned big-endian integer. The resulting ID selects one of 8192 learned embedding rows. Nearby IDs do not mean similar activities. This bounded representation permits a fixed checkpoint to accept arbitrary label strings, but collisions are possible: two different strings can select the same row.
+
+The compatibility matrix protects the exact label relation:
+\begin{equation}
+ C_{ij}=\ind[a_i=\lambda(t_j)\ne\tau].
+ \label{eq:compatibility}
+\end{equation}
+It is computed from the original labels, not their hashes. A hash collision can affect a preference but cannot authorize a false synchronous match. Conversely, $C_{ij}=1$ does not imply that $t_j$ is enabled. Label compatibility is checked in the score matrix; token availability is checked in the decoder. Keeping these conditions separate prevents statistical encoding choices from changing the move vocabulary.
+
+The runtime can inspect integer arc weights, but the neural features above do not explicitly encode those weights. Our formal and empirical claims therefore concern the ordinary-net setting used by the study. Passing a richer net object through a software interface would not by itself establish learned generalization to that setting.
+
+\subsection{Encoding the Graph and the Complete Trace}
+\label{sec:scorer}
+
+The role of the network is to rank plausible choices using context that a local label match cannot see. Its embedding dimension is $d=96$. Learned affine projections of $x_p$ and $x_t$ initialize graph vectors. A node-type embedding distinguishes places from transitions; transitions also receive their label embedding. In compact notation,
+\begin{equation}
+ h_p^{(0)}=A_Px_p+b_P+e_P,\qquad
+ h_t^{(0)}=A_Tx_t+b_T+e_T+e_{h(\lambda(t))}.
+ \label{eq:initialemb}
+\end{equation}
+The symbols $A_P,A_T,b_P,b_T,e_P,e_T$ and the label table $e$ are learned parameters. They are shared by all input nets. The model therefore learns transformations of structure and labels rather than a separate vector for each named transition in one process.
+
+Two graph blocks combine global self-attention with typed local messages. For a node $v$ with incoming typed edges $\mathcal N_v=\{(u,r):(u,v,r)\in E\}$, one block computes
+\begin{align}
+ \mu_v&=\frac{\sum_{(u,r)\in\mathcal N_v}W_rh_u}{\max(1,|\mathcal N_v|)},\label{eq:messages}\\
+ \widetilde H&=\LN\bigl(H+\operatorname{Drop}(\operatorname{MHA}(H,H,H)+\mu)\bigr),\label{eq:graphblock}\\
+ H'&=\LN\bigl(\widetilde H+\operatorname{Drop}(\operatorname{FF}(\widetilde H))\bigr).
+\end{align}
+Each $W_r$ is specific to an edge type. $\operatorname{MHA}$ is four-head attention based on Equation~\eqref{eq:attention}; $\operatorname{FF}$ expands the vector to $4d$ coordinates, applies a smooth nonlinear activation (GELU), and projects it back to $d$. Dropout is active during training only. The average in Equation~\eqref{eq:messages} limits the scale of a message aggregate at high-degree nodes. Self-attention adds access to the whole graph, while typed messages retain an explicit local connection to arc direction and role.
+
+The trace encoder starts with $e_{h(a_i)}+e_i^{\mathrm{pos}}$, adding a learned position vector to each event's label vector. Positions matter because $\langle a,b,c\rangle$ and $\langle c,b,a\rangle$ have different alignment problems despite containing the same labels. A one-layer transformer processes these event vectors with four attention heads. It uses no causal mask: the complete trace, including its suffix, is already available. LARA is therefore an offline alignment method, not a next-event predictor restricted to a running prefix. The position table has 4096 rows; the implementation clamps later positions to its final row. The reported traces are much shorter than this limit.
+
+Two cross-attention operations then connect graph and trace. Let $G_T$ be the graph's transition vectors and $H_E$ the trace vectors. The final event and transition vectors are
+\begin{align}
+ V&=\LN\bigl(H_E+\operatorname{MHA}(H_E,G_T,G_T)\bigr),\label{eq:cross1}\\
+ U&=\LN\bigl(G_T+\operatorname{MHA}(G_T,H_E,H_E)\bigr).\label{eq:cross2}
+\end{align}
+The two contexts are calculated from the pre-cross-attention vectors. An event can now reflect which transitions are relevant in this net, and a transition can reflect which events occur in this trace. The updated vectors are denoted $v_i$ and $u_j$. These numerical associations explain how the network can use the suffix $c$ to prefer one $b$ transition; they do not guarantee that it learns the appropriate association on every input.
+
+\subsection{Move Scores and Their Limits}
+\label{sec:scores}
+
+The network outputs preferences in the same vocabulary used by the decoder. With learned parameters $W,w_M,w_L,b_M,b_L$, the scores are
+\begin{align}
+ S_{ij}&=\begin{cases}(Wv_i)^\top u_j/\sqrt d,&C_{ij}=1,\\-10^9,&C_{ij}=0,\end{cases}\label{eq:syncscore}\\
+ M_j&=w_M^\top u_j+b_M,\qquad \ell_i=w_L^\top v_i+b_L.\label{eq:otherscores}
+\end{align}
+The matrix $S\in\R^{n\times|T|}$ ranks matching transitions for each event. The vector $M\in\R^{|T|}$ ranks model moves. The auxiliary vector $\ell\in\R^n$ is trained to indicate log moves but is not used by the current decoder. The finite value $-10^9$ effectively excludes incompatible labels from softmax calculations.
+
+A single forward pass calculates these arrays once per net--trace pair. They depend on the complete input, including initial and final markings, but remain fixed as decoding proceeds. In particular, $M_j$ has no event-position index, and neither $S$ nor $M$ is recomputed after a mistaken commitment. This saves repeated neural evaluation but limits adaptation to the decoder's current state. Scores rank alternatives; move costs remain those in Table~\ref{tab:moves}.
+
+For the running example, the reference checkpoint gives the scores in Table~\ref{tab:examplescores}. Once $t_a$ has fired, both $t_1$ and $t_2$ are enabled and compatible with event $b$. The score of $t_1$ is slightly higher, so the decoder takes the branch that can subsequently explain $c$. The magnitude difference is a preference, not an estimate of a cost saving or a confidence interval. When a unique matching transition is enabled, the synchronous score is not needed at all.
+
+\begin{table}[tb]
+\caption{Reference-checkpoint outputs for Figure~\ref{fig:running}, rounded to three decimals. Columns follow the sorted transition identifiers. A dash represents the incompatible-label sentinel $-10^9$. The unused log scores are $\ell=(-1.682,-1.618,-1.527)$.}
+\label{tab:examplescores}
+\centering
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Output & $t_1$ & $t_2$ & $t_a$ & $t_c$ & $t_d$ & $t_\tau$\\
+\midrule
+$S_{1,:}$: event $a$ & -- & -- & .353 & -- & -- & --\\
+$S_{2,:}$: event $b$ & .067 & .039 & -- & -- & -- & --\\
+$S_{3,:}$: event $c$ & -- & -- & -- & .876 & -- & --\\
+$M$ & $-1.357$ & $-1.401$ & $-1.030$ & $-1.830$ & $-1.837$ & $2.519$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+At fixed depth and embedding width, graph self-attention has quadratic dependence on the node count $|P|+|T|$, trace self-attention on $n$, and cross-attention on $n|T|$. Typed messages additionally traverse the encoded arcs. Avoiding a reachability graph therefore does not make the scorer linear in net size. The parameter count is fixed, but inference cost still grows with the input.
+
+\subsection{Marking-Aware Candidate Decoding}
+\label{sec:decoder}
+
+The decoder turns preferences into a concrete execution by consulting the current marking at every step. This is necessary because compatible transition labels alone do not enforce the model. Algorithm~\ref{alg:decode} gives the procedure, parameterized by a catch-up depth $d_p$ and a completion depth $d_f$. The defaults are $d_p=8$ and $d_f=32$; the stress and real-log experiments use $d_f=64$.
+
+\begin{algorithm}[tb]
+\caption{Construct a candidate with bounded model-move searches.}
+\label{alg:decode}
+\begin{algorithmic}[1]
+\Require $SN$, $\sigma=\langle a_1,\ldots,a_n\rangle$, fixed scores $S,M$, depths $d_p,d_f$
+\State $m\gets m_0$; $\gamma\gets\langle\,\rangle$
+\For{$i=1,\ldots,n$}
+  \State $B\gets\{t\in T:t\text{ enabled at }m,\ \lambda(t)=a_i\}$
+  \If{$B=\emptyset$}
+    \State BFS from $m$, depth at most $d_p$, to a marking enabling label $a_i$
+    \If{a path is found}
+      \State Append its model moves to $\gamma$ and fire them on $m$
+      \State Recompute $B$ at $m$
+    \EndIf
+  \EndIf
+  \If{$B\ne\emptyset$}
+    \State $t_j\gets\arg\max_{t_j\in B}S_{ij}$ \Comment{unique match needs no ranking}
+    \State Append $(a_i,t_j)$ to $\gamma$; fire $t_j$ on $m$
+  \Else
+    \State Append $(a_i,\skipmove)$ to $\gamma$ \Comment{marking unchanged}
+  \EndIf
+\EndFor
+\State BFS from $m$, depth at most $d_f$, to $m_f$
+\State Append and fire the completion path if found (empty if already at $m_f$)
+\State \Return $\gamma$ for independent replay, including when completion failed
+\end{algorithmic}
+\end{algorithm}
+
+Each breadth-first search explores paths by the number of transition firings. Within an expansion, invisible transitions precede visible transitions, and transitions in the same group are ordered by decreasing $M_j$. The search keeps a visited-marking set and stops at the first goal marking found. It does not minimize deviation cost: a short path containing a visible move may be considered before a longer path containing only zero-cost invisible moves. Depth limits bound path length but do not impose a fixed limit on the number of explored markings; branching can still make a bounded search expensive.
+
+If no bounded path enables the event, the decoder makes a log move. If a matching transition is already enabled, it synchronizes immediately. This policy never explicitly compares the cost of skipping that event with the downstream consequences of synchronizing it. It also never revises earlier choices. The simplicity gives a low-overhead baseline, but it explains the failure pattern examined in Section~\ref{sec:failure}.
+
+In unguided mode, all learned rankings are removed and the forward pass is skipped. The same firing rules, depth limits, and invisible-first policy remain. Ties among enabled synchronous transitions follow ascending transition-name order; ties in model search follow the runtime's reverse name order. The difference between guided and unguided modes therefore concerns ranking, not relaxed legality. Identifier order is deterministic but has no business meaning, which motivates the renaming experiment.
+
+\subsection{Replay Verification and Exact Certification}
+\label{sec:assurance}
+
+Verification is needed even though the decoder fires enabled transitions: a bounded completion can fail, and independent checking protects the interface against malformed candidates. Replay reconstructs the marking sequence from $m_0$, validates each transition identity and synchronous label, checks that the log projection is exactly $\sigma$, and requires the final marking to equal $m_f$. Only then is the summed cost advertised as an upper bound. A failed proposal can be retained for diagnostics, but it is not a verified alignment result.
+
+The assurance contract follows immediately from the alignment definition.
+\begin{Proposition}[Verified candidate and cost equality]
+If replay accepts $\widehat\gamma$, then $\delta(\sigma,SN)\leq c(\widehat\gamma)$. If an exact aligner establishes $\delta(\sigma,SN)$ and $c(\widehat\gamma)=\delta(\sigma,SN)$, then $\widehat\gamma$ is optimal, irrespective of whether its move sequence equals the exact aligner's witness.
+\end{Proposition}
+\begin{proof}
+Replay acceptance establishes that $\widehat\gamma$ belongs to the feasible set in Equation~\eqref{eq:optimum}. Its cost is therefore at least the minimum over that set. Equality means that it attains the minimum. No property of the neural scores is needed.
+\end{proof}
+
+In \Fast{} mode the system returns the candidate, replay status, and verified cost when available. In \Certified{} mode it additionally calls PM4Py's state-equation A* aligner. If an optimal exact result is available, it retains a legal equal-cost candidate; otherwise it returns the exact alignment as a replacement, with replay checks on that result. If exact search times out or fails, a legal candidate remains an upper bound and optimality stays unconfirmed. Table~\ref{tab:statuses} lists the externally meaningful outcomes.
+
+\begin{table}[tb]
+\caption{Meaning of result states. Certification is conditional on successful exact computation, not on a mode name or a learned score.}
+\label{tab:statuses}
+\centering
+\begin{tabularx}{\linewidth}{@{}lYY@{}}
+\toprule
+State & Evidence obtained & Claim available\\
+\midrule
+Rejected proposal & Replay fails or no proposal is produced & No candidate upper bound.\\
+Verified candidate & Replay succeeds & Executable explanation; $\delta\leq c(\widehat\gamma)$.\\
+Certified candidate & Replay succeeds; exact optimum has equal cost & Candidate attains the minimum cost.\\
+Exact replacement & Exact optimum available; candidate rejected or has larger cost & Returned exact alignment is optimal.\\
+Exact timeout & Exact optimum remains unavailable & Only the candidate's existing replay evidence, if any.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The current exact backend starts its own search. It does not consume the candidate as an incumbent solution, prune states using its cost, or use learned scores in its heuristic. Consequently, a candidate that is already optimal still incurs exact work in certified mode. The wrapper separates latency to a usable candidate from latency to a certificate; it does not yet accelerate the certificate itself. These same steps can be applied to a candidate produced by a classical approximation.

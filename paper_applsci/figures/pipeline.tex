@@ -1,0 +1,21 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[paneltitle] at (-.1,1.1) {1. Read the problem and score possible moves};
+\node[box,text width=32mm] (input) at (1.8,0) {system net $SN$\\complete trace $\sigma$};
+\node[learnbox,text width=32mm] (encoder) at (6,0) {encode net + trace\\exchange context};
+\node[learnbox,text width=32mm] (scores) at (10.2,0) {score moves\\fixed $S$ and $M$};
+\draw[flow] (input) -- (encoder); \draw[flow] (encoder) -- (scores);
+\node[paneltitle] at (-.1,-1.25) {2. Construct an execution and check it independently};
+\node[learnbox,text width=32mm] (decoder) at (10.2,-2.35) {construct candidate\\track the marking};
+\node[verifybox,text width=32mm] (replay) at (6,-2.35) {independent replay\\check projections};
+\node[verifybox,text width=32mm] (fast) at (1.8,-2.35) {verified candidate\\upper bound $c(\gamma)$};
+\draw[flow] (scores) -- (decoder);
+\draw[flow] (decoder) -- node[above,font=\small] {$\gamma$} (replay);
+\draw[flow] (replay) -- (fast);
+\node[annotation,anchor=north] at (6,-3.03) {failure: no candidate bound};
+\node[paneltitle] at (-.1,-4.0) {3. Add optimality evidence when requested};
+\node[verifybox,text width=32mm] (exact) at (1.8,-5.1) {exact A* search\\on $(SN,\sigma)$};
+\node[verifybox,text width=32mm] (compare) at (6,-5.1) {compare costs\\$c(\gamma)=\delta$?};
+\node[verifybox,text width=32mm] (result) at (10.2,-5.1) {equal: retain\\otherwise: repair};
+\draw[flow] (exact) -- (compare); \draw[flow] (compare) -- (result);
+\node[annotation,anchor=west] at (-.1,-6.13) {Exact timeout: retain a legal candidate without claiming optimality.};
+\end{tikzpicture}

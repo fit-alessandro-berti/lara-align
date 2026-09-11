@@ -1,0 +1,31 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[paneltitle] at (0,1.8) {A. Duplicate prefix: choose the branch while firing $A$};
+\node[place] (a0) at (.35,0) {};\fill[ink] (a0) circle (.065);
+\node[transition] (al) at (1.85,.7) {$A$};
+\node[transition] (ar) at (1.85,-.7) {$A$};
+\node[place] (pl) at (3.25,.7) {};
+\node[place] (pr) at (3.25,-.7) {};
+\node[transition] (b) at (4.65,.7) {$B$};
+\node[transition] (c) at (4.65,-.7) {$C$};
+\node[place] (f) at (6.1,0) {};
+\foreach \a/\b in {a0/al,a0/ar,al/pl,ar/pr,pl/b,pr/c,b/f,c/f}\draw[arc] (\a) -- (\b);
+\node[annotation,above=2mm of al] {$A_L$};\node[annotation,below=2mm of ar] {$A_R$};
+\node[box,text width=28mm] (suffix) at (8.25,0) {shared suffix\\$D$ then $E$};
+\draw[flow] (f) -- (suffix);
+\node[place,double] (end) at (10.35,0) {};\draw[flow] (suffix) -- (end);
+\node[paneltitle] at (0,-2) {B. Silent routing: postpone the choice until after $A$};
+\node[place] (b0) at (.35,-3.5) {};\fill[ink] (b0) circle (.065);
+\node[transition] (a) at (1.45,-3.5) {$A$};
+\node[place] (mid) at (2.55,-3.5) {};
+\node[silent] (tl) at (3.7,-2.8) {$\tau$};
+\node[silent] (tr) at (3.7,-4.2) {$\tau$};
+\node[place] (bl) at (4.85,-2.8) {};
+\node[place] (br) at (4.85,-4.2) {};
+\node[transition] (bb) at (6,-2.8) {$B$};
+\node[transition] (bc) at (6,-4.2) {$C$};
+\node[place] (bf) at (7.15,-3.5) {};
+\foreach \a/\b in {b0/a,a/mid,mid/tl,mid/tr,tl/bl,tr/br,bl/bb,br/bc,bb/bf,bc/bf}\draw[arc] (\a) -- (\b);
+\node[box,text width=17mm] (s2) at (8.75,-3.5) {$D$ then $E$};
+\node[place,double] (e2) at (10.35,-3.5) {};
+\draw[flow] (bf) -- (s2);\draw[flow] (s2) -- (e2);
+\end{tikzpicture}

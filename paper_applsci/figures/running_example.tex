@@ -1,0 +1,33 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[paneltitle] at (0,1.85) {One observed label, two possible transitions};
+\node[place] (p0) at (.3,0) {}; \fill[ink] (p0) circle (.065);
+\node[transition] (ta) at (1.45,0) {$a$};
+\node[place] (p1) at (2.6,0) {};
+\node[transition] (t1) at (3.8,.78) {$b$};
+\node[transition] (t2) at (3.8,-.78) {$b$};
+\node[place] (p2) at (5,.78) {};
+\node[place] (p3) at (5,-.78) {};
+\node[transition] (tc) at (6.2,.78) {$c$};
+\node[transition] (td) at (6.2,-.78) {$d$};
+\node[place] (p4) at (7.4,0) {};
+\node[silent] (tt) at (8.6,0) {$\tau$};
+\node[place,double] (p5) at (9.8,0) {};
+\foreach \a/\b in {p0/ta,ta/p1,p1/t1,p1/t2,t1/p2,t2/p3,p2/tc,p3/td,tc/p4,td/p4,p4/tt,tt/p5}
+  \draw[arc] (\a) -- (\b);
+\foreach \a/\l in {p0/p_0,p1/p_1,p4/p_4,p5/p_5}
+  \node[annotation,below=3mm of \a] {$\l$};
+\foreach \a/\l in {ta/t_a,t1/t_1,tc/t_c,tt/t_\tau}
+  \node[annotation,above=2mm of \a] {$\l$};
+\node[annotation,below=2mm of t2] {$t_2$};
+\node[annotation,below=2mm of td] {$t_d$};
+\node[annotation,above=2mm of p2] {$p_2$};
+\node[annotation,below=2mm of p3] {$p_3$};
+\node[paneltitle] at (0,-2.25) {A complete zero-cost alignment for $\sigma=\langle a,b,c\rangle$};
+\node[annotation,anchor=east] at (1.8,-2.95) {log};
+\node[annotation,anchor=east] at (1.8,-3.65) {model};
+\foreach \x/\a/\t in {2.6/a/t_a,3.7/b/t_1,4.8/c/t_c,5.9/\skipmove/t_\tau}{
+  \node[alcell] at (\x,-2.95) {$\a$};
+  \node[alcell] at (\x,-3.65) {$\t$};}
+\node[verifybox,text width=31mm] at (8.5,-3.3) {replay accepts\\$m_f$ reached\\$c(\gamma)=0$};
+\node[annotation,anchor=west] at (0,-4.5) {$[p_0]\xrightarrow{t_a}[p_1]\xrightarrow{t_1}[p_2]\xrightarrow{t_c}[p_4]\xrightarrow{t_\tau}[p_5]=m_f$};
+\end{tikzpicture}

@@ -1,0 +1,255 @@
+{
+  "description": "Successful Crossref metadata lookups retained for bibliographic checks. Other added sources were checked on publisher, proceedings, or author-hosted pages; see references.bib. Failed lookup attempts are omitted.",
+  "retrieved": "2026-09-11",
+  "records": {
+    "Berti2021": {
+      "DOI": "10.1007/978-3-662-63079-2_1",
+      "title": [
+        "A Novel Token-Based Replay Technique to Speed Up Conformance Checking and Process Enhancement"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0003-1830-4013",
+          "authenticated-orcid": false,
+          "given": "Alessandro",
+          "family": "Berti",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-0955-6940",
+          "authenticated-orcid": false,
+          "given": "Wil M. P.",
+          "family": "van der Aalst",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Lecture Notes in Computer Science",
+        "Transactions on Petri Nets and Other Models of Concurrency XV"
+      ],
+      "page": "1-26",
+      "published": {
+        "date-parts": [
+          [
+            2021
+          ]
+        ]
+      },
+      "publisher": "Springer Berlin Heidelberg",
+      "URL": "https://doi.org/10.1007/978-3-662-63079-2_1"
+    },
+    "Casas2024": {
+      "DOI": "10.1016/j.eswa.2023.122467",
+      "title": [
+        "REACH: Researching Efficient Alignment-based Conformance Checking"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0003-2521-1464",
+          "authenticated-orcid": false,
+          "given": "Jacobo",
+          "family": "Casas-Ramos",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0003-1735-3585",
+          "authenticated-orcid": false,
+          "given": "Manuel",
+          "family": "Mucientes",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0001-7195-6155",
+          "authenticated-orcid": false,
+          "given": "Manuel",
+          "family": "Lama",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Expert Systems with Applications"
+      ],
+      "volume": "241",
+      "page": "122467",
+      "published": {
+        "date-parts": [
+          [
+            2024,
+            5
+          ]
+        ]
+      },
+      "publisher": "Elsevier BV",
+      "URL": "https://doi.org/10.1016/j.eswa.2023.122467"
+    },
+    "Schuster2021": {
+      "DOI": "10.1007/978-3-030-72693-5_19",
+      "title": [
+        "Alignment Approximation for Process Trees"
+      ],
+      "author": [
+        {
+          "ORCID": "https://orcid.org/0000-0002-6512-9580",
+          "authenticated-orcid": false,
+          "given": "Daniel",
+          "family": "Schuster",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0003-0415-1036",
+          "authenticated-orcid": false,
+          "given": "Sebastiaan",
+          "family": "van Zelst",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "ORCID": "https://orcid.org/0000-0002-0955-6940",
+          "authenticated-orcid": false,
+          "given": "Wil M. P.",
+          "family": "van der Aalst",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Lecture Notes in Business Information Processing",
+        "Process Mining Workshops"
+      ],
+      "page": "247-259",
+      "published": {
+        "date-parts": [
+          [
+            2021
+          ]
+        ]
+      },
+      "publisher": "Springer International Publishing",
+      "URL": "https://doi.org/10.1007/978-3-030-72693-5_19"
+    },
+    "Tax2017": {
+      "DOI": "10.1007/978-3-319-59536-8_30",
+      "title": [
+        "Predictive Business Process Monitoring with LSTM Neural Networks"
+      ],
+      "author": [
+        {
+          "given": "Niek",
+          "family": "Tax",
+          "sequence": "first",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Ilya",
+          "family": "Verenich",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Marcello",
+          "family": "La Rosa",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        },
+        {
+          "given": "Marlon",
+          "family": "Dumas",
+          "sequence": "additional",
+          "affiliation": [],
+          "role": [
+            {
+              "vocabulary": "crossref",
+              "role": "author"
+            }
+          ]
+        }
+      ],
+      "container-title": [
+        "Lecture Notes in Computer Science",
+        "Advanced Information Systems Engineering"
+      ],
+      "page": "477-492",
+      "published": {
+        "date-parts": [
+          [
+            2017
+          ]
+        ]
+      },
+      "publisher": "Springer International Publishing",
+      "URL": "https://doi.org/10.1007/978-3-319-59536-8_30"
+    }
+  }
+}

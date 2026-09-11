@@ -1,0 +1,62 @@
+\section{Related Work}
+\label{sec:related}
+
+Several research traditions address the cost of conformance checking, and learning enters this landscape with different possible roles. To locate LARA precisely, this section compares methods by the object they return, the source of their guarantees, and what they reuse across problems. This distinction matters more than whether a method is described broadly as fast, approximate, or intelligent. Table~\ref{tab:positioning} summarizes the main relationships.
+
+\subsection{From Token Replay to Optimal Alignment}
+
+Conformance checking has long connected event data to executable models. Rozinat and van der Aalst~\cite{Rozinat2008} developed replay-based diagnosis of agreement between recorded behavior and a process model. Token replay can identify missing and remaining tokens and is attractive when rapid diagnostics are needed. Later work revisited its implementation and diagnostic behavior to improve scalability~\cite{Berti2021}. These methods address the practical need for efficient replay, but token deficits and a globally minimum-cost alignment are different output objects.
+
+Cost-based alignment expresses deviations through synchronous, log, and model moves~\cite{Adriansyah2011}. The broader conformance-checking framework treats the resulting correspondence as both a measurement tool and a diagnostic explanation~\cite{Carmona2018}. LARA preserves this transition-aware alignment object. Its verifier does not insert tokens to make a proposed firing possible: it checks whether the supplied model projection really executes from the initial to the final marking. This is why replay in our pipeline is a feasibility check on a candidate, rather than a substitute fitness metric.
+
+\subsection{Exact Search and Structural Decomposition}
+
+The synchronous-product formulation turns optimal alignment into a shortest-path problem~\cite{Zelst2018}. Marking-equation and extended-marking-equation methods accelerate search using formally justified estimates of remaining cost~\cite{Dongen2018}. More recent exact systems, including REACH~\cite{Casas2024}, continue to improve search efficiency through algorithmic treatment of explored states and model information. These are important alternatives whenever the requirement is a certified optimum. LARA currently uses an exact backend without modifying its search procedure, so its results should not be interpreted as a comparison against every state-of-the-art exact implementation.
+
+Complexity results explain why a uniformly inexpensive exact solver is unlikely across broad net classes. The preprint by Schwanen et al.~\cite{Schwanen2026} distinguishes the alignment problem on several classes, including hardness results even for structurally restricted models. Such worst-case results motivate practical alternatives, but they do not imply that exact alignment is slow on every real dataset. Our small-input timings make this distinction visible.
+
+Decomposition attacks complexity by splitting the model and observations. Generic Petri net decomposition~\cite{Aalst2013} and single-entry single-exit decomposition~\cite{Munoz2014} define structural conditions under which local analyses are useful. Recomposition then addresses consistency among local results and the relationship between local and global conformance~\cite{Lee2018}. These approaches have explicit semantic interfaces between fragments. LARA's auxiliary latent regions have no corresponding decomposition theorem and do not generate recomposable local alignments. Although the code includes router and local-head terminology, the evaluated decoder constructs one global candidate from move scores.
+
+\subsection{Approximation by Restricted Search, Compression, and Reuse}
+
+Approximation methods exploit different sources of regularity. Fixed-horizon alignment limits how far search looks before committing~\cite{Dongen2017}. Discounted alignment changes the influence of later deviations through a discounted objective~\cite{Boltenhagen2021}. Sliding-window methods divide long traces into smaller search problems and retain selected boundary candidates~\cite{Bogdanov2024}. Each reduces some search burden, while a commitment or restricted context can miss a globally better explanation. LARA shares the issue of irrevocable decisions with bounded search, but its ranking uses the complete trace as context.
+
+Compression is another route. Tandem-repeat methods exploit repeated trace segments to reduce the alignment problem before reconstructing a result~\cite{ReissnerTandem2020}. Approximation for process trees uses the hierarchical structure of a model to split and compose smaller alignment problems~\cite{Schuster2021}. Neither requires training one neural model per target process. These methods can be strong choices when their structural assumptions match the input.
+
+Subset selection and edit-distance approximation reuse alignments of representative traces to explain other traces~\cite{FaniSani2020}. Their reusable object is a collection of solved examples associated with a process, whereas LARA reuses network parameters learned over synthetic nets. The distinction affects preparation costs and failure modes: representative traces must cover relevant behavior, while a pretrained scorer must generalize to the target structure and observation patterns. Our subset comparison uses the concrete configuration in Section~\ref{sec:approximations}; it does not establish a best possible performance for all subset sizes or representative-selection policies.
+
+Padr\'o and Carmona~\cite{Padro2022} combine relaxation labeling on a partial-order representation with local optimal search to obtain executable, possibly suboptimal alignments. This is a particularly relevant precedent for separating a correspondence heuristic from completion under process constraints. LARA instead learns graph-and-trace scores across generated instances, then uses bounded marking search and independent replay. Executability checks are valuable for both approaches; they are not a novelty exclusive to neural methods.
+
+\subsection{Neural Learning for Event Data and Process Structure}
+
+Neural process-mining research provides useful representations but often solves a different task. Recurrent models for predictive monitoring estimate future events, timestamps, or remaining execution time from prefixes~\cite{Tax2017}. ProcessTransformer applies transformer-based sequence modeling to predictive monitoring~\cite{Bukhsh2021}. Such predictions do not, by themselves, identify an executable minimum-deviation explanation against a given Petri net. LARA has the complete trace available and returns an alignment whose transition identities can be replayed.
+
+Graph learning brings model structure into the numerical representation. Sommers et al.~\cite{Sommers2021} train a process-discovery technique on synthetic log/model pairs and use graph neural networks to produce Petri nets. This establishes a useful connection to synthetic supervision and reusable structural learning. Its target is a discovered process model, while LARA assumes the model is supplied and learns preferences for explaining a trace against it. Message-passing frameworks~\cite{Gilmer2017} and attention~\cite{Vaswani2017} supply general computational building blocks; the alignment-specific design lies in input compatibility, transition-aware targets, constrained decoding, and assurance.
+
+The survey and research agenda by Genga and Winter~\cite{Genga2025} examines artificial intelligence in conformance checking and identifies further opportunities. In this setting, it is useful to distinguish predicting a scalar conformance score, producing a diagnostic object, and proving a property of that object. LARA addresses the second task through learned proposal and constrained construction, while assigning the proof obligations to replay and exact search. It does not infer that successful prediction alone provides conformance assurance.
+
+\subsection{Reusable Models and Learning to Guide Search}
+
+The foundation-model perspective encourages pretraining a shared representation for reuse. Bommasani et al.~\cite{Bommasani2021} discuss this perspective across tasks and modalities, while Rizk et al.~\cite{Rizk2022} argue for models tailored to business-process data. The present study takes a limited step in that direction: one scorer is reused across alignment inputs. Its evidence concerns synthetic motifs and a small number of target logs, so it does not establish a general-purpose foundation model for process mining. This qualification is necessary to align the terminology with the scale and tasks actually evaluated.
+
+More broadly, machine learning for combinatorial optimization studies how learned decisions can complement established solvers~\cite{Bengio2021}. Neural A*~\cite{Yonetani2021}, for example, couples learned guidance with a differentiable search procedure in path planning. The common motivation is to learn useful preferences over expensive choices. LARA's current integration is simpler: it does not differentiate through A*, alter the exact objective, or establish admissibility of learned values. It learns a first candidate and checks it afterward. A future integration that uses a verified incumbent within exact search would be a different algorithm requiring its own evaluation.
+
+\begin{table}[tb]
+\caption{Positioning by output and reuse. Guarantees for a particular approximation depend on its algorithm and configuration; the table does not attribute one common guarantee to the entire family.}
+\label{tab:positioning}
+\centering
+\begin{tabularx}{\linewidth}{@{}>{\raggedright\arraybackslash}p{.21\linewidth}YYY@{}}
+\toprule
+Approach & Main object & Reused information & Relation to LARA\\
+\midrule
+Exact alignment & Minimum-cost executable alignment & Model structure and search heuristics & Supplies teacher and certificate.\\
+Decomposition & Local analyses and recomposed results & Structural fragments and their interfaces & Formal fragments differ from latent regions.\\
+Search or compression approximation & Candidate alignment or approximation & Bounded context, repeated structure & Direct candidate-generation competitors.\\
+Subset/edit distance & Transferred trace explanation & Representative solved traces & Reuses examples for a process.\\
+Predictive monitoring & Future event, time, or outcome & Learned event representations & Different target and information horizon.\\
+LARA & Replay-verified candidate; optional exact result & One pretrained net--trace scorer & Learning ranks; semantics checks.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+This comparison sets the empirical expectation. LARA should be assessed against exact search, against the same decoder without learning, and against existing approximations. Its contribution cannot be established from a high legality rate alone, because semantics enforces the acceptance condition. The key evidence is whether learned rankings improve useful candidate quality enough to justify their inference cost, and how that evidence changes across representations and datasets.

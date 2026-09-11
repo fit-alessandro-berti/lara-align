@@ -1,0 +1,43 @@
+\section{Discussion and Limitations}
+\label{sec:discussion}
+
+The results are most useful when they guide a concrete choice about when to generate a candidate and what to infer from it. This section connects the three research questions to that choice, distinguishes the semantic contract from empirical performance, and identifies the changes needed for stronger claims. It also records limits of the evidence so that the observed transfer is not mistaken for general-purpose alignment competence.
+
+\subsection{Interpreting the Three Research Questions}
+
+For RQ1, the experiments show that the decoder and replay pipeline produced legal candidates on all evaluated inputs, with 91.0\% optimality on the controlled test split. The formal guarantee is conditional: when replay accepts, the candidate is a complete executable explanation and its cost is an upper bound. The observed 100\% acceptance rate does not prove that the bounded decoder always reaches the final marking. Larger gaps on stress inputs and the worked failure show that a reliable legality check can coexist with a weak candidate policy.
+
+For RQ2, learning has a measurable but concentrated effect. The duplicate-prefix improvement demonstrates that global trace context can help decide among equal labels before the decoder reaches their distinguishing continuation. The identifier-renaming experiment shows more stable candidate costs than the name-ordered baseline. The remaining motifs show no cost improvement. The evidence therefore supports using learned rankings for selected ambiguities, rather than attributing the overall success rate to the network.
+
+For RQ3, one checkpoint accepts new net sizes and label vocabularies without fine tuning. The candidate can arrive faster than the tested exact backend on larger receipt models and selected stress cells. However, guided inference imposes a substantial floor on small cases, quality degrades on larger stress inputs, and established approximations perform better overall. The real-log quality is identical without learning. Reuse is demonstrated at the interface and candidate-pipeline level, while broad learned generalization remains limited.
+
+\subsection{What a Verified Candidate Can and Cannot Tell an Analyst}
+
+A verified candidate is useful because it is an executable explanation of the observed case. It can support visualization, an initial inspection of deviations, and a bound on the best achievable cost. Its deviation locations should nevertheless be read in the light of its optimization status. The fitting receipt model makes this concrete: a positive candidate cost does not prove that the trace deviates from the model, because a zero-cost alignment may exist. If the goal is to assert the minimum deviation count, exact evidence remains necessary.
+
+Likewise, equal optimal costs do not identify a unique diagnostic story. Different optimal alignments may allocate deviations or synchronize independent activities differently. Certification establishes minimal cost under the chosen policy, not the uniquely correct account of what happened in the organization. Business interpretation still depends on the model, event-data quality, and the suitability of the cost function.
+
+Progressive presentation is a practical application of these distinctions. A workbench can show a candidate and its replay status immediately, then add exact comparison when available. The current implementation supports that sequence. A deployment policy that starts exact search first and invokes candidate generation only for slow cases could reduce unnecessary inference, but this policy has not been evaluated. The threshold would depend on model structure, hardware, expected quality, and the analyst's need for a certificate.
+
+\subsection{Threats to Validity}
+\label{sec:validity}
+
+\textbf{Training distribution.} The corpus is small and intentionally structured. It contains four motif types, three of which use fixed controlled constructions. Family-level splitting prevents separation of a generated family's views, but it does not exclude repeated visible languages or motifs across splits. Holding out whole motif classes, unseen compilation schemes, or larger and more varied net collections would provide stronger evidence of structural transfer. Training on abstract labels also leaves business semantics, resources, and time outside the study.
+
+\textbf{Teacher and objective.} Exact targets are verified for the supplied cost model, but only one optimal witness is retained. Sequence agreement therefore mixes candidate quality with witness choice. The masking rule for duplicate-prefix targets is motif-specific. Moreover, the loss supervises a log head that decoding ignores and auxiliary region heads whose contribution has not been isolated. These choices make the trained model a useful experimental prototype, but they do not establish that the objective is the best one for candidate cost.
+
+\textbf{Statistical coverage.} The main result uses one checkpoint and one training seed. Bootstrap intervals resample families for that fixed model; they are not intervals over retraining or target domains. Stress cells contain only ten inputs, and the real-log study uses two logs with one restricted road-traffic sample. Observed perfect coverage or agreement in these collections should not be generalized to arbitrary systems.
+
+\textbf{Comparison protocol.} The evaluation uses one exact backend and concrete approximation configurations. Alternatives such as stronger exact implementations, other window sizes, or larger representative subsets may change the comparison. Stored PM4Py approximation times exclude the independent wrapper replay, whereas LARA proposal timing includes it. Hardware scheduling, warm-up effects, and Python overhead can affect millisecond-scale differences. The strongest present comparative evidence concerns the replayed costs and explicit coverage; fine-grained timing claims require a common harness and repeated measurements.
+
+\textbf{Real-log interpretation.} Models are discovered from the same logs used for alignment. This is appropriate for testing the algorithm on different structures and labels, but it does not establish compliance with an independent organizational specification. Variant and case weighting answer different questions, and selecting a limited set of variants in an interactive run changes the covered population. The paper therefore reports both quality weightings and states the scope of the road-traffic sample.
+
+\textbf{Semantic and computational scope.} The evaluated setting uses ordinary control-flow nets and fixed unit visible-deviation costs. Neural features omit explicit arc weights, current decoder markings, and data guards. The scorer uses dense attention, and the decoder's depth bounds do not bound the width of marking exploration. Neither component has a demonstrated constant-latency guarantee. The guarantee that survives these implementation limits is the conditional replay/certification contract.
+
+\subsection{Methodological Extensions Suggested by the Evidence}
+
+The failure in Figure~\ref{fig:failure} suggests comparing a log move with model catch-up before committing. A decoder could rank synchronous, log, and model alternatives jointly and retain a small beam of partial alignments. Recomputing scores from the current marking or predicting model preferences per event position could help it respond to earlier choices. These changes would increase inference or search cost, so they should be assessed against both the current unguided decoder and strong non-neural approximations.
+
+A separate extension concerns certification. A replay-verified candidate supplies a feasible incumbent cost. An exact search algorithm can potentially use that cost for pruning while relying on admissible lower bounds for correctness. Such an integration would need to expose the relevant solver interface, preserve exactness, and demonstrate reduced total work. Merely comparing a candidate with an independently computed optimum, as done here, cannot support a certification-speedup claim.
+
+Training could also focus on the decisions that the active decoder actually makes, collect multiple optimal witnesses, or penalize downstream candidate gaps more directly. Additional structural diversity and deliberate tests of hash relabeling would strengthen evidence for reuse. The auxiliary regions would require independent validation before being treated as meaningful process decompositions. These are research directions motivated by observed limitations, not capabilities of the evaluated checkpoint.

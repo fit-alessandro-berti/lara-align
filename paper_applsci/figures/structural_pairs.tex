@@ -1,0 +1,32 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[paneltitle] at (0,1.5) {A. Parallel execution and explicit interleavings};
+\node[place] (s) at (.25,0) {};\fill[ink] (s) circle (.06);
+\node[silent] (split) at (1.15,0) {$\tau$};
+\node[place] (p) at (2.2,.65) {};
+\node[place] (q) at (2.2,-.65) {};
+\node[transition] (a) at (3.25,.65) {$A$};
+\node[transition] (b) at (3.25,-.65) {$B$};
+\node[place] (pa) at (4.3,.65) {};
+\node[place] (pb) at (4.3,-.65) {};
+\node[silent] (join) at (5.35,0) {$\tau$};
+\node[place,double] (f) at (6.25,0) {};
+\foreach \a/\b in {s/split,split/p,split/q,p/a,q/b,a/pa,b/pb,pa/join,pb/join,join/f}\draw[arc] (\a) -- (\b);
+\node[box,text width=30mm] at (8.65,0) {equivalent visible choice\\$\operatorname{XOR}(AB,BA)$};
+\node[annotation] at (3.25,-1.4) {split produces two tokens; join requires both};
+\node[paneltitle] at (0,-2.2) {B. The M pattern and its block representation};
+\node[place] (s2) at (.25,-4) {};\fill[ink] (s2) circle (.06);
+\node[silent] (sp) at (1.15,-4) {$\tau$};
+\node[place] (p2) at (2.2,-3.2) {};
+\node[place] (q2) at (2.2,-4.8) {};
+\node[transition] (a2) at (3.6,-2.85) {$A$};
+\node[transition] (b2) at (3.6,-4) {$B$};
+\node[transition] (c2) at (3.6,-5.15) {$C$};
+\node[place] (pa2) at (4.9,-2.85) {};
+\node[place] (pc2) at (4.9,-5.15) {};
+\node[silent] (j2) at (6,-4) {$\tau$};
+\node[place,double] (f2) at (7,-4) {};
+\foreach \a/\b in {s2/sp,sp/p2,sp/q2,p2/a2,q2/c2,p2/b2,q2/b2,a2/pa2,c2/pc2,pa2/j2,pc2/j2,j2/f2}\draw[arc] (\a) -- (\b);
+\draw[arc,preaction={draw=white,line width=3pt}] (b2.east) -- (4.15,-4) -- (4.15,-5.8) -- (7,-5.8) -- (f2.south);
+\node[box,text width=24mm] at (9.15,-4) {equivalent block\\$\operatorname{XOR}(B,$\\$\operatorname{AND}(A,C))$};
+\node[annotation,anchor=west] at (0,-6.35) {$B$ needs both tokens; firing $A$ or $C$ prevents $B$ from firing.};
+\end{tikzpicture}

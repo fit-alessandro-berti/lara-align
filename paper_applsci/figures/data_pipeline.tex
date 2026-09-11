@@ -1,0 +1,15 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[box,text width=30mm] (plan) at (1.6,0) {assign split\\choose motif};
+\node[box,text width=30mm] (nets) at (5.3,0) {build two nets\\$SN_1$ and $SN_2$};
+\node[verifybox,text width=30mm] (check) at (9,0) {check languages\\and structure};
+\draw[flow] (plan) -- (nets); \draw[flow] (nets) -- (check);
+\node[box,text width=30mm] (pool) at (9,-1.9) {select two traces\\from clean pool};
+\node[warnbox,text width=30mm] (noise) at (5.3,-1.9) {apply edits once\\share $\sigma_1,\sigma_2$};
+\node[box,text width=30mm] (rows) at (1.6,-1.9) {form four inputs\\$(SN_r,\sigma_k)$};
+\draw[flow] (check) -- (pool); \draw[flow] (pool) -- (noise); \draw[flow] (noise) -- (rows);
+\node[verifybox,text width=30mm] (teacher) at (1.6,-3.9) {exact alignments\\one per input};
+\node[verifybox,text width=30mm] (replay) at (5.3,-3.9) {replay witnesses\\check equal costs};
+\node[learnbox,text width=30mm] (save) at (9,-3.9) {accept whole family\\store inputs + targets};
+\draw[flow] (rows) -- (teacher); \draw[flow] (teacher) -- (replay); \draw[flow] (replay) -- (save);
+\node[annotation,anchor=west,text width=105mm] at (0,-5.3) {If a required check fails, replace the attempted family with another of the same planned motif. Corruption history never becomes a neural input.};
+\end{tikzpicture}

@@ -1,0 +1,6 @@
+# Keep the complete, compilable manuscript despite repository-wide PDF/data rules.
+!main.pdf
+!Definitions/*.pdf
+!figures/*.pdf
+!data/
+!data/**

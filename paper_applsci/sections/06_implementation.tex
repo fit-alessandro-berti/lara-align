@@ -1,0 +1,60 @@
+\section{Implementation and Interactive Use}
+\label{sec:implementation}
+
+An alignment method becomes useful to an analyst only when its explanations and evidence can be inspected. This section describes how the mathematical stages are implemented, how the workbench exposes their different outcomes, and how experiments can be reproduced. The interface treats a candidate and its later exact comparison as separate results so that a fast first explanation is never silently presented as an optimum.
+
+\subsection{Software Components and Interfaces}
+
+The implementation is available at \url{https://github.com/fit-alessandro-berti/lara-align}. It uses PyTorch for neural computation and PM4Py for Petri net and event-log objects, process discovery, and exact alignment~\cite{Berti2023}. The package provides Python and command-line interfaces; the workbench uses Streamlit. Table~\ref{tab:modules} maps the conceptual stages to their implementation modules. This separation allows candidate-generation experiments to reuse the same independent verifier.
+
+\begin{table}[tb]
+\caption{Implementation responsibilities in the \texttt{lara\_align} package. A module's output is not given stronger guarantees than the checks it performs.}
+\label{tab:modules}
+\centering
+\begin{tabularx}{\linewidth}{@{}lY@{}}
+\toprule
+Module & Responsibility\\
+\midrule
+\texttt{features.py} & Builds typed graph arrays, label IDs, and exact compatibility.\\
+\texttt{model.py} & Encodes inputs and returns learned move scores and auxiliary outputs.\\
+\texttt{decode.py} & Maintains markings, chooses synchronous transitions, and searches for model-move paths.\\
+\texttt{verify.py} & Replays complete move sequences, checks projections, and recomputes costs.\\
+\texttt{exact.py} & Invokes PM4Py's exact backend and retains concrete transition identities.\\
+\texttt{certifier.py} & Exposes proposal and exact-comparison operations with explicit statuses.\\
+\texttt{families.py}, \texttt{data.py} & Generate behavior families and store inputs, witnesses, and metadata.\\
+\texttt{training.py} & Extracts supervision and computes the full training objective.\\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+An alignment move stores the observed label, transition name, and transition label where applicable. This avoids ambiguity when several transitions share a label. Proposal results retain the candidate, replay report, timings for feature construction/inference/decoding/verification, and optional score diagnostics. Certification results retain the exact witness, exact cost, elapsed time, and status. The candidate is preserved when a better exact alignment becomes available, allowing direct inspection of the gap.
+
+The ordinary alignment entry point supports fast and certified modes. Separate proposal and certification calls support progressive presentation in the workbench. If proposal construction raises an exception, it returns an explicit failure; the workbench can still request exact computation through its separate certification operation. This distinction matters because the convenience alignment call does not automatically recover every possible software failure. The current ``anytime'' mode in the Python enumeration uses the exact-comparison path; it is not a learned branch-and-bound algorithm with a stream of improving lower bounds.
+
+For decoding, the runtime precomputes each transition's preset, postset, label group, and score lookup. Local marking search then operates on sparse token dictionaries and a visited-marking set. These implementation choices reduce overhead without changing the firing semantics. Each proposal still constructs its input features and runtime; the reported timing does not assume a globally cached neural representation for a target net. The checkpoint is loaded once before processing a sequence of traces.
+
+\subsection{Preparing a Log and Reference Model}
+
+The Setup page accepts XES event logs, including compressed files, and PNML nets. An analyst may provide an independent reference model or discover a model from the uploaded log using Inductive Miner. The latter option is labeled explicitly: checking a model discovered from the same data is a different analysis from checking compliance with an independently specified process. The discovery noise threshold controls whether infrequent behavior is filtered.
+
+The page summarizes the log and net, lists activity labels and duplicate-label groups, and groups cases into variants. Grouping is valid for this control-flow setting because cases with the same activity sequence have the same alignment problem against a fixed net and cost policy. It reduces repeated computation while retaining a mapping back to case identifiers. The analyst chooses which variants to process, and the workbench reports the corresponding case coverage. Unprocessed variants are not counted as successful alignments.
+
+\subsection{Progressive Results and Trace Inspection}
+
+The Live Run page offers fast candidates, progressive certification, and an exact baseline. In candidate modes it first produces and independently verifies the proposal for a variant. The result can be displayed immediately, while exact work is a subsequent stage when selected. Statuses distinguish a ready candidate, an illegal candidate, exact computation, certification, repair, timeout, and failure. A timeout retains the evidence already obtained; it does not fill in an unknown optimum.
+
+The Trace Inspector aligns candidate and exact explanations to common observed event positions. It exposes concrete transition identities, which is especially useful for duplicate labels, and allows the model projection to be replayed through precomputed marking snapshots. An analyst can therefore see both where an event was skipped and which enabled transition the decoder chose. Neural score diagnostics are supplementary preferences. They are not labeled as causal explanations or calibrated certainty about correctness.
+
+Results can be exported as variant-level and case-level CSV, detailed JSON, execution logs, and per-alignment move tables. Candidate cost, exact cost, gap, legality, and certification remain separate fields. This makes subsequent analysis auditable: a CSV consumer can select only certified optima or deliberately study the latency and quality of verified candidates. The optional experiment dashboard reads stored metric files for training-curve and benchmark inspection.
+
+% Optional insertion point for author-supplied screenshots. The scientific
+% explanation above is complete without screenshots. See figures/README.md.
+\InputIfFileExists{figures/implementation_screenshots.tex}{}{}
+
+\subsection{Reproducibility and Experiment Artifacts}
+
+The repository includes the reference synthetic corpus, checkpoint, generation configuration, per-epoch metrics, and benchmark outputs. The script \texttt{init\_data.py} generates the behavior families; \texttt{train\_model.py} trains and saves checkpoints. Evaluation scripts cover the fixed synthetic test split, scaling inputs, PM4Py approximations, and real logs. The journal source additionally packages the result data used by its plots and records hashes of the source artifacts, so figures can be rebuilt without rerunning training.
+
+Reproducing candidate-quality figures requires the recorded checkpoint and matching inputs. Reproducing timings additionally requires the hardware, software, thread settings, and measurement boundaries in Section~\ref{sec:protocol}. Existing result files are measurements of their original runs; rebuilding a plot from those files is not a new runtime experiment. The delivery includes commands for both operations and keeps them separate.
+
+The workbench is an implementation artifact, not a user-study result. Its progressive workflow illustrates how to expose the method's guarantees in practice, but the experiments below measure alignment outputs and algorithmic timings. They do not measure analyst productivity, user satisfaction, or deployment performance under concurrent load.

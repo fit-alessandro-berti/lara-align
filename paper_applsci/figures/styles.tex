@@ -1,0 +1,30 @@
+% Vector figure palette: learned decisions blue, verified evidence green,
+% deviations amber. Labels and shapes retain meaning in grayscale.
+\definecolor{learnblue}{HTML}{2066A8}
+\definecolor{verifygreen}{HTML}{087F72}
+\definecolor{devamber}{HTML}{BB641A}
+\definecolor{ink}{HTML}{213547}
+\definecolor{muted}{HTML}{566778}
+\definecolor{softblue}{HTML}{EAF2FB}
+\definecolor{softgreen}{HTML}{E8F5F0}
+\definecolor{softamber}{HTML}{FFF2E2}
+\definecolor{softgray}{HTML}{F2F5F8}
+\tikzset{
+  flow/.style={-{Stealth[length=2mm]},draw=muted,line width=.8pt},
+  box/.style={rounded corners=3pt,draw=muted!55,fill=softgray,
+    align=center,inner sep=6pt,font=\small,minimum height=10mm},
+  learnbox/.style={box,draw=learnblue,fill=softblue},
+  verifybox/.style={box,draw=verifygreen,fill=softgreen},
+  warnbox/.style={box,draw=devamber,fill=softamber},
+  place/.style={circle,draw=ink,line width=.8pt,fill=white,
+    minimum size=5mm,inner sep=0pt},
+  transition/.style={rectangle,draw=learnblue,line width=.9pt,fill=softblue,
+    minimum width=6mm,minimum height=7mm,inner sep=2pt,font=\small},
+  silent/.style={transition,draw=ink,fill=ink,text=white,minimum width=4mm},
+  arc/.style={-{Stealth[length=1.7mm]},draw=ink,line width=.7pt},
+  annotation/.style={font=\small,align=left,text=muted},
+  paneltitle/.style={font=\small\bfseries,text=ink,anchor=west},
+  alcell/.style={draw=muted!45,minimum width=11mm,minimum height=7mm,
+    inner sep=1pt,font=\small,fill=softgreen},
+  devcell/.style={alcell,fill=softamber,draw=devamber},
+}
