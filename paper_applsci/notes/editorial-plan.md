@@ -25,4 +25,4 @@ Evidence discovered during inspection:
 - Synthetic family IDs are split before expansion; this is not a held-out-motif or globally deduplicated structural split.
 - Current certification does not use the candidate as an incumbent in exact search. Exact timeouts retain only the available replay-verified upper bound.
 
-Author-supplied declarations (funding, contribution roles, conflicts, and final AI-use disclosure) must not be invented from code. They are recorded in the delivery notes rather than asserted in the scientific text.
+Submission preparation restores the funding and AI-use statements supplied in the original manuscript. The contribution line records software authorship and manuscript review, and the conflict statement discloses the existing Celonis affiliation. Broader roles or claims about funder involvement are not inferred.

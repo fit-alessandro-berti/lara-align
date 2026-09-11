@@ -13,6 +13,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[2]
 PAPER = ROOT / "paper_applsci"
+REFERENCE = json.loads((PAPER / "data/evidence.json").read_text())
 sys.path.insert(0, str(ROOT))
 import torch
 import numpy as np
@@ -28,12 +29,25 @@ from pm4py.objects.petri_net.utils.petri_utils import add_arc_from_to
 
 
 def read(name):
-    return json.loads((ROOT / "runs/lara" / name).read_text())
+    path = ROOT / "runs/lara" / name
+    if path.exists():
+        return json.loads(path.read_text())
+    return REFERENCE["original_results"][name]
+
+
+def source_hash(name):
+    path = ROOT / "runs/lara" / name
+    if path.exists():
+        return hashlib.sha256(path.read_bytes()).hexdigest()
+    # Preserve the provenance of historical results when only their included
+    # numerical snapshot is available. These are not newly measured timings.
+    return REFERENCE["source_sha256"][name]
 
 
 def main():
     torch.set_num_threads(10)
     torch.set_num_interop_threads(10)
+    assert source_hash("best.pt") == REFERENCE["source_sha256"]["best.pt"]
     model, checkpoint = load_checkpoint(ROOT / "runs/lara/best.pt")
     model.eval()
     systems = {name: CertifyingAlignmentSystem(model=model, use_guidance=guided)
@@ -180,10 +194,12 @@ def main():
               "checked_test_records": records, "running_example_scores": scores,
               "checkpoint_config": checkpoint["model_config"],
               "parameter_count": sum(p.numel() for p in model.parameters()),
-              "source_sha256": {name:hashlib.sha256((ROOT/"runs/lara"/name).read_bytes()).hexdigest()
+              "source_sha256": {name:source_hash(name)
                                 for name in names + ["best.pt","metrics.csv"]}}
     (PAPER/"data/evidence.json").write_text(json.dumps(inputs,indent=2)+"\n")
-    (PAPER/"data/metrics.csv").write_text((ROOT/"runs/lara/metrics.csv").read_text())
+    metrics = ROOT / "runs/lara/metrics.csv"
+    if metrics.exists():
+        (PAPER/"data/metrics.csv").write_text(metrics.read_text())
     print(json.dumps({"checked_test_rows":len(records),"corpus_checks":corpus_checks,"classes":classes,
                       "parameter_count":inputs["parameter_count"],"running_example":scores},indent=2))
 

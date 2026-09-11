@@ -53,7 +53,7 @@ Results can be exported as variant-level and case-level CSV, detailed JSON, exec
 
 \subsection{Reproducibility and Experiment Artifacts}
 
-The repository includes the reference synthetic corpus, checkpoint, generation configuration, per-epoch metrics, and benchmark outputs. The script \texttt{init\_data.py} generates the behavior families; \texttt{train\_model.py} trains and saves checkpoints. Evaluation scripts cover the fixed synthetic test split, scaling inputs, PM4Py approximations, and real logs. The journal source additionally packages the result data used by its plots and records hashes of the source artifacts, so figures can be rebuilt without rerunning training.
+The journal source includes the reference synthetic corpus, generation configuration, per-epoch metrics, and numerical benchmark records. The pretrained checkpoint is distributed separately through the download linked in the Data Availability Statement; its recorded checksum identifies the model used here. The script \texttt{init\_data.py} generates the behavior families; \texttt{train\_model.py} trains and saves checkpoints. Evaluation scripts cover the fixed synthetic test split, scaling inputs, PM4Py approximations, and real logs. The included result data and figure scripts allow the plots to be rebuilt without rerunning training.
 
 Reproducing candidate-quality figures requires the recorded checkpoint and matching inputs. Reproducing timings additionally requires the hardware, software, thread settings, and measurement boundaries in Section~\ref{sec:protocol}. Existing result files are measurements of their original runs; rebuilding a plot from those files is not a new runtime experiment. The delivery includes commands for both operations and keeps them separate.
 

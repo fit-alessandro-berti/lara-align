@@ -4,7 +4,8 @@ Checked on 11 September 2026.
 
 ## Delivered manuscript
 
-- `main.pdf`: 40 pages in the official MDPI Applied Sciences submission class.
+- `build/main.pdf`: 41 pages in the official MDPI Applied Sciences submission class.
+- `build/submission.zip`: self-contained LaTeX source archive for submission.
 - Nine main sections, 11 vector figures, 18 tables, and 34 cited references.
 - Research questions and contributions appear explicitly in Section 2.
 - Section 2 introduces the process and machine-learning concepts used later.
@@ -20,24 +21,43 @@ Checked on 11 September 2026.
 
 ## Typesetting and artifact checks
 
-`make` completes successfully. A separate build using only the manuscript's
-LaTeX sources, bibliography, figures, and supplied class files also completes
-successfully; its extracted PDF text and pagination match the delivered PDF.
-All 40 final pages were rendered and visually reviewed. Figures and tables were
-also examined at larger scale during revision. Labels, arrows, captions,
-equations, and table columns fit within the intended layout.
+`make submission` completes successfully. The resulting source ZIP was extracted
+into a new temporary directory and compiled independently with latexmk. Both
+builds produce 41 pages with identical extracted text. Both final LaTeX and
+BibTeX logs contain no errors, warnings, missing glyph reports, or overfull or
+underfull boxes. All 41 final pages were rendered and visually reviewed; the
+changed text, declarations, and bibliography were also checked at larger scale.
+Labels, arrows, captions, equations, and table columns fit within the layout.
 
 All 98 labels are unique. All citations and cross-references resolve; every
-bibliography entry is cited. There are no overfull boxes, missing references,
-missing glyph reports, empty screenshot boxes, or publication-date/DOI
-placeholders. The remaining build messages are the supplied class's redundant
-xcolor-load warning and two harmless underfull text boxes.
+bibliography entry is cited. There are no empty screenshot boxes or dummy
+publication dates or DOIs. Removing the redundant global `pdftex` option resolves
+the xcolor warning; two prose edits resolve the underfull boxes. The supplied
+MDPI class files are unmodified.
+
+Build products are ignored by Git. The previously removed `main.pdf` remains
+absent from this directory's root and is not restored to the repository.
 
 Delivered PDF SHA-256:
 
 ```
-0e1d18ec93a36217ebb23522ecbab2730a634a6c898c95c509dfd8b8f56194c8
+f42f0bffe603dea9d56eaa5b0abe39e91f8f6d8da4ab68c7040ba567aa521622
 ```
+
+## Bibliography verification
+
+All 34 cited works were located and checked against primary records. The source
+URLs and verified metadata for every entry are in `reference-metadata.json`.
+The audit covers authors and their order, titles, publication years, venues or
+source types, volumes, pages or article numbers where applicable, and persistent
+links. Publisher and repository metadata were supplemented by publisher pages
+and author-posted papers when a record was incomplete.
+
+Corrections include book and proceedings metadata, chapter series volumes,
+publication types, article identifiers, compound surnames, accents, and initials.
+The six cited arXiv works are explicitly identified as preprints. Every entry
+has a DOI or publisher URL, and the rendered bibliography was checked for name
+formatting, edition wording, duplicated words, and link wrapping.
 
 ## Numerical and data checks
 
@@ -60,11 +80,29 @@ corpus. The saved results in `data/evidence.json` record these checks:
 - Family bootstrap intervals are recomputed with 10,000 resamples and seed 13.
 - The five empirical plots regenerate from the included evidence and training CSV.
 
+The exact reference corpus is now included in `data/reference_corpus.tar.gz`.
+All five archived files match the checksums recorded in `data/artifacts.json`.
+The separately hosted checkpoint was downloaded and its `best.pt` checksum
+matched the model used for the reported evaluation.
+
+An isolated reproduction used the packaged corpus, downloaded checkpoint, and
+included result snapshot, without the original local benchmark JSON files. It
+completed successfully and reproduced `data/evidence.json` exactly. Historical
+comparison records use the included snapshot when their original files are
+absent; their original source hashes remain recorded as provenance.
+
 The expanded explanation records the implemented decoder depths, static-score
 limitations, unused log head, experimental timing boundaries, exact-timeout
 denominators, and the absence of a guided-quality gain on the real logs.
 Historical benchmark timings are retained; this verification does not claim a
 new training run or reproduction of the original timing environment.
 
-Screenshots and personal author declarations can be supplied later as described
-in `README.md`. No author approval, submission, or publication is asserted.
+## Author statements
+
+Funding and the AI-use acknowledgment follow the original manuscript. The
+contribution statement records supported software authorship and manuscript
+review, and the conflict statement records the declared Celonis affiliation.
+Ethics and consent statements identify the synthetic and published-data scope.
+Data availability now distinguishes the packaged corpus from the separately
+hosted checkpoint. No final author approval, submission, or publication is
+asserted.

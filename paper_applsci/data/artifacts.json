@@ -1,0 +1,24 @@
+{
+  "reference_corpus": {
+    "archive": "reference_corpus.tar.gz",
+    "sha256": "0982fdc50e66375588617dbbcd71affe0c487bdd6eb0233e4324ccfd42e9f96f",
+    "files": {
+      "train.pkl": "a84502f844b54bab6e89722c7cf5066c0910db77957ff75ec4a5b6f407746f53",
+      "val.pkl": "4f741b30e41709dfb405b70476656126852f3e47692a82b9a93d5273c91e4332",
+      "test.pkl": "e95c3ac73e965f85f2edde45f3eec734c8f841707e969fd04e835463fb52f66a",
+      "metadata.json": "8bfdf14756b3e178f1f4b44d6e312d5a131a72b676bca4df92285edf63e363d8",
+      "metadata.pkl": "70577f7e8aecedd302150c941bf7a4a2e9c873659062764adb9b3df6762f66a2"
+    }
+  },
+  "checkpoint": {
+    "url": "https://www.alessandroberti.it/checkpoint_lara_latest.tar.gz",
+    "downloaded_body_sha256": "0dad48cab3acdbda85066e82e67866797bd39d94cbed6b2d62f6086fe260efa2",
+    "checkpoints": [
+      {
+        "name": "runs/lara/best.pt",
+        "sha256": "4a91ed5fd2e05151efd147bdaf7b865ccb65443eef0c8ae0b4aee5fcb91c3d18",
+        "matches_reference": true
+      }
+    ]
+  }
+}

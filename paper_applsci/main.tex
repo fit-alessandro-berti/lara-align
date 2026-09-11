@@ -1,4 +1,4 @@
-\documentclass[applsci,article,submit,pdftex,moreauthors]{Definitions/mdpi}
+\documentclass[applsci,article,submit,moreauthors]{Definitions/mdpi}
 % Expanded journal manuscript. Official MDPI class; no compressed spacing.
 \firstpage{1}
 \pubvolume{1}
@@ -67,9 +67,13 @@ $^{2}$ \quad Celonis, Munich, Germany}
 \input{sections/07_evaluation}
 \input{sections/08_discussion}
 \input{sections/09_conclusion}
-\dataavailability{The implementation, synthetic data, pretrained checkpoint, and experiment scripts are available in the LARA repository at \url{https://github.com/fit-alessandro-berti/lara-align}. The journal source includes the numerical inputs used to draw its result figures. The public event-log sources are cited in Section~\ref{sec:real}.}
-% Funding, CRediT roles, conflicts, and author-approved AI disclosure:
-% see README.md. These author declarations are not inferred from the software.
+\authorcontributions{Software, A.B.; writing---review and editing, A.B. and W.M.P.v.d.A.}
+\funding{Funded by the European Union. This work has received funding from the European High Performance Computing Joint Undertaking (JU) and from the German Federal Ministry of Research, Technology and Space (BMFTR), the Ministry of Culture and Science of North Rhine-Westphalia (MKW NRW), and the Hessian Ministry of Science and Research, Arts and Culture (HMWK) under grant agreement No.~101250682.}
+\institutionalreview{Not applicable. This study uses synthetic traces and previously published event logs.}
+\informedconsent{Not applicable.}
+\dataavailability{The implementation and experiment scripts are available at \url{https://github.com/fit-alessandro-berti/lara-align}. The \texttt{ft-journal} branch includes the reference synthetic corpus, numerical result records, and figure sources in \texttt{paper\_applsci}. The pretrained checkpoint is available at \url{https://www.alessandroberti.it/checkpoint_lara_latest.tar.gz}; the journal source records its SHA-256 checksum. The public event-log sources are cited in Section~\ref{sec:real}.}
+\acknowledgments{Generative AI tools supported software implementation and manuscript preparation. OpenAI Codex assisted with restructuring the text, explaining the methodology, preparing figure code, checking references, and compiling the manuscript. The authors take responsibility for the content.}
+\conflictsofinterest{W.M.P.v.d.A. is affiliated with Celonis.}
 \abbreviations{Abbreviations}{The following abbreviations are used in this manuscript:\\
 \begin{tabular}{@{}ll}
 A* & Heuristic shortest-path search\\

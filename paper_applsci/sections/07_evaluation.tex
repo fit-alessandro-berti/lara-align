@@ -61,7 +61,7 @@ The ablation isolates learned ranking from the model semantics. Unguided decodin
 These aggregate gains are real for the fixed test set but do not imply that learning is responsible for most successful alignments. The unguided decoder already synchronizes uniquely enabled matches and searches for short model-move paths. Many inputs offer little meaningful ranking choice. To answer where the improvement comes from, Table~\ref{tab:classes} separates the eight representation cells and Figure~\ref{fig:guidance} shows the corresponding differences.
 
 \begin{table}[tb]
-\caption{Optimality by motif and representation, with 64 rows per cell. G/U denote guided/unguided decoding; all outputs in both modes pass replay. The mean gap column is for guided candidates.}
+\caption{Optimality by motif and representation. Each cell contains 64 inputs. G and U identify guided and unguided decoding; all outputs pass replay. Mean gaps are reported for guided candidates.}
 \label{tab:classes}
 \centering
 \begin{tabularx}{\linewidth}{@{}lYrrr@{}}

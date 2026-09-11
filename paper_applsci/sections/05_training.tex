@@ -71,7 +71,7 @@ This pair tests a change in the representation of concurrency. One net uses an i
 
 \subsubsection{Block Structure and the Non-Free-Choice M Pattern}
 
-This pair introduces a conflict that cannot be described merely as a shared choice among transitions with identical input places. The block representation is $\operatorname{XOR}(B,\operatorname{AND}(A,C))$. In the M representation, an invisible split places one token in each of two places. $A$ consumes the first, $C$ consumes the second, and $B$ consumes both. Therefore $B$ conflicts with both $A$ and $C$, while $A$ and $C$ can occur in either order. The presets of conflicting transitions are unequal, giving the non-free-choice structure. Appropriate output places and a join complete the $A,C$ branch. Figure~\ref{fig:structuralpairs} shows the token-level construction together with the parallelism pair.
+This pair tests a conflict between transitions with different input places. The block representation is $\operatorname{XOR}(B,\operatorname{AND}(A,C))$. In the M representation, an invisible split places one token in each of two places. $A$ consumes the first, $C$ consumes the second, and $B$ consumes both. Therefore $B$ conflicts with both $A$ and $C$, while $A$ and $C$ can occur in either order. The presets of conflicting transitions are unequal, giving the non-free-choice structure. Appropriate output places and a join complete the $A,C$ branch. Figure~\ref{fig:structuralpairs} shows the token-level construction together with the parallelism pair.
 
 \begin{figure}[tb]
 \centering

@@ -1,9 +1,10 @@
-.PHONY: all figures evidence clean
+.PHONY: all submission figures evidence clean
 
-all: main.pdf
+all:
+	latexmk -pdf -outdir=build -interaction=nonstopmode -halt-on-error main.tex
 
-main.pdf: main.tex references.bib Definitions/mdpi.cls Definitions/mdpi.bst Definitions/journalnames.tex $(wildcard Definitions/*.pdf) $(wildcard sections/*.tex) $(wildcard figures/*.tex) $(wildcard figures/*.pdf)
-	latexmk -pdf -interaction=nonstopmode -halt-on-error main.tex
+submission: all
+	python3 -m zipfile -c build/submission.zip main.tex references.bib Definitions sections figures
 
 figures:
 	python3 scripts/make_figures.py
@@ -12,4 +13,5 @@ evidence:
 	python3 scripts/collect_evidence.py
 
 clean:
-	latexmk -c main.tex
+	latexmk -C -outdir=build main.tex
+	rm -f build/submission.zip

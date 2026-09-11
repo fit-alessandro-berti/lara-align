@@ -1,5 +1,6 @@
-# Keep the complete, compilable manuscript despite repository-wide PDF/data rules.
-!main.pdf
+# Keep source assets despite repository-wide PDF/data rules.
+/main.pdf
+/build/
 !Definitions/*.pdf
 !figures/*.pdf
 !data/

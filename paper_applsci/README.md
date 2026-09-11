@@ -1,102 +1,97 @@
-# Expanded Applied Sciences manuscript
+# Applied Sciences submission source
 
-Open `main.pdf` to read the 40-page journal version, with 11 figures, 18 tables,
-and 34 cited references. `main.tex` is the entry point for
-the self-contained LaTeX project; the manuscript text is split into `sections/`.
-The original `paper/` manuscript and its standalone data-generation document
-are left untouched. The journal version integrates data generation and all
-training losses into its main text and has no appendix or separate data paper.
+The journal manuscript contains nine main sections, 11 vector figures, 18 tables,
+and 34 verified references. Data generation and training are integrated into
+Section 5; there is no appendix or separate data-generation document.
 
 The target is the Applied Sciences special issue
 [Process Mining: Theory and Applications](https://www.mdpi.com/journal/applsci/special_issues/87G1T64B1M).
-It uses the official MDPI class, downloaded from the
-[MDPI template distribution](https://mdpi-res.com/data/MDPI_template.zip)
-on 11 September 2026, with `applsci,article,submit` options. The class files in
-`Definitions/` are supplied by MDPI and are not custom layout substitutes.
+The project uses the official [MDPI LaTeX class](https://mdpi-res.com/data/MDPI_template.zip),
+downloaded on 11 September 2026. The supplied class files are unmodified.
 
-## Build
+## Build and submission files
 
-From this directory:
+Run from this directory:
 
 ```bash
-make
+make submission
 ```
 
-This requires a TeX Live installation with pdfLaTeX, BibTeX, latexmk, and the
-packages loaded by the MDPI class. All figures and references needed for the
-PDF are included. The source can also be uploaded as a folder to a LaTeX editor
-with `main.tex` selected as the main document.
+This creates `build/main.pdf` and `build/submission.zip`. The ZIP contains the
+LaTeX source, bibliography, required class files, and figure assets. Upload the
+PDF and source ZIP as the manuscript files. The PDF and ZIP are build products
+and are excluded from Git; `main.pdf` is not recreated in this directory's root.
+Use `make` to compile without packaging, and `make clean` to remove build output.
 
-To regenerate only the result plots from the included numerical snapshot:
+The build requires TeX Live with pdfLaTeX, BibTeX, latexmk, and the packages used
+by the MDPI class. Python 3 packages the source ZIP. No image-generation service
+is needed. The final LaTeX and BibTeX logs are checked for errors, warnings,
+missing glyphs, and overfull or underfull boxes; see `notes/validation.md`.
+
+Funding and the AI-use acknowledgment are based on the original manuscript.
+The author contribution statement records software authorship and manuscript
+review; the declared Celonis affiliation is included in the conflict statement.
+Ethics and consent statements identify the study's synthetic and public-data
+scope. Final author approval and the submission-system confirmations remain
+with the corresponding author.
+
+Implementation screenshots can be supplied later through
+`figures/implementation_screenshots.tex`; see `figures/README.md`. The current
+manuscript has no empty screenshot placeholders.
+
+## Bibliography verification
+
+`notes/reference-metadata.json` records primary sources for all 34 references.
+Sources include publisher pages and metadata, DataCite dataset records, PMLR
+and NeurIPS proceedings, and author-posted arXiv papers. The bibliography
+preserves compound surnames and initials, identifies preprints explicitly,
+and includes a DOI or persistent publisher URL for every entry.
+
+## Reproducing figures
+
+The numerical snapshot and training history are included. To redraw the five
+empirical plots without rerunning experiments:
 
 ```bash
 make figures
 make
 ```
 
-This requires Python, NumPy, and Matplotlib. Plots are exported as PDF and SVG.
-The conceptual illustrations use editable TikZ sources and need no external
-image service.
+This requires Python, NumPy, and Matplotlib. Figures are exported as PDF and SVG;
+the conceptual diagrams use editable TikZ source.
 
-## Evidence and reproduction
+## Rechecking the reported results
 
-`data/evidence.json` contains the original result summaries and stress/real-log
-records, source hashes, a fresh check of all 512 guided/unguided test outputs,
-512 recomputed exact test costs, the worked-example neural scores, and
-family-bootstrap settings. The evidence script also checks family split
-separation and balance, the stored language-certificate statuses, shared
-observations and equal teacher costs within representation pairs, and the
-replay of all 3,072 teacher witnesses. The original
-benchmark timings remain historical measurements; they are not replaced by the
-quality verification run. `data/metrics.csv` is the recorded training history.
-See `notes/validation.md` for the final manuscript checks and their scope.
+`data/reference_corpus.tar.gz` contains the exact training, validation, and test
+splits and their generation metadata. `data/artifacts.json` records checksums
+for the corpus files and the reference checkpoint. The publicly distributed
+checkpoint was downloaded and its `best.pt` hash matched the evaluated model.
 
-To recheck the fixed checkpoint, worked input tensors, and test-set quality in
-the parent repository's Python environment:
+From the root of a fresh repository checkout, recover the inputs with:
 
 ```bash
-make evidence
-make figures
-make
+mkdir -p data
+tar -xzf paper_applsci/data/reference_corpus.tar.gz -C data
+curl --fail --location https://www.alessandroberti.it/checkpoint_lara_latest.tar.gz --output /tmp/lara-checkpoint.tar.gz
+tar -xf /tmp/lara-checkpoint.tar.gz
+make -C paper_applsci evidence
 ```
 
-The original generation and experiment commands run from the repository root.
-Use a new output directory when regenerating data or training so that the
-reference artifacts remain available. The relevant command interfaces are:
+These extraction commands are intended for a fresh checkout; preserve existing experimental files when working in an
+active research directory. Use the parent project's Python dependencies.
 
-```bash
-python scripts/init_data.py --help
-python scripts/train_model.py --help
-python scripts/test_model.py --help
-python scripts/benchmark_scaling.py --help
-python scripts/benchmark_pm4py_approx.py --help
-python scripts/benchmark_pm4py_approx_scaling.py --help
-python scripts/evaluate_real_log.py --help
-streamlit run streamlit_app.py
-```
+The verification checks all 3,072 teacher witnesses, family separation and
+balance, paired observations and costs, 512 freshly recomputed exact test
+costs, guided and unguided candidates, the worked example, and bootstrap
+intervals. It reproduces 466 guided and 445 unguided optimal candidates.
 
-The paper explains the generation settings, losses, model configuration,
-decoder depths, comparison parameters, and timing boundaries. Quality
-verification and plot regeneration do not imply reproduction of the original
-CPU timings. No new training run is claimed.
+Historical comparison results are read from the original files when present
+and otherwise from the included snapshot. Their original file hashes are
+preserved as provenance. Verification does not rerun those timing experiments
+or claim a new training run. The entire check was also run in an isolated copy
+using only the packaged corpus, downloaded checkpoint, and included snapshot;
+its resulting evidence matched the supplied snapshot exactly.
 
-## Screenshots and author declarations
-
-The implementation section is complete as prose. Screenshots can be added later
-through `figures/implementation_screenshots.tex`; see `figures/README.md`.
-There are no empty screenshot placeholders in the PDF.
-
-Before actual journal submission, the authors should supply their funding and
-APC declaration, CRediT contributions, conflicts of interest, any applicable
-ethics statements, and final author-approved AI-use disclosure. These personal
-declarations cannot be inferred from the repository and have not been invented.
-The title-page authors, affiliations, and ORCIDs are inherited from the original
-manuscript. No acceptance date or article DOI is asserted.
-
-For the AI-use disclosure, the factual preparation record is: OpenAI Codex
-assisted with restructuring and expanding the manuscript, explaining notation
-and methodology, literature verification, editable figure code, numerical
-cross-checks, and LaTeX preparation. The empirical results come from the existing
-project artifacts and a fixed-checkpoint verification, not generated experimental
-data. The authors can use this record to write the disclosure after reviewing
-the manuscript; their review or approval is not asserted here.
+Generation and experiment interfaces remain in the parent repository's
+`scripts/` directory. Their settings and measurement boundaries are explained
+in the manuscript. Public real-log sources are cited in Section 7.

@@ -1,255 +1,775 @@
 {
-  "description": "Successful Crossref metadata lookups retained for bibliographic checks. Other added sources were checked on publisher, proceedings, or author-hosted pages; see references.bib. Failed lookup attempts are omitted.",
-  "retrieved": "2026-09-11",
-  "records": {
-    "Berti2021": {
-      "DOI": "10.1007/978-3-662-63079-2_1",
-      "title": [
-        "A Novel Token-Based Replay Technique to Speed Up Conformance Checking and Process Enhancement"
+  "checked_on": "2026-09-11",
+  "scope": "Every bibliography entry: existence, author order and name rendering, title, publication year, venue or source type, volume, pages or article number where applicable, and persistent link. Capitalization and punctuation follow the manuscript style.",
+  "style_source": "https://www.mdpi.com/files/authors/mdpi_references_guide.pdf",
+  "entries": {
+    "Aalst2016": {
+      "sources": [
+        "https://api.crossref.org/works/10.1007/978-3-662-49851-4",
+        "https://link.springer.com/book/10.1007/978-3-662-49851-4"
       ],
-      "author": [
-        {
-          "ORCID": "https://orcid.org/0000-0003-1830-4013",
-          "authenticated-orcid": false,
-          "given": "Alessandro",
-          "family": "Berti",
-          "sequence": "first",
-          "affiliation": [],
-          "role": [
-            {
-              "vocabulary": "crossref",
-              "role": "author"
-            }
-          ]
-        },
-        {
-          "ORCID": "https://orcid.org/0000-0002-0955-6940",
-          "authenticated-orcid": false,
-          "given": "Wil M. P.",
-          "family": "van der Aalst",
-          "sequence": "additional",
-          "affiliation": [],
-          "role": [
-            {
-              "vocabulary": "crossref",
-              "role": "author"
-            }
-          ]
-        }
-      ],
-      "container-title": [
-        "Lecture Notes in Computer Science",
-        "Transactions on Petri Nets and Other Models of Concurrency XV"
-      ],
-      "page": "1-26",
-      "published": {
-        "date-parts": [
-          [
-            2021
-          ]
-        ]
+      "verified_metadata": {
+        "title": "Process Mining: Data Science in Action",
+        "authors": [
+          "Wil van der Aalst"
+        ],
+        "year": 2016,
+        "container": [],
+        "volume": null,
+        "issue": null,
+        "pages_or_article": null,
+        "doi": "10.1007/978-3-662-49851-4",
+        "edition": 2,
+        "publisher": "Springer, Berlin, Heidelberg"
       },
-      "publisher": "Springer Berlin Heidelberg",
-      "URL": "https://doi.org/10.1007/978-3-662-63079-2_1"
+      "notes": []
+    },
+    "Adriansyah2011": {
+      "sources": [
+        "https://api.crossref.org/works/10.1109/edoc.2011.12"
+      ],
+      "verified_metadata": {
+        "title": "Conformance Checking Using Cost-Based Fitness Analysis",
+        "authors": [
+          "A. Adriansyah",
+          "B.F. van Dongen",
+          "W.M.P. van der Aalst"
+        ],
+        "year": 2011,
+        "container": [
+          "2011 IEEE 15th International Enterprise Distributed Object Computing Conference"
+        ],
+        "volume": null,
+        "issue": null,
+        "pages_or_article": "55-64",
+        "doi": "10.1109/edoc.2011.12"
+      },
+      "notes": []
+    },
+    "Zelst2018": {
+      "sources": [
+        "https://api.crossref.org/works/10.1007/978-3-662-58381-4_1",
+        "https://link.springer.com/chapter/10.1007/978-3-662-58381-4_1"
+      ],
+      "verified_metadata": {
+        "title": "Computing Alignments of Event Data and Process Models",
+        "authors": [
+          "Sebastiaan J. van Zelst",
+          "Alfredo Bolt",
+          "Boudewijn F. van Dongen"
+        ],
+        "year": 2018,
+        "container": [
+          "Lecture Notes in Computer Science",
+          "Transactions on Petri Nets and Other Models of Concurrency XIII"
+        ],
+        "volume": null,
+        "issue": null,
+        "pages_or_article": "1-26",
+        "doi": "10.1007/978-3-662-58381-4_1",
+        "series_volume": "11090"
+      },
+      "notes": [
+        "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
+      ]
+    },
+    "Dongen2018": {
+      "sources": [
+        "https://api.crossref.org/works/10.1007/978-3-319-98648-7_12",
+        "https://link.springer.com/chapter/10.1007/978-3-319-98648-7_12",
+        "https://link.springer.com/book/10.1007/978-3-319-98648-7"
+      ],
+      "verified_metadata": {
+        "title": "Efficiently Computing Alignments: Using the Extended Marking Equation",
+        "authors": [
+          "Boudewijn F. van Dongen"
+        ],
+        "year": 2018,
+        "container": [
+          "Lecture Notes in Computer Science",
+          "Business Process Management"
+        ],
+        "volume": null,
+        "issue": null,
+        "pages_or_article": "197-214",
+        "doi": "10.1007/978-3-319-98648-7_12",
+        "series_volume": "11080"
+      },
+      "notes": [
+        "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
+      ]
+    },
+    "Schwanen2026": {
+      "sources": [
+        "https://arxiv.org/abs/2603.05331"
+      ],
+      "verified_metadata": {
+        "title": "Computational Complexity of Alignments",
+        "authors": [
+          "Schwanen, Christopher T.",
+          "Pakusa, Wied",
+          "van der Aalst, Wil M. P."
+        ],
+        "year": 2026
+      },
+      "notes": []
+    },
+    "Aalst2013": {
+      "sources": [
+        "https://link.springer.com/article/10.1007/s10619-013-7127-5"
+      ],
+      "verified_metadata": {
+        "title": "Decomposing Petri nets for process mining: A generic approach",
+        "authors": [
+          "van der Aalst, Wil M. P."
+        ],
+        "year": 2013,
+        "container": [
+          "Distributed and Parallel Databases"
+        ],
+        "volume": "31",
+        "issue": "4",
+        "pages_or_article": "471-507",
+        "doi": "10.1007/s10619-013-7127-5"
+      },
+      "notes": []
+    },
+    "Lee2018": {
+      "sources": [
+        "https://api.crossref.org/works/10.1016/j.ins.2018.07.026"
+      ],
+      "verified_metadata": {
+        "title": "Recomposing conformance: Closing the circle on decomposed alignment-based conformance checking in process mining",
+        "authors": [
+          "Wai Lam Jonathan Lee",
+          "H.M.W. Verbeek",
+          "Jorge Munoz-Gama",
+          "Wil M.P. van der Aalst",
+          "Marcos Sepúlveda"
+        ],
+        "year": 2018,
+        "container": [
+          "Information Sciences"
+        ],
+        "volume": "466",
+        "issue": null,
+        "pages_or_article": "55-91",
+        "doi": "10.1016/j.ins.2018.07.026"
+      },
+      "notes": [
+        "Spaces separate initials in the BibTeX author field to prevent BibTeX from dropping initials."
+      ]
+    },
+    "Berti2023": {
+      "sources": [
+        "https://api.crossref.org/works/10.1016/j.simpa.2023.100556"
+      ],
+      "verified_metadata": {
+        "title": "PM4Py: A process mining library for Python",
+        "authors": [
+          "Alessandro Berti",
+          "Sebastiaan van Zelst",
+          "Daniel Schuster"
+        ],
+        "year": 2023,
+        "container": [
+          "Software Impacts"
+        ],
+        "volume": "17",
+        "issue": null,
+        "pages_or_article": "100556",
+        "doi": "10.1016/j.simpa.2023.100556"
+      },
+      "notes": []
+    },
+    "Leemans2013": {
+      "sources": [
+        "https://api.crossref.org/works/10.1007/978-3-642-38697-8_17",
+        "https://link.springer.com/chapter/10.1007/978-3-642-38697-8_17",
+        "https://link.springer.com/book/10.1007/978-3-642-38697-8"
+      ],
+      "verified_metadata": {
+        "title": "Discovering Block-Structured Process Models from Event Logs - A Constructive Approach",
+        "authors": [
+          "Sander J. J. Leemans",
+          "Dirk Fahland",
+          "Wil M. P. van der Aalst"
+        ],
+        "year": 2013,
+        "container": [
+          "Lecture Notes in Computer Science",
+          "Application and Theory of Petri Nets and Concurrency"
+        ],
+        "volume": null,
+        "issue": null,
+        "pages_or_article": "311-329",
+        "doi": "10.1007/978-3-642-38697-8_17",
+        "series_volume": "7927"
+      },
+      "notes": [
+        "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
+      ]
+    },
+    "Vaswani2017": {
+      "sources": [
+        "https://papers.nips.cc/paper_files/paper/2017/hash/3f5ee243547dee91fbd053c1c4a845aa-Abstract.html",
+        "https://proceedings.neurips.cc/paper_files/paper/2017/hash/3f5ee243547dee91fbd053c1c4a845aa-Abstract.html",
+        "https://papers.nips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Bibtex.bib"
+      ],
+      "verified_metadata": {
+        "title": "Attention is All you Need",
+        "authors": [
+          "Vaswani, Ashish",
+          "Shazeer, Noam",
+          "Parmar, Niki",
+          "Uszkoreit, Jakob",
+          "Jones, Llion",
+          "Gomez, Aidan N.",
+          "Kaiser, Łukasz",
+          "Polosukhin, Illia"
+        ],
+        "year": 2017,
+        "volume": "30"
+      },
+      "notes": [
+        "The publisher BibTeX export gives volume 30 and leaves pages empty. The unverified page range was omitted; the Polish initial in Łukasz Kaiser is preserved."
+      ]
+    },
+    "Bukhsh2021": {
+      "sources": [
+        "https://arxiv.org/abs/2104.00721"
+      ],
+      "verified_metadata": {
+        "title": "ProcessTransformer: Predictive Business Process Monitoring with Transformer Network",
+        "authors": [
+          "Bukhsh, Zaharah A.",
+          "Saeed, Aaqib",
+          "Dijkman, Remco M."
+        ],
+        "year": 2021
+      },
+      "notes": []
+    },
+    "Genga2025": {
+      "sources": [
+        "https://api.crossref.org/works/10.1007/s44311-025-00015-7"
+      ],
+      "verified_metadata": {
+        "title": "Artificial intelligence in conformance checking: state of the art and research agenda",
+        "authors": [
+          "Laura Genga",
+          "Karolin Winter"
+        ],
+        "year": 2025,
+        "container": [
+          "Process Science"
+        ],
+        "volume": "2",
+        "issue": "1",
+        "pages_or_article": "9",
+        "doi": "10.1007/s44311-025-00015-7"
+      },
+      "notes": [
+        "Article number 9 is stored in the pages field because the supplied MDPI BibTeX style ignores articleno."
+      ]
+    },
+    "ReceiptLog": {
+      "sources": [
+        "https://api.datacite.org/dois/10.4121/uuid:a07386a5-7be3-4367-9535-70bc9e77dbe6",
+        "https://data.4tu.nl/articles/_/12709127/1"
+      ],
+      "verified_metadata": {
+        "title": "Receipt phase of an environmental permit application process (‘WABO’), CoSeLoG project",
+        "authors": [
+          "Buijs, Joos"
+        ],
+        "year": 2014,
+        "publisher": "Eindhoven University of Technology",
+        "doi": "10.4121/uuid:a07386a5-7be3-4367-9535-70bc9e77dbe6"
+      },
+      "notes": []
+    },
+    "RoadTrafficLog": {
+      "sources": [
+        "https://api.datacite.org/dois/10.4121/uuid:270fd440-1057-4fb9-89a9-b699b47990f5",
+        "https://data.4tu.nl/articles/_/12683249/1"
+      ],
+      "verified_metadata": {
+        "title": "Road Traffic Fine Management Process",
+        "authors": [
+          "de Leoni, M. (Massimiliano)",
+          "Mannhardt, Felix"
+        ],
+        "year": 2015,
+        "publisher": "Eindhoven University of Technology",
+        "doi": "10.4121/uuid:270fd440-1057-4fb9-89a9-b699b47990f5"
+      },
+      "notes": []
+    },
+    "Boltenhagen2021": {
+      "sources": [
+        "https://api.crossref.org/works/10.1007/978-3-030-85469-0_17",
+        "https://link.springer.com/chapter/10.1007/978-3-030-85469-0_17",
+        "https://link.springer.com/book/10.1007/978-3-030-85469-0"
+      ],
+      "verified_metadata": {
+        "title": "A Discounted Cost Function for Fast Alignments of Business Processes",
+        "authors": [
+          "Mathilde Boltenhagen",
+          "Thomas Chatain",
+          "Josep Carmona"
+        ],
+        "year": 2021,
+        "container": [
+          "Lecture Notes in Computer Science",
+          "Business Process Management"
+        ],
+        "volume": null,
+        "issue": null,
+        "pages_or_article": "252-269",
+        "doi": "10.1007/978-3-030-85469-0_17",
+        "series_volume": "12875"
+      },
+      "notes": [
+        "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
+      ]
+    },
+    "Dongen2017": {
+      "sources": [
+        "https://api.crossref.org/works/10.1007/978-3-319-59536-8_7",
+        "https://link.springer.com/chapter/10.1007/978-3-319-59536-8_7",
+        "https://link.springer.com/book/10.1007/978-3-319-59536-8"
+      ],
+      "verified_metadata": {
+        "title": "Aligning Modeled and Observed Behavior: A Compromise Between Computation Complexity and Quality",
+        "authors": [
+          "Boudewijn van Dongen",
+          "Josep Carmona",
+          "Thomas Chatain",
+          "Farbod Taymouri"
+        ],
+        "year": 2017,
+        "container": [
+          "Lecture Notes in Computer Science",
+          "Advanced Information Systems Engineering"
+        ],
+        "volume": null,
+        "issue": null,
+        "pages_or_article": "94-109",
+        "doi": "10.1007/978-3-319-59536-8_7",
+        "series_volume": "10253"
+      },
+      "notes": [
+        "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
+      ]
+    },
+    "ReissnerTandem2020": {
+      "sources": [
+        "https://arxiv.org/abs/2004.01781"
+      ],
+      "verified_metadata": {
+        "title": "Efficient Conformance Checking using Approximate Alignment Computation with Tandem Repeats",
+        "authors": [
+          "Reißner, Daniel",
+          "Armas-Cervantes, Abel",
+          "La Rosa, Marcello"
+        ],
+        "year": 2020
+      },
+      "notes": [
+        "Family, given name syntax preserves compound surnames."
+      ]
+    },
+    "Bogdanov2024": {
+      "sources": [
+        "https://arxiv.org/abs/2406.05439"
+      ],
+      "verified_metadata": {
+        "title": "A Scalable and Near-Optimal Conformance Checking Approach for Long Traces",
+        "authors": [
+          "Bogdanov, Eli",
+          "Cohen, Izack",
+          "Gal, Avigdor"
+        ],
+        "year": 2024
+      },
+      "notes": []
+    },
+    "FaniSani2020": {
+      "sources": [
+        "https://api.crossref.org/works/10.1007/978-3-030-49435-3_15",
+        "https://link.springer.com/chapter/10.1007/978-3-030-49435-3_15",
+        "https://link.springer.com/book/10.1007/978-3-030-49435-3"
+      ],
+      "verified_metadata": {
+        "title": "Conformance Checking Approximation Using Subset Selection and Edit Distance",
+        "authors": [
+          "Mohammadreza Fani Sani",
+          "Sebastiaan J. van Zelst",
+          "Wil M. P. van der Aalst"
+        ],
+        "year": 2020,
+        "container": [
+          "Lecture Notes in Computer Science",
+          "Advanced Information Systems Engineering"
+        ],
+        "volume": null,
+        "issue": null,
+        "pages_or_article": "234-251",
+        "doi": "10.1007/978-3-030-49435-3_15",
+        "series_volume": "12127"
+      },
+      "notes": [
+        "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record.",
+        "Family, given name syntax preserves compound surnames."
+      ]
+    },
+    "Carmona2018": {
+      "sources": [
+        "https://api.crossref.org/works/10.1007/978-3-319-99414-7"
+      ],
+      "verified_metadata": {
+        "title": "Conformance Checking: Relating Processes and Models",
+        "authors": [
+          "Josep Carmona",
+          "Boudewijn van Dongen",
+          "Andreas Solti",
+          "Matthias Weidlich"
+        ],
+        "year": 2018,
+        "container": [],
+        "volume": null,
+        "issue": null,
+        "pages_or_article": null,
+        "doi": "10.1007/978-3-319-99414-7"
+      },
+      "notes": []
+    },
+    "Rozinat2008": {
+      "sources": [
+        "https://api.crossref.org/works/10.1016/j.is.2007.07.001"
+      ],
+      "verified_metadata": {
+        "title": "Conformance checking of processes based on monitoring real behavior",
+        "authors": [
+          "A. Rozinat",
+          "W.M.P. van der Aalst"
+        ],
+        "year": 2008,
+        "container": [
+          "Information Systems"
+        ],
+        "volume": "33",
+        "issue": "1",
+        "pages_or_article": "64-95",
+        "doi": "10.1016/j.is.2007.07.001"
+      },
+      "notes": [
+        "Spaces separate initials in the BibTeX author field to prevent BibTeX from dropping initials."
+      ]
+    },
+    "Berti2021": {
+      "sources": [
+        "https://api.crossref.org/works/10.1007/978-3-662-63079-2_1",
+        "https://link.springer.com/chapter/10.1007/978-3-662-63079-2_1"
+      ],
+      "verified_metadata": {
+        "title": "A Novel Token-Based Replay Technique to Speed Up Conformance Checking and Process Enhancement",
+        "authors": [
+          "Alessandro Berti",
+          "Wil M. P. van der Aalst"
+        ],
+        "year": 2021,
+        "container": [
+          "Lecture Notes in Computer Science",
+          "Transactions on Petri Nets and Other Models of Concurrency XV"
+        ],
+        "volume": null,
+        "issue": null,
+        "pages_or_article": "1-26",
+        "doi": "10.1007/978-3-662-63079-2_1",
+        "series_volume": "12530"
+      },
+      "notes": [
+        "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
+      ]
     },
     "Casas2024": {
-      "DOI": "10.1016/j.eswa.2023.122467",
-      "title": [
-        "REACH: Researching Efficient Alignment-based Conformance Checking"
+      "sources": [
+        "https://api.crossref.org/works/10.1016/j.eswa.2023.122467"
       ],
-      "author": [
-        {
-          "ORCID": "https://orcid.org/0000-0003-2521-1464",
-          "authenticated-orcid": false,
-          "given": "Jacobo",
-          "family": "Casas-Ramos",
-          "sequence": "first",
-          "affiliation": [],
-          "role": [
-            {
-              "vocabulary": "crossref",
-              "role": "author"
-            }
-          ]
-        },
-        {
-          "ORCID": "https://orcid.org/0000-0003-1735-3585",
-          "authenticated-orcid": false,
-          "given": "Manuel",
-          "family": "Mucientes",
-          "sequence": "additional",
-          "affiliation": [],
-          "role": [
-            {
-              "vocabulary": "crossref",
-              "role": "author"
-            }
-          ]
-        },
-        {
-          "ORCID": "https://orcid.org/0000-0001-7195-6155",
-          "authenticated-orcid": false,
-          "given": "Manuel",
-          "family": "Lama",
-          "sequence": "additional",
-          "affiliation": [],
-          "role": [
-            {
-              "vocabulary": "crossref",
-              "role": "author"
-            }
-          ]
-        }
-      ],
-      "container-title": [
-        "Expert Systems with Applications"
-      ],
-      "volume": "241",
-      "page": "122467",
-      "published": {
-        "date-parts": [
-          [
-            2024,
-            5
-          ]
-        ]
+      "verified_metadata": {
+        "title": "REACH: Researching Efficient Alignment-based Conformance Checking",
+        "authors": [
+          "Jacobo Casas-Ramos",
+          "Manuel Mucientes",
+          "Manuel Lama"
+        ],
+        "year": 2024,
+        "container": [
+          "Expert Systems with Applications"
+        ],
+        "volume": "241",
+        "issue": null,
+        "pages_or_article": "122467",
+        "doi": "10.1016/j.eswa.2023.122467"
       },
-      "publisher": "Elsevier BV",
-      "URL": "https://doi.org/10.1016/j.eswa.2023.122467"
+      "notes": []
+    },
+    "Padro2022": {
+      "sources": [
+        "https://api.crossref.org/works/10.1016/j.is.2020.101703"
+      ],
+      "verified_metadata": {
+        "title": "Computation of alignments of business processes through relaxation labeling and local optimal search",
+        "authors": [
+          "Lluís Padró",
+          "Josep Carmona"
+        ],
+        "year": 2022,
+        "container": [
+          "Information Systems"
+        ],
+        "volume": "104",
+        "issue": null,
+        "pages_or_article": "101703",
+        "doi": "10.1016/j.is.2020.101703"
+      },
+      "notes": []
     },
     "Schuster2021": {
-      "DOI": "10.1007/978-3-030-72693-5_19",
-      "title": [
-        "Alignment Approximation for Process Trees"
+      "sources": [
+        "https://api.crossref.org/works/10.1007/978-3-030-72693-5_19",
+        "https://link.springer.com/chapter/10.1007/978-3-030-72693-5_19",
+        "https://link.springer.com/book/10.1007/978-3-030-72693-5"
       ],
-      "author": [
-        {
-          "ORCID": "https://orcid.org/0000-0002-6512-9580",
-          "authenticated-orcid": false,
-          "given": "Daniel",
-          "family": "Schuster",
-          "sequence": "first",
-          "affiliation": [],
-          "role": [
-            {
-              "vocabulary": "crossref",
-              "role": "author"
-            }
-          ]
-        },
-        {
-          "ORCID": "https://orcid.org/0000-0003-0415-1036",
-          "authenticated-orcid": false,
-          "given": "Sebastiaan",
-          "family": "van Zelst",
-          "sequence": "additional",
-          "affiliation": [],
-          "role": [
-            {
-              "vocabulary": "crossref",
-              "role": "author"
-            }
-          ]
-        },
-        {
-          "ORCID": "https://orcid.org/0000-0002-0955-6940",
-          "authenticated-orcid": false,
-          "given": "Wil M. P.",
-          "family": "van der Aalst",
-          "sequence": "additional",
-          "affiliation": [],
-          "role": [
-            {
-              "vocabulary": "crossref",
-              "role": "author"
-            }
-          ]
-        }
-      ],
-      "container-title": [
-        "Lecture Notes in Business Information Processing",
-        "Process Mining Workshops"
-      ],
-      "page": "247-259",
-      "published": {
-        "date-parts": [
-          [
-            2021
-          ]
-        ]
+      "verified_metadata": {
+        "title": "Alignment Approximation for Process Trees",
+        "authors": [
+          "Daniel Schuster",
+          "Sebastiaan van Zelst",
+          "Wil M. P. van der Aalst"
+        ],
+        "year": 2021,
+        "container": [
+          "Lecture Notes in Business Information Processing",
+          "Process Mining Workshops"
+        ],
+        "volume": null,
+        "issue": null,
+        "pages_or_article": "247-259",
+        "doi": "10.1007/978-3-030-72693-5_19",
+        "series_volume": "406"
       },
-      "publisher": "Springer International Publishing",
-      "URL": "https://doi.org/10.1007/978-3-030-72693-5_19"
+      "notes": [
+        "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
+      ]
+    },
+    "Munoz2014": {
+      "sources": [
+        "https://api.crossref.org/works/10.1016/j.is.2014.04.003"
+      ],
+      "verified_metadata": {
+        "title": "Single-Entry Single-Exit decomposed conformance checking",
+        "authors": [
+          "Jorge Munoz-Gama",
+          "Josep Carmona",
+          "Wil M.P. van der Aalst"
+        ],
+        "year": 2014,
+        "container": [
+          "Information Systems"
+        ],
+        "volume": "46",
+        "issue": null,
+        "pages_or_article": "102-122",
+        "doi": "10.1016/j.is.2014.04.003"
+      },
+      "notes": [
+        "Spaces separate initials in the BibTeX author field to prevent BibTeX from dropping initials."
+      ]
+    },
+    "Sommers2021": {
+      "sources": [
+        "https://api.crossref.org/works/10.1109/icpm53251.2021.9576849"
+      ],
+      "verified_metadata": {
+        "title": "Process Discovery Using Graph Neural Networks",
+        "authors": [
+          "Dominique Sommers",
+          "Vlado Menkovski",
+          "Dirk Fahland"
+        ],
+        "year": 2021,
+        "container": [
+          "2021 3rd International Conference on Process Mining (ICPM)"
+        ],
+        "volume": null,
+        "issue": null,
+        "pages_or_article": "40-47",
+        "doi": "10.1109/icpm53251.2021.9576849"
+      },
+      "notes": []
     },
     "Tax2017": {
-      "DOI": "10.1007/978-3-319-59536-8_30",
-      "title": [
-        "Predictive Business Process Monitoring with LSTM Neural Networks"
+      "sources": [
+        "https://api.crossref.org/works/10.1007/978-3-319-59536-8_30",
+        "https://link.springer.com/chapter/10.1007/978-3-319-59536-8_30",
+        "https://link.springer.com/book/10.1007/978-3-319-59536-8"
       ],
-      "author": [
-        {
-          "given": "Niek",
-          "family": "Tax",
-          "sequence": "first",
-          "affiliation": [],
-          "role": [
-            {
-              "vocabulary": "crossref",
-              "role": "author"
-            }
-          ]
-        },
-        {
-          "given": "Ilya",
-          "family": "Verenich",
-          "sequence": "additional",
-          "affiliation": [],
-          "role": [
-            {
-              "vocabulary": "crossref",
-              "role": "author"
-            }
-          ]
-        },
-        {
-          "given": "Marcello",
-          "family": "La Rosa",
-          "sequence": "additional",
-          "affiliation": [],
-          "role": [
-            {
-              "vocabulary": "crossref",
-              "role": "author"
-            }
-          ]
-        },
-        {
-          "given": "Marlon",
-          "family": "Dumas",
-          "sequence": "additional",
-          "affiliation": [],
-          "role": [
-            {
-              "vocabulary": "crossref",
-              "role": "author"
-            }
-          ]
-        }
+      "verified_metadata": {
+        "title": "Predictive Business Process Monitoring with LSTM Neural Networks",
+        "authors": [
+          "Niek Tax",
+          "Ilya Verenich",
+          "Marcello La Rosa",
+          "Marlon Dumas"
+        ],
+        "year": 2017,
+        "container": [
+          "Lecture Notes in Computer Science",
+          "Advanced Information Systems Engineering"
+        ],
+        "volume": null,
+        "issue": null,
+        "pages_or_article": "477-492",
+        "doi": "10.1007/978-3-319-59536-8_30",
+        "series_volume": "10253"
+      },
+      "notes": [
+        "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record.",
+        "Family, given name syntax preserves compound surnames."
+      ]
+    },
+    "Bengio2021": {
+      "sources": [
+        "https://api.crossref.org/works/10.1016/j.ejor.2020.07.063"
       ],
-      "container-title": [
-        "Lecture Notes in Computer Science",
-        "Advanced Information Systems Engineering"
+      "verified_metadata": {
+        "title": "Machine learning for combinatorial optimization: A methodological tour d’horizon",
+        "authors": [
+          "Yoshua Bengio",
+          "Andrea Lodi",
+          "Antoine Prouvost"
+        ],
+        "year": 2021,
+        "container": [
+          "European Journal of Operational Research"
+        ],
+        "volume": "290",
+        "issue": "2",
+        "pages_or_article": "405-421",
+        "doi": "10.1016/j.ejor.2020.07.063"
+      },
+      "notes": []
+    },
+    "Gilmer2017": {
+      "sources": [
+        "https://proceedings.mlr.press/v70/gilmer17a.html"
       ],
-      "page": "477-492",
-      "published": {
-        "date-parts": [
-          [
-            2017
-          ]
+      "verified_metadata": {
+        "title": "Neural Message Passing for Quantum Chemistry",
+        "authors": [
+          "Justin Gilmer",
+          "Samuel S. Schoenholz",
+          "Patrick F. Riley",
+          "Oriol Vinyals",
+          "George E. Dahl"
+        ],
+        "year": 2017,
+        "pages_or_article": "1263-1272",
+        "series": "Proceedings of Machine Learning Research",
+        "series_volume": "70"
+      },
+      "notes": []
+    },
+    "Yonetani2021": {
+      "sources": [
+        "https://proceedings.mlr.press/v139/yonetani21a.html"
+      ],
+      "verified_metadata": {
+        "title": "Path Planning using Neural A* Search",
+        "authors": [
+          "Ryo Yonetani",
+          "Tatsunori Taniai",
+          "Mohammadamin Barekatain",
+          "Mai Nishimura",
+          "Asako Kanezaki"
+        ],
+        "year": 2021,
+        "pages_or_article": "12029-12039",
+        "series": "Proceedings of Machine Learning Research",
+        "series_volume": "139"
+      },
+      "notes": []
+    },
+    "Bommasani2021": {
+      "sources": [
+        "https://api.datacite.org/dois/10.48550/arxiv.2108.07258",
+        "https://arxiv.org/abs/2108.07258"
+      ],
+      "verified_metadata": {
+        "title": "On the Opportunities and Risks of Foundation Models",
+        "authors": [
+          "Bommasani, Rishi",
+          "Hudson, Drew A.",
+          "Adeli, Ehsan",
+          "Altman, Russ",
+          "Arora, Simran",
+          "von Arx, Sydney",
+          "Bernstein, Michael S.",
+          "Bohg, Jeannette",
+          "Bosselut, Antoine",
+          "Brunskill, Emma"
+        ],
+        "year": 2021,
+        "publisher": "arXiv",
+        "doi": "10.48550/arxiv.2108.07258",
+        "total_authors": 114
+      },
+      "notes": [
+        "The bibliography lists the first ten authors followed by et al., as permitted by the MDPI reference guide."
+      ]
+    },
+    "Rizk2022": {
+      "sources": [
+        "https://api.datacite.org/dois/10.48550/arxiv.2210.14739",
+        "https://arxiv.org/abs/2210.14739"
+      ],
+      "verified_metadata": {
+        "title": "A Case for Business Process-Specific Foundation Models",
+        "authors": [
+          "Rizk, Yara",
+          "Venkateswaran, Praveen",
+          "Isahagian, Vatche",
+          "Muthusamy, Vinod"
+        ],
+        "year": 2022,
+        "publisher": "arXiv",
+        "doi": "10.48550/arxiv.2210.14739"
+      },
+      "notes": []
+    },
+    "AdamW2019": {
+      "sources": [
+        "https://arxiv.org/abs/1711.05101",
+        "https://arxiv.org/pdf/1711.05101",
+        "https://openreview.net/forum?id=Bkg6RiCqY7"
+      ],
+      "verified_metadata": {
+        "title": "Decoupled Weight Decay Regularization",
+        "authors": [
+          "Ilya Loshchilov",
+          "Frank Hutter"
+        ],
+        "year": 2019,
+        "container": [
+          "International Conference on Learning Representations"
         ]
       },
-      "publisher": "Springer International Publishing",
-      "URL": "https://doi.org/10.1007/978-3-319-59536-8_30"
+      "notes": [
+        "The author-posted paper explicitly identifies ICLR 2019. The OpenReview landing page presents a browser challenge; authors, title, and venue were checked in the arXiv record and PDF."
+      ]
     }
   }
 }
