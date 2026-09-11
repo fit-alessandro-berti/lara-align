@@ -2,6 +2,7 @@
 
 \usepackage[T1]{fontenc}
 \usepackage{amsmath}
+\usepackage{amssymb}
 \usepackage{booktabs}
 \usepackage[margin=1in]{geometry}
 \usepackage{graphicx}
@@ -58,7 +59,7 @@
 
 \setlength{\emergencystretch}{2em}
 
-\title{LARA: Training Data Generation Appendix}
+\title{LARA: Training Inputs, Data Generation, and Losses}
 \author{Alessandro Berti \and Wil M. P. van der Aalst}
 \date{}
 
@@ -71,8 +72,9 @@
 \section{Training Data Generation}
 \label{app:data-generation}
 
-This standalone appendix expands the training data generation description in
-the main paper. The data generator creates a
+This standalone appendix specifies the concrete network inputs and training
+targets, expands the data generation procedure, and gives the complete loss
+used by the reference run. The data generator creates a
 supervised alignment corpus in which every row contains a Petri net, one trace,
 and the exact optimal alignment for that trace on that net. The relevant code
 path is \texttt{scripts/init\_data.py}, which calls the behavior-family
@@ -100,22 +102,166 @@ silent model moves cost zero. The exact alignment is transition-aware. Thus a
 synchronous move stores the concrete transition name, not only the visible
 activity label. This matters when two transitions have the same label.
 
-The neural training targets are derived from this exact alignment. For each
+The network receives only numeric features of the net, its markings and labels,
+and the observed trace. Sample IDs, family metadata, the clean trace, the exact
+alignment, and its cost are not input features. The neural training targets are
+derived from this exact alignment. For each
 trace event, the sync target is the transition fired by the exact alignment
 when that event is synchronized. Events skipped by the optimum become log-move
 targets. Transitions fired without consuming an event become model-move
 targets. The exact cost is also stored as the target for the learned cost
 estimate.
 
+\subsection{A Concrete Stored Training Input}
+\label{app:concrete-input}
+
+Consider \texttt{train-000048} in \texttt{data/lara\_synthetic/train.pkl}
+(seed 13, dataset version 2). It belongs to the duplicate-prefix representation
+of family \texttt{train-6fda2acef53502aa}. The generator selected the clean trace
+$\langle A,B,D,E\rangle$, swapped the last two events, and substituted $C$ for
+$B$, yielding the observed input $\sigma=\langle A,C,E,D\rangle$. The two
+representations of this family both admit exactly $ABDE$ and $ACDE$; the same
+observation is separately aligned on each representation.
+
+For readability, write $A_L,A_R,B,C,D,E$ for transition identities, with
+$\lambda(A_L)=\lambda(A_R)=A$ and the other labels equal to the displayed
+letters. The complete input net has six places and six transitions. Its paths
+are
+\[
+ p_0\xrightarrow{A_L}p_L\xrightarrow{B}p_f
+ \xrightarrow{D}p_D\xrightarrow{E}p_E,
+ \qquad p_0\xrightarrow{A_R}p_R\xrightarrow{C}p_f.
+\]
+All arcs have weight one. The initial marking is $[p_0]$ and the final marking
+is $[p_E]$; $p_f$ is only the end of the core, before the shared suffix.
+Table~\ref{tab:stored-order} fixes the actual sorted tensor order and connects
+the readable notation to the stored identifiers. Names fix indices but are not
+embedded as semantic features.
+
+\begin{table}[htbp]
+\centering
+\small
+\caption{Stored identifier order for \texttt{train-000048}. Node indices put
+places first; transition target indices are zero-based within the transition list.}
+\label{tab:stored-order}
+\setlength{\tabcolsep}{3pt}
+\begin{tabular}{@{}rll|rll@{}}
+\toprule
+node & place & stored name & target index & transition & stored name\\
+\midrule
+0 & $p_D$ & \texttt{context\_sink\_000} & 0 & $D$ & \texttt{context\_000\_D}\\
+1 & $p_E$ & \texttt{context\_sink\_001} & 1 & $E$ & \texttt{context\_001\_E}\\
+2 & $p_0$ & \texttt{p0} & 2 & $A_L$ & \texttt{t\_A\_left}\\
+3 & $p_f$ & \texttt{pf} & 3 & $A_R$ & \texttt{t\_A\_right}\\
+4 & $p_L$ & \texttt{pl} & 4 & $B$ & \texttt{t\_B}\\
+5 & $p_R$ & \texttt{pr} & 5 & $C$ & \texttt{t\_C}\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\paragraph{Input tensors.}
+\texttt{pm4py\_to\_features} in \texttt{lara\_align/features.py} produces the
+input tuple $X=(X_P,X_T,E,r,z_T,z_\sigma,C)$. A place row is
+$(m_0,m_f,d^-,d^+,d^-+d^+)$; a transition row is
+$(\mathbf{1}_{\tau},d^-,d^+,c_M,c_S,s)$, where $s$ records a shared input/output
+place. For this row,
+\[
+ X_P=\begin{bmatrix}
+ 0&0&1&1&2\\0&1&1&0&1\\1&0&0&2&2\\
+ 0&0&2&1&3\\0&0&1&1&2\\0&0&1&1&2
+ \end{bmatrix},\qquad
+ X_T=\begin{bmatrix}
+ 0&1&1&1&0&0\\0&1&1&1&0&0\\0&1&1&1&0&0\\
+ 0&1&1&1&0&0\\0&1&1&1&0&0\\0&1&1&1&0&0
+ \end{bmatrix}.
+\]
+The transition graph nodes are $6,\ldots,11$ in target-index order. The
+following table determines every column of $E$ and every edge type $r$.
+For each row $(p,t,q)$, append the four directed edges
+$(p,t),(t,p),(t,q),(q,t)$, with types $(0,2,1,3)$ respectively. Types $0,1$
+follow consumption and production arcs; types $2,3$ reverse them. Thus $E$ is $2\times24$; $r$ repeats $(0,2,1,3)$ six times.
+\[
+\begin{array}{c|rrr}
+\text{transition}&p&t&q\\\hline
+D&3&6&0\\ E&0&7&1\\ A_L&2&8&4\\ A_R&2&9&5\\
+B&4&10&3\\ C&5&11&3
+\end{array}
+\]
+For visible labels, the hash is
+$h(a)=1+(\operatorname{int}(\operatorname{BLAKE2b}_8(\operatorname{UTF8}(a)))
+\bmod8191)$, using an unsigned big-endian integer; $h(\tau)=0$. The integer
+input vectors before augmentation are
+\[
+ z_T=(2587,4475,8075,8075,6408,5878),\qquad
+ z_\sigma=(8075,5878,4475,2587).
+\]
+The shared embedding matrix has 8{,}192 learned rows, each of dimension 96.
+An ID selects one row; it is neither an activity count nor a numeric measure
+of similarity. Event positions $(0,1,2,3)$ index a separate learned position
+embedding. Exact equality of the original visible labels gives
+\[
+ C=\begin{bmatrix}
+ 0&0&1&1&0&0\\0&0&0&0&0&1\\0&1&0&0&0&0\\1&0&0&0&0&0
+ \end{bmatrix}.
+\]
+For example, the first event matches both $A$ transitions; the third event
+matches $E$ even though $E$ is not enabled at the initial marking. Compatibility
+is a label relation, not an enabledness relation. All seven input tensors are
+now specified; no alignment or intermediate marking is supplied to the scorer.
+
+\paragraph{Exact witness and target tensors.}
+The stored optimal witness is
+\[
+ \gamma^*=\langle(A,A_R),(C,C),(E,\gg),(D,D),(\gg,E)\rangle,
+ \qquad\delta=2.
+\]
+It skips the observed $E$, synchronizes the final observed $D$, and completes
+with a model move $E$. Both the log move and visible model move cost one.
+An alternative optimum inserts model move $D$ before synchronizing the observed
+$E$ and skips the last observed $D$. Training uses the stored witness, not all
+optimal witnesses simultaneously.
+
+With the transition indices in Table~\ref{tab:stored-order},
+\texttt{targets\_from\_alignment} in \texttt{lara\_align/training.py} returns
+\[
+ y=(3,5,-1,0),\qquad q=(0,0,1,0),\qquad
+ b=(0,1,0,0,0,0),\qquad\delta=2.
+\]
+Here $y$ is an integer tensor of length four, $q$ a binary event target of
+length four, $b$ a binary transition target of length six, and $\delta$ a scalar.
+The value $-1$ excludes that event from synchronous cross-entropy. A positive
+$b_j$ means that transition $j$ occurs at least once as a model move, including
+silent moves when present; it gives neither the position nor the number of
+such occurrences. These are supervision tensors, separate from $X$.
+The row contains $C$ but not $B$, so transition-identity supervision is active.
+
+\paragraph{Training-time relabeling.}
+Each training visit independently remaps label IDs with probability $0.5$.
+The implementation draws distinct replacement IDs from $1,\ldots,8191$ for
+the distinct nonzero IDs appearing in the net and trace, and applies the same
+mapping to both vectors. For example, the assignment
+$8075\mapsto101$, $6408\mapsto205$, $5878\mapsto309$,
+$2587\mapsto413$, $4475\mapsto517$ would give
+$z_T'=(413,517,101,101,205,309)$ and
+$z_\sigma'=(101,309,517,413)$. This is an illustrative augmentation, not the
+recorded random draw. The graph, $C$, and all targets are unchanged; ID zero
+remains reserved for silent transitions. Existing hash collisions remain
+collisions. This trains reuse across activity vocabularies without claiming
+exact invariance to every label renaming. Validation and test use unmodified
+hash IDs.
+
+\FloatBarrier
+
 \subsection{Behavior Families}
 
 The generator does not create isolated trace and net pairs directly. It first
-creates a \emph{behavior family}. A behavior family is a small group of related
-models and traces that represent the same visible behavior in different Petri
-net forms. This is the unit that is assigned to train, validation, or test
-before any row is written. Assigning whole families to a split prevents a model
-variant from one behavior appearing in training while another variant of the
-same behavior appears in testing.
+creates a \emph{behavior family}. Formally, a family fixes two labeled system nets $SN_1,SN_2$ whose
+complete visible languages agree, $L(SN_1)=L(SN_2)=L$, and two observations
+$\sigma_1,\sigma_2$ obtained by corrupting traces from $L$. An observation
+need not itself belong to $L$. This is the unit that is assigned to train, validation, or test
+before any row is written. Assigning whole families to a split keeps the four rows of a generated
+family together. It does not make motif classes or all visible languages
+disjoint across splits: independently generated families can share a language.
 
 With the default configuration, each family has two Petri net representations
 and two observed traces. Therefore each family expands to four rows:
@@ -472,10 +618,14 @@ choice is not free. The complete visible languages still agree.}
 \label{fig:m-pattern-pair}
 \end{figure}
 
-For the three controlled motifs above, the default generator appends a short
-shared suffix of two fresh visible activities. This makes the examples less
-degenerate while preserving the intended comparison between the two
-representations.
+For each of the three controlled motifs above, the default generator appends
+two visible activities in sequence, labeled $D$ and $E$, to both representations.
+These labels are fresh relative to that core. If its language is $L_{\mathrm{core}}$,
+the full language becomes $\{wDE\mid w\in L_{\mathrm{core}}\}$. For example,
+$\{AB,AC\}$ becomes $\{ABDE,ACDE\}$, and $\{B,AC,CA\}$ becomes
+$\{BDE,ACDE,CADE\}$. Every clean trace gains two events; language equality
+between the paired nets is preserved. The suffix is attached to the core exit,
+and its end becomes the new final marking.
 
 \begin{figure}[htbp]
 \centering
@@ -729,8 +879,8 @@ exactly when the observed labels contain $B$ or $C$, but not both. Noise can
 remove both distinguishing labels or introduce both, in which case a particular
 optimal $A$ witness is not an identifiable target. The implementation then
 masks all synchronous transition-identity targets for that row from the sync
-loss. The row is still kept: log-move targets, model-move targets, legality, and
-optimal-cost supervision remain valid. The metadata records this as
+loss. The row is still kept: log-move, model-move, and optimal-cost targets remain active, and the
+exact witness remains replay-verified. The metadata records this as
 \texttt{transition\_identity\_loss\_masked}.
 
 \begin{figure}[htbp]
@@ -745,7 +895,7 @@ optimal-cost supervision remain valid. The metadata records this as
   \node[decision box, right=of xor, yshift=-9mm] (masked)
     {mask all synchronous\\transition-identity targets};
   \node[output box, right=12mm of active, yshift=-9mm] (kept)
-    {row retained\\log and model moves, legality,\\and optimal cost remain active};
+    {row retained\\log/model/cost targets active;\\witness remains replay-verified};
   \draw[flow] (obs) -- (xor);
   \draw[flow] (xor.east) -- ++(4mm,0) |- node[tiny label, near end, above] {yes} (active.west);
   \draw[flow] (xor.east) -- ++(4mm,0) |- node[tiny label, near end, below] {no} (masked.west);
@@ -767,12 +917,8 @@ The default command
 \[
   \texttt{python scripts/init\_data.py --overwrite}
 \]
-creates the reference corpus in \texttt{data/lara\_synthetic}. It writes one
-pickle file per split, plus machine-readable and human-readable metadata:
-\begin{itemize}
-  \item \texttt{train.pkl}, \texttt{val.pkl}, and \texttt{test.pkl};
-  \item \texttt{metadata.pkl} and \texttt{metadata.json}.
-\end{itemize}
+creates the reference corpus in \texttt{data/lara\_synthetic}. It writes the split files \texttt{train.pkl}, \texttt{val.pkl}, and
+\texttt{test.pkl}, plus \texttt{metadata.pkl} and \texttt{metadata.json}.
 
 \begin{table}
 \centering
@@ -838,7 +984,7 @@ test & 128 & 512 & 32 \\
 \end{tikzpicture}%
 }
 \caption{Balanced family quotas and row expansion in the reference corpus.
-Every motif remains wholly inside its assigned split, and every accepted family
+Every family remains wholly inside its assigned split, and every accepted family
 contributes four rows.}
 \label{fig:split-quotas}
 \end{figure}
@@ -851,5 +997,153 @@ accepted corpus: 25 attempted families raised a generation-time
 \texttt{ValueError} and were replaced by later accepted families of the same
 planned motifs. No exact-alignment, replay, or paired-cost rejection was
 recorded for this run.
+
+
+\FloatBarrier
+\section{Neural Scoring and the Complete Training Loss}
+\label{app:loss}
+
+\subsection{From Input Tensors to Fixed Move Scores}
+
+With trained parameters $\theta$, the encoder maps $X(SN,\lambda,\sigma)$
+to event vectors $v_i$ and transition vectors $u_j$, each of dimension $d=96$.
+Place features receive a linear projection and a place-type embedding.
+Transition features receive a linear projection, a transition-type embedding,
+and the embedding indexed by $z_T$. Two graph blocks combine global
+self-attention and typed arc messages. For node $v$, the message term is
+\[
+ \mu_v=\frac{\sum_{(u,v,r)\in E}W_r h_u}
+ {\max(1,|\{(u,v,r)\in E\}|)}.
+\]
+Each block adds attention and $\mu_v$ through a residual connection and layer
+normalization, followed by a residual feed-forward block. A one-layer trace
+transformer processes label embeddings plus position embeddings with no causal
+mask. Two cross-attention modules let events attend to transitions and
+transitions attend to events. Hence both outputs depend on the whole trace,
+including future events, and on the net's topology, labels, initial/final
+markings, and transition costs.
+
+The heads in \texttt{lara\_align/model.py} compute
+\[
+\begin{split}
+ \mathrm{sync}_\theta(i,t_j\mid SN,\lambda,\sigma)=S_{ij}
+ &=\begin{cases}(Wv_i)^\top u_j/\sqrt d,&C_{ij}=1,\\-10^9,&C_{ij}=0,\end{cases}\\
+ \mathrm{model}_\theta(t_j\mid SN,\lambda,\sigma)=M_j&=w_M^\top u_j+b_M,\\
+ \ell_i&=w_L^\top v_i+b_L.
+\end{split}
+\]
+Dropout is applied during training and disabled at inference. At inference one
+forward pass gives $S\in\mathbb{R}^{n\times|T|}$,
+$M\in\mathbb{R}^{|T|}$, and $\ell\in\mathbb{R}^n$. The current decoder uses
+only $S,M$, reusing them at every visited marking. Its enabledness checks and
+bounded searches depend on the current marking; the neural scores do not.
+The model-move vector is conditioned on the trace but is not indexed by event
+position. The main paper's worked decoding figure lists all move scores for a
+complete example, including the unused log scores.
+
+\subsection{Move Imitation}
+
+Use the target conventions of Section~\ref{app:concrete-input}. Let
+$I=\{i:y_i\geq0\}$ and $J_i=\{j:C_{ij}=1\}$. In the following equations,
+$y_i$ identifies its corresponding transition column, accounting for the
+stored zero-based indices. For $i\in I$, define
+\[
+ p_{ij}=\frac{\exp S_{ij}}{\sum_{k\in J_i}\exp S_{ik}},\qquad j\in J_i.
+\]
+The implementation uses a finite $-10^9$ sentinel outside $J_i$; its softmax
+contribution underflows to zero. With smoothing $\epsilon_s=0.05$,
+\[
+ \mathcal L_{\mathrm{sync}}=-\frac{1}{|I|}\sum_{i\in I}
+ \left[(1-\epsilon_s)\log p_{i,y_i}
+ +\frac{\epsilon_s}{|J_i|}\sum_{j\in J_i}\log p_{ij}\right].
+\]
+Set this term to zero if $I$ is empty. For the concrete row, $I=\{1,2,4\}$;
+only the first event offers two compatible transitions. Its smoothed target
+masses are $0.025$ on $A_L$ and $0.975$ on $A_R$. Events with a unique
+compatible transition contribute zero synchronous cross-entropy.
+
+For a raw logit $z$ and binary target $u$, write
+$\operatorname{BCE}(z,u)=\log(1+e^z)-uz$, evaluated numerically in its stable
+form. With binary smoothing $\epsilon_b=0.03$, set
+$\widetilde u=(1-2\epsilon_b)u+\epsilon_b$. The other move losses are
+\[
+ \mathcal L_{\mathrm{log}}=\frac1n\sum_{i=1}^n
+   \operatorname{BCE}(\ell_i,0.94q_i+0.03),\qquad
+ \mathcal L_{\mathrm{model}}=\frac1{|T|}\sum_{j=1}^{|T|}
+   \operatorname{BCE}(M_j,0.94b_j+0.03).
+\]
+An empty output contributes zero. For the concrete row, smoothing gives
+\[
+ \widetilde q=(0.03,0.03,0.97,0.03),\qquad
+ \widetilde b=(0.03,0.97,0.03,0.03,0.03,0.03).
+\]
+Log loss has the same weight as the other move losses, even though the decoder
+does not consume its scores.
+
+\subsection{Auxiliary Cost and Region Terms}
+
+A learned router assigns each transition and event a softmax distribution
+over $R=6$ latent regions, denoted $Q^T_{jr}$ and $Q^E_{ir}$. Each region
+forms normalized weighted means of its transition and event vectors,
+concatenates them, and applies a small feed-forward network to obtain $h_r$.
+The denominator of each weighted mean is clamped below at $10^{-6}$.
+Two softplus heads give $\widehat l_r\geq0$ and
+$\widehat u_r=\widehat l_r+\operatorname{softplus}(w_u^\top h_r+b_u)$.
+These are learned endpoints, not admissible bounds. Only the sum of upper
+endpoints is supervised against the optimal cost:
+\[
+ \widehat c=\sum_{r=1}^R\widehat u_r,\qquad
+ \mathcal L_{\mathrm{cost}}=H_1(\widehat c-\delta),\qquad
+ H_1(e)=\begin{cases}\tfrac12e^2,&|e|<1,\\|e|-\tfrac12,&|e|\geq1.\end{cases}
+\]
+The implementation also exposes sketch and uncertainty heads; neither has a
+direct supervised loss or enters the current decoder.
+
+For each place $p$, let $U_p$ be the set of distinct incident transitions,
+regardless of arc direction. Boundary regularization averages over all
+unordered transition pairs within each $U_p$:
+\[
+ \mathcal L_{\mathrm{boundary}}=
+ \frac{\displaystyle\sum_{p\in P}\sum_{\{j,k\}\subseteq U_p}
+       \left(1-\sum_{r=1}^R Q^T_{jr}Q^T_{kr}\right)}
+      {\displaystyle\sum_{p\in P}\binom{|U_p|}{2}}.
+\]
+A pair sharing several places appears once for each such place; if there are
+no pairs the term is zero. It encourages incident transitions to share regions.
+Let the mean region load over transitions and events be
+$a_r=(\sum_j Q^T_{jr}+\sum_i Q^E_{ir})/(|T|+n)$. Then
+\[
+ \mathcal L_{\mathrm{balance}}=\frac1R\sum_r(a_r-1/R)^2,\qquad
+ \mathcal L_{\mathrm{entropy}}=\tfrac12
+ \left[\frac1{|T|}\sum_j H(Q^T_j)+\frac1n\sum_i H(Q^E_i)\right],
+\]
+where $H(q)=-\sum_r q_r\log q_r$ (logs are clamped at $10^{-8}$ in code).
+For an empty trace, balance and entropy use only transitions. The positive
+entropy weight encourages concentrated assignments; balance discourages
+collapse into a single region.
+
+\subsection{Total Loss and Optimization Settings}
+
+The reference command uses the following complete objective:
+\[
+\begin{split}
+\mathcal L={}&\mathcal L_{\mathrm{sync}}+\mathcal L_{\mathrm{log}}
+ +\mathcal L_{\mathrm{model}}+0.03\mathcal L_{\mathrm{cost}}\\
+ &+0.01\mathcal L_{\mathrm{boundary}}+0.01\mathcal L_{\mathrm{balance}}
+ +0.001\mathcal L_{\mathrm{entropy}}.
+\end{split}
+\]
+Each component is reduced per input pair as above, then averaged over the
+16 pairs in an optimizer step (the implementation processes each pair
+separately and accumulates gradients). AdamW uses learning rate $5\times10^{-4}$,
+weight decay $3\times10^{-3}$, and gradient-norm clipping at 1. Dropout is
+$0.30$. Validation loss controls learning-rate reduction by factor $0.5$ after
+two plateau epochs (minimum $10^{-5}$) and early stopping with patience six
+and minimum improvement $5\times10^{-4}$. The seed is 13; the reference run
+executes 50 epochs and selects epoch 49. The settings are defined in
+\texttt{scripts/train\_model.py}; the loss reductions and masking are defined in
+\texttt{lara\_align/training.py}. Neither replay legality nor exact certification
+is a differentiable training term: both are explicit semantic checks outside
+the neural objective.
 
 \end{document}

@@ -134,13 +134,13 @@
 \renewcommand{\shortauthors}{Alessandro Berti et al.}
 
 \begin{abstract}
-Alignments explain how observed behavior deviates from a process model, but computing an optimum requires exact search and can make interactive conformance checking unpredictable. Learned guidance offers predictable candidate generation, yet a neural prediction may be illegal or silently suboptimal. LARA (Learned Alignment with Replay Assurance) addresses this tension through a strict separation of roles. A neural scorer independent of vocabulary proposes moves for previously unseen net and trace pairs, a decoder aware of markings constructs a candidate, replay checks its legality and cost, and an exact backend remains the sole authority for certification and repair. The evaluation shows that the semantic wrapper consistently yields legal candidates, learned guidance is most useful for ambiguity among duplicate labels and decisions that remain stable across identifiers, and fast candidate generation can outperform exact search on harder tested models, although established approximations generally return better candidates. LARA therefore contributes a reusable, progressive alignment architecture that combines learned proposals with an explicit semantic trust boundary rather than replacing exact or classical alignment methods.
+Alignments explain how observed behavior deviates from a process model. Most exact alignments are fast, but a few difficult traces can dominate running time and delay interactive conformance checking. LARA (Learned Alignment with Replay Assurance) investigates a foundation model for alignment: a neural scorer pretrained on abstract synthetic nets and traces and reused on unseen nets and activity vocabularies without retraining. The scorer assigns move preferences from the complete net and trace; a decoder tracks markings, replay checks legality and cost, and an exact backend certifies or repairs the candidate. Learned guidance helps resolve duplicate labels and stabilize decisions across identifiers. Fast candidate generation can outperform exact search on harder tested models, although established approximations generally return better candidates. The contribution is reusable learned scoring within a verified alignment pipeline. Such guidance should be reserved for cases where exact search is slow; replay and progressive certification also apply to classical candidates.
 \end{abstract}
 
 \ccsdesc[500]{Information systems~Business process management}
 \ccsdesc[300]{Computing methodologies~Modeling methodologies}
 
-\keywords{process mining, conformance checking, alignments, Petri nets, neural networks, certification}
+\keywords{process mining, conformance checking, alignments, Petri nets, foundation models, neural networks, certification}
 
 \begin{document}
 \raggedbottom
@@ -150,22 +150,20 @@ Alignments explain how observed behavior deviates from a process model, but comp
 \section{Introduction}
 \label{sec:introduction}
 
-Process mining relates event data to process models \cite{Aalst2016}; conformance checking compares their behavior, and alignments explain each event through synchronous, log, and model moves \cite{Adriansyah2011}. An optimal alignment minimizes deviation cost, yielding both a fitness value and a diagnostic account of disagreement. Computing it requires shortest path search over a synchronous product, commonly guided by marking equation heuristics \cite{Dongen2018,Zelst2018}. The state space grows with concurrency, loops, duplicate labels, and invisible transitions, making exact alignment intrinsically hard \cite{Schwanen2026}. These constructs are common in models obtained through process discovery, so one difficult variant can dominate running time at the event log level and make interactive analysis unpredictable.
+Process mining relates event data to process models \cite{Aalst2016}; conformance checking compares their behavior, and alignments explain each event through synchronous, log, and model moves \cite{Adriansyah2011}. An optimal alignment minimizes deviation cost, yielding both a fitness value and a diagnostic account of disagreement. Computing it requires shortest path search over a synchronous product, commonly guided by marking equation heuristics \cite{Dongen2018,Zelst2018}. The state space grows with concurrency, loops, duplicate labels, and invisible transitions, making exact alignment intrinsically hard \cite{Schwanen2026}. These constructs are common in models obtained through process discovery, so a few difficult variants can dominate event log processing time even when most alignments finish quickly. Interactive users then wait for these slow cases.
 
 Learned guidance can provide candidates with low latency, but a prediction may be illegal or silently suboptimal. Either failure is consequential: an illegal sequence is not an explanation of the observed case, while an unreported cost gap distorts fitness and downstream diagnostics. LARA (Learned Alignment with Replay Assurance) therefore enforces one invariant: \emph{neural output is never a certificate}. A neural model scores moves; a greedy decoder that is aware of the marking constructs a candidate; replay verifies legality and cost; and an exact backend certifies it by cost equality or repairs it. Thus learning proposes, while process semantics supplies every guarantee.
 
-The neural component is a reusable move scorer conditioned on topology and traces. It is trained once on synthetic data labeled with exact alignments and accepts unseen labels and Petri nets without retraining under the stated system net and unit cost setting. We position LARA deliberately: established approximations return better candidates on our benchmarks, and fast mode carries no optimality guarantee. What the combination adds is a set of properties that none of its parts provides alone: every returned result is legal because replay rejects anything else, latency is predictable because one forward pass replaces search, a single trained model serves unseen nets and vocabularies, and the exact backend can upgrade any candidate to a certified optimum on demand. The contributions are (1) this scorer, which is independent of vocabulary; (2) a trust architecture that separates learned proposal, replay verification, and exact proof (Section~\ref{sec:approach}); (3) a synthetic pipeline labeled with exact alignments and supervised by transition identity; and (4) an assessment that isolates the 4.1 percentage point learned contribution, locates the scaling threshold, compares established approximations, and tests transfer (Section~\ref{sec:assessment}).
+The neural component is a \emph{foundation model for alignment}: one scorer pretrained across abstract process structures and reused on new nets and traces without fitting a model for each process. Activity names serve as equality identifiers; their business meaning is not an input. Here the term describes reuse within alignment under the stated system net and unit cost setting, not broad competence across process mining tasks. Hashing and training-time relabeling allow unseen vocabularies, but do not guarantee identical scores under arbitrary relabeling. Established approximations return better candidates on our benchmarks, and fast mode carries no optimality guarantee. Our contributions are (1) this reusable scorer; (2) its integration with marking-aware decoding, replay, and exact certification (Section~\ref{sec:approach}); (3) synthetic training pairs with explicit transition-identity targets; and (4) an assessment that isolates the 4.1 percentage point learned contribution, measures scaling, compares established approximations, and tests transfer (Section~\ref{sec:assessment}).
 
 We ask: \textbf{RQ1, candidate contract and quality:} are returned candidates legal, and what are their optimality rates and gaps? \textbf{RQ2, contribution of learning:} when do learned scores improve the same decoder constrained by semantics? \textbf{RQ3, transfer and efficiency:} how do quality and latency change across representations, scales, real event logs, and competing methods?
-
-The rest of the paper is organized as follows. Section~\ref{sec:relatedWork} reviews related exact, approximate, and learned alignment methods. Section~\ref{sec:preliminaries} introduces the required alignment concepts, and Section~\ref{sec:approach} presents LARA's scoring, decoding, verification, and training pipeline. Section~\ref{sec:assessment} describes the implementation and evaluates candidate quality, learning, transfer, and efficiency. Section~\ref{sec:discussion} discusses the findings, limitations, and development opportunities, and Section~\ref{sec:conclusion} concludes the paper.
 
 \section{Related Work}
 \label{sec:relatedWork}
 
 \textbf{Exact and decomposed alignment.} Alignments are shortest paths through a synchronous product \cite{Zelst2018}; marking equation heuristics provide admissible lower bounds and accelerate exact search \cite{Dongen2018}, but worst case complexity remains high \cite{Schwanen2026}. Structural decomposition reduces the state space by aligning fragments, after which recomposition restores a global result or bound \cite{Aalst2013,Lee2018}. Both families derive their guarantees from the model. LARA retains that principle but changes the division of labor: its neural scorer predicts move preferences that depend on the trace, while replay and exact search alone establish claims about the returned alignment.
 
-\textbf{Approximation.} Discounted A* changes the cost function \cite{Boltenhagen2021}; fixed horizon search commits bounded prefixes \cite{Dongen2017}; tandem repeats compress traces \cite{ReissnerTandem2020}; sliding windows retain promising boundary markings \cite{Bogdanov2024}; and subset selection transfers representative alignments by edit distance \cite{FaniSani2020}. These methods exploit different regularities and therefore have different failure surfaces: bounded prefixes and windows lose global context, compression depends on repetition, and subset transfer depends on representative traces. Section~\ref{sec:comparison} compares their PM4Py implementations under independent replay and common unit costs. LARA differs less in output format than in trust handling: replay checks every candidate and exposes a cost only when it is legal, after which exact cost equality certifies it or exact search repairs it.
+\textbf{Approximation.} Discounted A* changes the cost function \cite{Boltenhagen2021}; fixed horizon search commits bounded prefixes \cite{Dongen2017}; tandem repeats compress traces \cite{ReissnerTandem2020}; sliding windows retain promising boundary markings \cite{Bogdanov2024}; and subset selection transfers representative alignments by edit distance \cite{FaniSani2020}. These methods exploit different regularities and therefore have different failure surfaces: bounded prefixes and windows lose global context, compression depends on repetition, and subset transfer depends on representative traces. Section~\ref{sec:comparison} compares their PM4Py implementations under independent replay and common unit costs. Replay checking and exact certification can be applied to any of these candidates. LARA investigates a different candidate generator: a single pretrained scorer conditioned on the complete net and trace. Its verification wrapper is shared infrastructure, not a distinction exclusive to learning.
 
 \textbf{Learning.} Neural process models largely target prediction \cite{Bukhsh2021}, and a recent survey identifies conformance checking as an open AI opportunity \cite{Genga2025}. Predicting the next activity or a scalar fitness value does not provide the required explanation for each move. LARA instead constructs an alignment against an explicit Petri net and retains concrete transition identities. Its learned scores guide a constrained decoder but never act as admissible heuristics or certificates. This conservative interface makes distribution shift observable as a larger candidate gap or an exact repair, rather than silently weakening the semantics of conformance checking.
 
@@ -185,17 +183,26 @@ is the minimum number of visible deviations required to explain the trace. Optim
 \section{Approach}
 \label{sec:approach}
 
-LARA separates learned, fast candidate generation from exact, trusted certification. Figure~\ref{fig:architecture} follows a net and trace pair through encoding, neural move scoring, decoding that is aware of the marking, replay, and exact certification. Training is offline and amortized over later use. Throughout, the neural component can be treated as a black box with a fixed interface: it reads the net and the trace (Section~\ref{sec:encoding}) and returns preference scores for possible moves (Section~\ref{sec:architecture}). Everything downstream consumes only these scores, and only to break ties; they never act as costs, bounds, or proofs.
+LARA separates learned, fast candidate generation from exact, trusted certification. Figure~\ref{fig:architecture} follows a net and trace pair through encoding, neural move scoring, decoding that is aware of the marking, replay, and exact certification. Training is offline and amortized over later use. Sections~\ref{sec:encoding} and~\ref{sec:architecture} specify the input tensors and the equations producing move scores. The decoder uses these scores to rank duplicate matches and order bounded model-move searches; they never act as costs, bounds, or proofs.
 
 
 \subsection{Input Encoding: Reading the Net and the Trace}
 \label{sec:encoding}
 
-This stage translates the problem instance into the numeric form the network consumes. Given $SN=(N,m_0,m_f)$ and a trace $\sigma$ of length $n$, it produces three objects: a graph view of the net with simple structural features, one integer token per event label, and a Boolean matrix $C$ recording which event and transition pairs carry the same visible label.
+For a labeled system net $SN=(N,m_0,m_f)$, trace $\sigma=\langle a_1,\ldots,a_n\rangle$, and the fixed unit costs, the input is the tuple
+\[
+ X(SN,\lambda,\sigma)=(X_P,X_T,E,r,z_T,z_\sigma,C).
+\]
+Places and transitions are each sorted by identifier; this fixes tensor indices, not learned name embeddings. The matrices $X_P\in\mathbb{R}^{|P|\times5}$ and $X_T\in\mathbb{R}^{|T|\times6}$ contain rows
+\[
+ x_p=(m_0(p),m_f(p),d^-(p),d^+(p),d^-(p)+d^+(p)),\quad
+ x_t=(\mathbf{1}_{\lambda(t)=\tau},d^-(t),d^+(t),c_M(t),c_S(t),s_t),
+\]
+where $d^-,d^+$ are incoming/outgoing arc counts, $c_M,c_S$ are model/synchronous move costs, and $s_t=1$ iff a place is both input and output of $t$. Initial and final markings are inputs; intermediate decoder markings are not.
 
-\textbf{Typed graph.} The net becomes a bipartite graph with one node per place and transition. Places carry initial/final token counts and degrees, exposing where execution starts and ends and where branches synchronize. Transitions carry invisibility, move costs, degrees, and a self loop flag, exposing routing, choice, and repeatable behavior. Each arc becomes two typed directed edges: the type distinguishes presets, which enable a transition, from postsets, which receive its tokens, while the reverse edge lets downstream context flow back toward a choice. This is essential for duplicate labels. If two transitions have symmetric presets but different suffixes, messages traveling only forward leave them indistinguishable; bidirectional messages bring that suffix evidence to each duplicate. The representation is linear in net size and avoids the potentially exponential reachability graph; attention inside the network is quadratic in the token counts.
+\textbf{Typed graph.} Nodes are places followed by transitions. Each arc produces a forward and a reverse edge: $E\in\mathbb{N}^{2\times2|F|}$ lists their endpoints and $r\in\{0,1,2,3\}^{2|F|}$ their types (consumption, production, reverse consumption, reverse production). Reverse edges let a transition receive messages from its output places. Thus duplicates with identical presets can acquire different representations when their outgoing branches differ. The graph avoids reachability enumeration; attention is quadratic in the numbers of nodes and events.
 
-\textbf{Vocabulary independent labels.} Stable BLAKE2b hashing maps labels to 8{,}192 identifiers, reserving one for $\tau$. Equal event and transition labels share an identifier, so they begin from the same embedding without requiring a global activity dictionary. Hashing provides an interface of fixed size, while random label remapping during training discourages name memorization. Collisions can share an embedding but cannot create an illegal synchronous move because the compatibility mask uses exact label equality: $C_{ij}=1$ precisely when event $i$ and transition $j$ carry the same visible label.
+\textbf{Labels and compatibility.} The integer vectors $z_T$ and $z_\sigma$ contain one label ID per transition and event. For a visible label $a$, $h(a)=1+(\operatorname{int}(\operatorname{BLAKE2b}_8(\operatorname{UTF8}(a)))\bmod8191)$, interpreting the eight-byte digest as an unsigned big-endian integer; $h(\tau)=0$. For example, $h(A)=8075$ and $h(C)=5878$. These IDs index a shared learned embedding matrix with 8{,}192 rows. The Boolean matrix $C\in\{0,1\}^{n\times|T|}$ has $C_{ij}=1$ iff $a_i=\lambda(t_j)\ne\tau$, using original labels rather than hashes. A collision can share an embedding but cannot create a label match. Enabledness is checked separately by the decoder.
 
 \begin{figure}
 \centering
@@ -227,7 +234,7 @@ This stage translates the problem instance into the numeric form the network con
 % Information flow
 \draw[flow] (net) -- node[flowlab, above] {net tokens} (genc);
 \draw[flow] (trace) -- node[flowlab, above] {event tokens} (tenc);
-\draw[biflow] (genc) -- node[flowlab, fill=white] {cross attention} (tenc);
+\draw[biflow] (genc) -- node[flowlab, fill=white] {cross-attention} (tenc);
 \draw[flow] (genc) -- (score);
 \draw[flow] (tenc.east) to[out=0,in=205] (score.south west);
 \draw[flow, dashed] (mask.east) -| node[flowlab, below, pos=0.2] {hard mask}
@@ -260,9 +267,19 @@ This stage translates the problem instance into the numeric form the network con
 \subsection{Neural Move Scoring}
 \label{sec:architecture}
 
-\textbf{Interface.} The scorer is a neural network whose interface Algorithm~\ref{alg:decode} consumes directly. Given the encoded pair, it returns two score tables. The \emph{synchronous score} $\mathrm{sync}(i,t)\in\mathbb{R}$ states how strongly the network prefers to explain event $a_i$ by firing transition $t$; the mask $C$ restricts it to pairs with equal visible labels, so an illegal synchronous move can never be preferred. The \emph{model move score} $\mathrm{model}(t)\in\mathbb{R}$ states how plausible it is that $t$ fires without a matching event. Higher scores are preferred; the raw numbers carry no meaning as probabilities, costs, or bounds. The network has about 1.7M parameters ($d=96$) and runs on CPU. It also predicts a log move score per event and experimental cost intervals, but the current decoder consumes neither: they are auxiliary training targets, documented with the artifact, and never enter decoding, replay, or certification.
+\textbf{Computation and dependencies.} Let $\theta$ denote the trained parameters. Linear projections of $X_P,X_T$, node-type embeddings, and shared label embeddings initialize the graph. Two graph blocks combine self-attention with degree-normalized typed messages; one trace transformer \cite{Vaswani2017} reads label embeddings plus learned event positions. Bidirectional cross-attention yields transition vectors $u_j$ and event vectors $v_i$ in $\mathbb{R}^{96}$, each conditioned on the complete input $X$. The output arrays are
+\begin{equation}
+\begin{aligned}
+ S_{ij}=\mathrm{sync}_\theta(i,t_j\mid SN,\lambda,\sigma)
+   &=\begin{cases}(Wv_i)^\top u_j/\sqrt{96},&C_{ij}=1,\\-10^9,&C_{ij}=0,\end{cases}\\
+ M_j=\mathrm{model}_\theta(t_j\mid SN,\lambda,\sigma)&=w_M^\top u_j+b_M,\qquad
+ \ell_i=w_L^\top v_i+b_L.
+\end{aligned}
+\label{eq:scores}
+\end{equation}
+Here $S\in\mathbb{R}^{n\times|T|}$ is a synchronous score matrix, $M\in\mathbb{R}^{|T|}$ a model-move score vector, and $\ell\in\mathbb{R}^n$ an auxiliary log-move score vector. $W,w_M,w_L,b_M,b_L$ belong to $\theta$. Higher logits are preferred; they are not costs or calibrated probabilities. The roughly 1.7M-parameter model computes them once per net--trace pair on CPU. They remain fixed as decoding proceeds: $M$ has no event-position index, and neither array depends on the current marking or past decoder choices. Changing the net, markings, labels, full trace, or parameters can change scores. Algorithm~\ref{alg:decode} abbreviates these fixed arrays by $S_{ij}$ and $M_j$; its marking supplies enabledness. Log scores and experimental cost heads support training only.
 
-\textbf{Why this could work.} An event whose label matches two enabled transitions cannot be resolved from the current marking alone, yet the duplicates lead to different downstream structure, and the remaining trace reveals which branch the case actually followed. Inside the black box, a graph transformer exchanges typed messages on the net (so each transition's representation reflects its context, including what can follow it), a sequence transformer \cite{Vaswani2017} reads the whole trace with the same label embeddings, and bidirectional cross attention lets events inspect candidate transitions and vice versa. The network therefore sees the trace suffix and each duplicate's future at once, which is exactly the information a greedy marking based rule lacks. Consequently, the same net receives different scores for different traces: the representation is structural, but the decisions depend on the trace.
+\textbf{Worked output.} Figure~\ref{fig:decoding} gives every entry of $S,M,\ell$ for one complete input, evaluated with the reference checkpoint. The trace suffix $c$ and the outgoing branches can inform the duplicate choice, although the learned ranking need not be correct on every input.
 
 \begin{figure}
 \centering
@@ -283,6 +300,7 @@ This stage translates the problem instance into the numeric form the network con
 \node[trans] (td) at (6.0,-0.8) {$d$};
 \node[place] (p4) at (7.2,0) {};
 \node[invtrans] (tt) at (8.4,0) {$\tau$};
+\node[font=\scriptsize, above=0.5mm of tt] {$t_\tau$};
 \node[place] (p5) at (9.6,0) {};
 \draw[netarc] (p0) -- (ta); \draw[netarc] (ta) -- (p1);
 \draw[netarc] (p1) -- (t1); \draw[netarc] (p1) -- (t2);
@@ -296,8 +314,8 @@ This stage translates the problem instance into the numeric form the network con
 \node[font=\scriptsize, text=black!60, above=0.5mm of tc] {$t_c$};
 \node[font=\scriptsize, text=black!60, below=0.5mm of td] {$t_d$};
 % synchronous scores for the ambiguous event b
-\node[scorebadge, above=1.2mm of t1] (s1) {$t_1$: sync $0.92$};
-\node[scorebadgelow, below=1.2mm of t2] (s2) {$t_2$: sync $0.08$};
+\node[scorebadge, above=1.2mm of t1] (s1) {$t_1$: $S_{2,1}=0.067$};
+\node[scorebadgelow, below=1.2mm of t2] (s2) {$t_2$: $S_{2,2}=0.039$};
 % the trace
 \node[font=\small, anchor=east] at (0.55,-2.36) {$\sigma =$};
 \pic at (1.15,-2.36) {trcfrag};
@@ -320,35 +338,50 @@ This stage translates the problem instance into the numeric form the network con
 \node[font=\scriptsize, text=black!55, anchor=west] at (3.15,-3.15)
   {tracked marking: $[p_0] \xrightarrow{t_a} [p_1] \xrightarrow{t_1} [p_2] \xrightarrow{t_c} [p_4] \xrightarrow{\tau} [p_5] = m_f$};
 \end{tikzpicture}}
-\caption{Guided decoding of $\langle a,b,c\rangle$: scores informed by the suffix select duplicate $t_1$, and bounded search completes through $\tau$; every move is fireable.}
-\label{fig:decoding}
 \end{minipage}
-\Description{A Petri net with duplicate b transitions shows decoding informed by the suffix selecting the b transition whose branch continues with c and then reaching the final marking through an invisible transition.}
+
+\smallskip
+{\footnotesize
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+$SN$ as drawn, $\sigma=\langle a,b,c\rangle$ & $t_1$ & $t_2$ & $t_a$ & $t_c$ & $t_d$ & $t_\tau$\\
+\midrule
+$S_{1,:}$ (event $a$) & -- & -- & 0.353 & -- & -- & --\\
+$S_{2,:}$ (event $b$) & 0.067 & 0.039 & -- & -- & -- & --\\
+$S_{3,:}$ (event $c$) & -- & -- & -- & 0.876 & -- & --\\
+$M$ & $-1.357$ & $-1.401$ & $-1.030$ & $-1.830$ & $-1.837$ & 2.519\\
+\bottomrule
+\end{tabular}\\[2pt]
+$\ell=(-1.682,-1.618,-1.527)$; -- denotes the mask value $-10^9$.}
+\caption{Complete move scores for the drawn net and trace, rounded to three decimals (epoch-49 checkpoint, dropout disabled). Columns follow transition-name order. The decoder selects $t_1$ for $b$, then completes through $t_\tau$ at cost zero.}
+\label{fig:decoding}
+\Description{The complete synchronous matrix, model vector, and log vector accompany a net with duplicate b transitions. The larger synchronous score selects the branch continuing with c.}
+
 \end{figure}
 
 \subsection{Decoding, Verification, and Certification}
 \label{sec:decoding}
 
-Given the net, the trace, and the two score tables, this stage returns an upper bound verified by replay, a certified optimum, or an exact repair. Algorithm~\ref{alg:decode} gives the procedure and Figure~\ref{fig:decoding} an example. Scores affect only decoding; replay and exact search inspect the resulting alignment, never neural output.
+Given the net, the trace, and the fixed arrays $S,M$, this stage returns an upper bound verified by replay, a certified optimum, or an exact repair. Algorithm~\ref{alg:decode} gives the procedure and Figure~\ref{fig:decoding} an example. Scores affect only decoding; replay and exact search inspect the resulting alignment, never neural output.
 
 \begin{algorithm}
 \caption{Guided greedy decoding, verification, and certification.}
 \label{alg:decode}
 \footnotesize
 \begin{algorithmic}[1]
-\Require system net $SN = (N, m_0, m_f)$, trace $\sigma = \langle a_1, \ldots, a_n \rangle$, scores $\mathrm{sync}(i,t)$ and $\mathrm{model}(t)$ of Section~\ref{sec:architecture}, mode
+\Require system net $SN = (N, m_0, m_f)$, trace $\sigma = \langle a_1, \ldots, a_n \rangle$, arrays $S,M$ from Eq.~\eqref{eq:scores}, mode
 \State $\gamma \gets \langle\,\rangle$;\quad $m \gets m_0$ \Comment{every appended model component is fired on $m$}
 \For{$i = 1, \ldots, n$}
   \State $E \gets \{\, t \text{ enabled at } m \mid \lambda(t) = a_i \,\}$
   \If{$|E| = 1$} append the synchronous move $(a_i, t)$ \Comment{forced by the marking}
-  \ElsIf{$|E| > 1$} append $(a_i, t^\ast)$ with $t^\ast = \arg\max_{t \in E} \mathrm{sync}(i, t)$ \Comment{duplicate labels}
-  \Else{} BFS over model moves from $m$, depth $\leq 8$: invisible transitions first, then in decreasing $\mathrm{model}(t)$
+  \ElsIf{$|E| > 1$} append $(a_i, t^\ast)$ with $t^\ast = \arg\max_{t_j \in E} S_{ij}$ \Comment{duplicate labels}
+  \Else{} BFS over model moves from $m$, depth $\leq 8$: invisible transitions first, then in decreasing $M_j$ for $t_j$
     \If{the search reaches a marking enabling $a_i$} append its model moves, then the synchronous move
     \Else{} append the log move $(a_i, \gg)$ \Comment{bounded catch up failed}
     \EndIf
   \EndIf
 \EndFor
-\State bounded search for model path $\pi_f$ from $m$ to $m_f$, depth $\leq 32$; append $\pi_f$ if found
+\State bounded search for model path $\pi_f$ from $m$ to $m_f$, depth $\leq 32$, with the same move ordering; append $\pi_f$ if found
 \State \emph{verify}: replay $\gamma$ from $m_0$; check that $m_f$ is reached and the log projection equals $\sigma$
 \If{$\pi_f$ was not found or replay fails} \Return no verified bound in \textsc{fast}, or an exact alignment in \textsc{certified}
 \EndIf
@@ -359,99 +392,14 @@ Given the net, the trace, and the two score tables, this stage returns an upper 
 \end{algorithmic}
 \end{algorithm}
 
-The decoder walks over the trace once and always knows the current marking, so every appended model component is fireable. A unique enabled label match synchronizes without consulting the network; if no short model move path can enable the event, the decoder emits a log move. The score $\mathrm{sync}(i,t)$ settles only the choice between enabled transitions with the same label (line 5), where the trace suffix can distinguish branches that a structural tie breaking rule cannot; $\mathrm{model}(t)$ only orders catch up routes (line 6). The auxiliary heads do not participate. A bounded completion can still fail to reach $m_f$, so replay is a rejection gate rather than a claim that decoding is legal by construction. No such rejection occurred in the evaluated instances.
+The decoder walks over the trace once and always knows the current marking, so every appended model component is fireable. A unique enabled label match synchronizes without consulting the network; if no short model move path can enable the event, the decoder emits a log move. The score $S_{ij}$ settles the choice between enabled transitions with the same label (line 5), where the trace suffix can distinguish branches that a structural tie breaking rule cannot; $M_j$ orders both catch up and completion searches. The auxiliary heads do not participate. A bounded completion can still fail to reach $m_f$, so replay is a rejection gate rather than a claim that decoding is legal by construction. No such rejection occurred in the evaluated instances.
 
 This design differs fundamentally from exact alignment. The bounded searches stop at the first enabling marking rather than the cheapest globally compatible one and never revise an earlier commitment. Replay independently checks both projections and computes $c(\gamma)$. \textsc{Fast} returns that verified upper bound. \textsc{Certified} still invokes exact A* for every trace, then retains the candidate if $c(\gamma)=\delta$ or returns the exact alignment as repair. Thus the 91.0\% rate reported below counts candidates confirmed and retained, not cases that avoid exact search. A precomputed runtime for each net keeps local searches cheap, so latency in fast mode is dominated by encoding and the forward pass. Irrevocable commitments and the unused log score motivate the extensions in Section~\ref{sec:discussion}.
-
-% Width of the toy training figure as a fraction of the text width:
-% adjust this single macro to resize the whole figure.
-\newcommand{\trainingfigwidth}{0.7\textwidth}
-\begin{figure}[H]
-\centering
-\resizebox{\trainingfigwidth}{!}{%
-\begin{tikzpicture}[font=\small]
-% panel 1: randomly initialized model
-\node[stagelab, text=black!60] at (1.4,1.95) {1.\ random initialization};
-\node[place] (pa) at (0,0) {};
-\fill[black!70] (pa.center) circle (0.7mm);
-\node[trans] (ta1) at (1.15,0.75) {$b$};
-\node[trans] (ta2) at (1.15,-0.75) {$b$};
-\node[place] (qa1) at (2.0,0.75) {};
-\node[place] (qa2) at (2.0,-0.75) {};
-\node[trans] (ca) at (2.85,0.75) {$c$};
-\node[trans] (da) at (2.85,-0.75) {$d$};
-\draw[netarc] (pa) -- (ta1); \draw[netarc] (pa) -- (ta2);
-\draw[netarc] (ta1) -- (qa1); \draw[netarc] (ta2) -- (qa2);
-\draw[netarc] (qa1) -- (ca); \draw[netarc] (qa2) -- (da);
-\node[scorebadgelow, above=1.1mm of ta1] {$t_1$: sync $0.51$};
-\node[scorebadgelow, below=1.1mm of ta2] {$t_2$: sync $0.49$};
-\draw[black!70, fill=black!8] (1.05,-2.45) rectangle +(0.3,0.3);
-\node[font=\tiny, text=black!70] at (1.2,-2.3) {$b$};
-\draw[black!70, fill=black!8] (1.45,-2.45) rectangle +(0.3,0.3);
-\node[font=\tiny, text=black!70] at (1.6,-2.3) {$c$};
-\node[font=\small, anchor=east] at (0.95,-2.3) {$\sigma'' =$};
-\node[font=\scriptsize, text=black!55, align=center] at (1.4,-3.05)
-  {scores $\approx$ uniform: the\\duplicates are indistinguishable};
-% panel 2: message exchange and imitation of the exact teacher
-\node[stagelab, text=black!60] at (6.4,1.95) {2.\ message exchange $+$ imitation};
-\node[place] (pb) at (5.0,0) {};
-\fill[black!70] (pb.center) circle (0.7mm);
-\node[trans, draw=seriesaqua!70!black, line width=1.1pt] (tb1) at (6.15,0.75) {$b$};
-\node[trans] (tb2) at (6.15,-0.75) {$b$};
-\node[place] (qb1) at (7.0,0.75) {};
-\node[place] (qb2) at (7.0,-0.75) {};
-\node[trans] (cb) at (7.85,0.75) {$c$};
-\node[trans] (db) at (7.85,-0.75) {$d$};
-\draw[netarc] (pb) -- (tb1); \draw[netarc] (pb) -- (tb2);
-\draw[netarc] (tb1) -- (qb1); \draw[netarc] (tb2) -- (qb2);
-\draw[netarc] (qb1) -- (cb); \draw[netarc] (qb2) -- (db);
-\node[font=\scriptsize, text=seriesaqua!45!black, left=1mm of tb1] {$\gamma^\ast$};
-\node[scorebadge, above=1.1mm of tb1] {$t_1$: sync $0.71\,\uparrow$};
-\node[scorebadgelow, below=1.1mm of tb2] {$t_2$: sync $0.29\,\downarrow$};
-\draw[black!70, fill=black!8] (6.05,-2.45) rectangle +(0.3,0.3);
-\node[font=\tiny, text=black!70] at (6.2,-2.3) {$b$};
-\draw[black!70, fill=black!8] (6.45,-2.45) rectangle +(0.3,0.3);
-\node[font=\tiny, text=black!70] at (6.6,-2.3) {$c$};
-\node[font=\small, anchor=east] at (5.95,-2.3) {$\sigma'' =$};
-\draw[biflow, dashed, draw=black!50] (6.4,-2.1) -- (6.4,-1.58);
-\node[flowlab, anchor=west] at (6.55,-1.84) {messages};
-\node[font=\scriptsize, text=black!55, align=center] at (6.4,-3.05)
-  {cross entropy on identities pulls\\the sync scores toward $t_1$};
-% panel 3: after training
-\node[stagelab, text=black!60] at (11.4,1.95) {3.\ after training};
-\node[place] (pc) at (10.0,0) {};
-\fill[black!70] (pc.center) circle (0.7mm);
-\node[trans] (tc1) at (11.15,0.75) {$b$};
-\node[trans] (tc2) at (11.15,-0.75) {$b$};
-\node[place] (qc1) at (12.0,0.75) {};
-\node[place] (qc2) at (12.0,-0.75) {};
-\node[trans, draw=seriesblue!75!black, line width=1.1pt] (cc) at (12.85,0.75) {$c$};
-\node[trans] (dc) at (12.85,-0.75) {$d$};
-\draw[netarc] (pc) -- (tc1); \draw[netarc] (pc) -- (tc2);
-\draw[netarc] (tc1) -- (qc1); \draw[netarc] (tc2) -- (qc2);
-\draw[netarc] (qc1) -- (cc); \draw[netarc] (qc2) -- (dc);
-\node[scorebadge, above=1.1mm of tc1] {$t_1$: sync $0.92$};
-\node[scorebadgelow, below=1.1mm of tc2] {$t_2$: sync $0.08$};
-\draw[black!70, fill=black!8] (11.05,-2.45) rectangle +(0.3,0.3);
-\node[font=\tiny, text=black!70] at (11.2,-2.3) {$b$};
-\draw[seriesblue!75!black, fill=seriesblue!12] (11.45,-2.45) rectangle +(0.3,0.3);
-\node[font=\tiny, text=seriesblue!60!black] at (11.6,-2.3) {$c$};
-\node[font=\small, anchor=east] at (10.95,-2.3) {$\sigma'' =$};
-\node[font=\scriptsize, text=black!55, align=center] at (11.4,-3.05)
-  {the suffix $c$ only fits the\\branch of $t_1$: scores separate};
-% progression arrows
-\draw[flow] (3.35,0) -- node[flowlab, above] {gradient\\steps} (4.75,0);
-\draw[flow] (8.35,0) -- node[flowlab, above] {more\\epochs} (9.75,0);
-\end{tikzpicture}}
-\caption{Toy training example on a duplicate label choice whose branches continue with $c$ and $d$. For $\sigma'' = \langle b,c\rangle$, cross entropy on transition identities separates initially similar scores and favors $t_1$, whose suffix contains $c$.}
-\label{fig:training}
-\Description{Three stages show duplicate label scores changing from nearly equal at initialization to a strong preference for the transition leading to c after training with an exact teacher on trace b, c.}
-\end{figure}
 
 \subsection{Training Data Generation}
 \label{sec:data}
 
-The sampling unit is a \emph{behavior family}: one visible behavior, two Petri net representations, and two observed traces shared by both nets, hence four rows.\footnote{A detailed description of the data generation procedure is available at \url{https://github.com/fit-alessandro-berti/lara-align/blob/main/data_generation.pdf}.} Table~\ref{tab:motifs} defines the four equally weighted motifs. The three controlled motifs receive the same two fresh sequential activities after the displayed core, making traces less degenerate without changing the paired comparison.
+The generator first constructs two nets $SN_1,SN_2$ with the same complete visible language $L$, then creates two observations $\sigma_1,\sigma_2$. This group is a \emph{behavior family}; it yields the four inputs $(SN_1,\sigma_1)$, $(SN_1,\sigma_2)$, $(SN_2,\sigma_1)$, $(SN_2,\sigma_2)$, each labeled by its own exact alignment.\footnote{The standalone data and training appendix, including complete input tensors and losses, accompanies the artifact at \url{https://github.com/fit-alessandro-berti/lara-align/blob/main/data_generation.pdf}.} Table~\ref{tab:motifs} defines four equally weighted motifs. In each controlled motif, both nets append activities $D$ then $E$, with labels absent from the core: $L=\{wDE\mid w\in L_{\mathrm{core}}\}$. For example, the duplicate/silent pair generates $ABDE$ and $ACDE$. The common suffix adds two events to every clean trace while preserving equality of the two languages.
 
 \begin{table}[H]
 \centering
@@ -471,20 +419,44 @@ M pattern & $\langle B\rangle$, $\langle A,C\rangle$, $\langle C,A\rangle$ & blo
 \end{tabular}
 \end{table}
 
-\textbf{Ordinary tree and canonical block.} Here, ``ordinary tree'' refers to the heterogeneous class generated from randomly sampled process trees. A process tree has 4 to 12 visible leaves, depth at most six, and sequence/XOR/AND operators sampled with probabilities .4/.3/.3. Its alphabet is about 70\% of the leaf count, so duplicate labels occur naturally. The deterministic block compiler maps a leaf to one visible transition, chains sequence children through places, lets XOR children share entry and exit places, and surrounds AND children with a $\tau$ split and join. Its output is called the canonical block representation only to distinguish it from the paired transformation.
+\textbf{Ordinary tree and canonical block.} A random process tree has 4--12 visible leaves, depth at most six, and sequence/XOR/AND probabilities .4/.3/.3. Its alphabet is about 70\% of the leaf count, permitting duplicate labels. The fixed compiler maps leaves to visible transitions, sequences to chains, XOR to shared entry/exit places, and AND to $\tau$ splits/joins. ``Canonical'' refers to this compiler. The paired net permutes only place and transition identifiers; arcs, labels, weights, and markings are preserved under a bijection. This changes the name order used by unguided tie breaking while preserving language and costs.
 
-\textbf{Isomorphic rename.} The second ordinary tree net is a clone in which only place and transition identifiers are permuted. Arcs, arc weights, visible labels, and initial/final markings are preserved under a bijection; its language and optimal costs are therefore identical. The perturbation is meaningful because unguided decoding breaks otherwise equal choices by transition name order.
+\textbf{Controlled pairs.} Duplicate-prefix nets choose the $B$ or $C$ branch when firing one of two $A$ transitions; silent-routing nets share one $A$ and choose afterward through $\tau$. Parallel nets enable $A,B$ together; explicit interleaving instead chooses $AB$ or $BA$. The M pair compares XOR$(B,\mathrm{AND}(A,C))$ with a net where $A,C$ each consume one of two tokens and $B$ consumes both. Thus $B$ conflicts with both despite unequal presets. The appendix draws every representation and specifies the generation checks.
 
-\textbf{Controlled representation pairs.} Duplicate prefix nets choose between two enabled transitions labeled $A$, whose markings determine whether $B$ or $C$ follows; silent routing nets share one $A$ and make that choice through $\tau$ transitions. True concurrency enables $A$ and $B$ together between an invisible split and join, whereas explicit interleaving removes concurrency and encodes $AB$ and $BA$ as separate XOR paths. Finally, the canonical M representation compiles XOR$(B,\mathrm{AND}(A,C))$. In its nonfree choice equivalent, a $\tau$ split marks two places; $A$ consumes the first, $C$ the second, while $B$ requires both. Thus $B$ conflicts with each side despite unequal presets, which is the characteristic M relation, while the visible complete language remains $B$, $AC$, or $CA$.
-
-Families are assigned to train/validation/test before expansion. Complete visible languages are enumerated and mismatching, unreachable, or dead transition pairs rejected. Up to 16 clean traces form a pool; two are selected and 20\% remain clean, while the rest receive one to three deletions, insertions, substitutions, repetitions, swaps, or prefix/suffix truncations. Corruption occurs once at label level and is reused across the two representations. The exact backend then aligns and checks all four rows by replay and rejects unequal paired optimal costs. The final corpus contains 2{,}048/512/512 train/validation/test rows; test traces average 3.6 events and optimal costs range from 0 to 7.
+Families are assigned to train/validation/test before expansion. The default generator requires complete visible-language enumeration within its bounds; truncated or mismatching languages, unreachable final markings, and dead transitions cause rejection. Up to 16 clean traces form a pool; two are selected and 20\% remain clean, while the rest receive one to three edits: deletions, insertions (including an outside label), substitutions, repetitions, swaps, or prefix/suffix truncations. Corruption occurs once at label level and is reused across the two representations. The exact backend then aligns and checks all four rows by replay and rejects unequal paired optimal costs. The final corpus contains 2{,}048/512/512 train/validation/test rows; test traces average 3.6 events and optimal costs range from 0 to 7.
 
 \subsection{Exact Targets and Optimization}
 \label{sec:training}
 
-Training is imitation of the exact aligner. For every generated row, PM4Py computes one optimal alignment, which replay checks and which is then read as per move targets: for each event, the concrete transition that explained it synchronously, or the fact that it was skipped, and for each position, the transitions fired as model moves. The network is trained so that $\mathrm{sync}(i,t)$ ranks the teacher's transition highest among the label compatible candidates (cross entropy over transition identities) and $\mathrm{model}(t)$ is high exactly where the teacher fired model moves (binary cross entropy); the auxiliary heads add low weight terms that never enter decoding, replay, or exact search. Full loss definitions and weights ship with the artifact. When optima are not unique, supervision uses the single witness returned by PM4Py, so identity accuracy measures witness agreement rather than correctness. Figure~\ref{fig:training} illustrates the intended effect: suffix evidence separates two branches with the same label.
+For each input $X$, one replay-checked optimal witness supplies targets $y_i\in\{-1,0,\ldots,|T|-1\}$, $q_i\in\{0,1\}$, and $b_j\in\{0,1\}$. Here $y_i$ is the zero-based index of the teacher's synchronous transition, or $-1$ if absent/masked; $q_i=1$ iff event $i$ is a log move; and $b_j=1$ iff $t_j$ occurs at least once as a model move anywhere in the alignment. The latter records neither its position nor its multiplicity. Table~\ref{tab:training-row} gives a stored training row before augmentation. These targets and $\delta$ supervise learning; they are not network inputs.
 
-Training uses AdamW, early stopping, and random relabeling of activities in each epoch, which, beyond hashing, discourages the memorization of activity names. The reference run takes about 41 seconds per epoch on one CPU and reaches its best validation loss at epoch 49 of 50 (Figure~\ref{fig:panels}, left). Validation loss is lower than training loss because dropout and label remapping remain active only in the training pass; recognizing which observed events are deviations remains the hardest subtask.
+\begin{table}[H]
+\centering
+\caption{Concrete row \texttt{train-000048}. The duplicate-prefix net has paths $A_LBDE$ and $A_RCDE$, with both $A_L,A_R$ labeled $A$. Indices use the stored transition order.}
+\label{tab:training-row}
+\footnotesize
+\begin{tabular}{@{}lp{0.73\linewidth}@{}}
+\toprule
+quantity & value\\
+\midrule
+input net & $m_0=[p_0]$, $m_f=[p_E]$; paths $p_0\xrightarrow{A_L}p_L\xrightarrow{B}p_f\xrightarrow{D}p_D\xrightarrow{E}p_E$ and $p_0\xrightarrow{A_R}p_R\xrightarrow{C}p_f$, sharing the suffix\\
+input trace & $\sigma=\langle A,C,E,D\rangle$, event IDs $(8075,5878,4475,2587)$\\
+transition order & $(D,E,A_L,A_R,B,C)$; label IDs $(2587,4475,8075,8075,6408,5878)$\\
+exact witness & $(A,A_R),(C,C),(E,\gg),(D,D),(\gg,E)$; $\delta=2$\\
+targets & $y=(3,5,-1,0)$, $q=(0,0,1,0)$, $b=(0,1,0,0,0,0)$\\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Let $I=\{i:y_i\geq0\}$ and $J_i=\{j:C_{ij}=1\}$. The synchronous loss is mean cross-entropy over $I$, with target mass $0.95$ on the teacher plus $0.05$ uniformly over $J_i$; the teacher index is converted to the corresponding column. Log and model losses are mean binary cross-entropies with logits $\ell_i,M_j$ and smoothed targets $0.94q_i+0.03$, $0.94b_j+0.03$. The total loss is
+\[
+\mathcal L=\mathcal L_{\rm sync}+\mathcal L_{\rm log}+\mathcal L_{\rm model}
+ +0.03\mathcal L_{\rm cost}+0.01\mathcal L_{\rm boundary}
+ +0.01\mathcal L_{\rm balance}+0.001\mathcal L_{\rm entropy}.
+\]
+The cost term is smooth-L1 against $\delta$; the last three terms regularize auxiliary region assignments (full equations in the appendix). They do not certify bounds. For ambiguous duplicate-prefix rows containing both or neither of $B,C$, all $y_i$ are masked; other targets remain active. Multiple optima are possible, so identity agreement measures agreement with one teacher witness.
+
+Training uses AdamW and early stopping. On each training visit, probability $0.5$ triggers a consistent random remapping of the nonzero label IDs in the net and trace; equality and $C$ are preserved. The reference run takes about 41 seconds per epoch on one CPU and reaches its best validation loss at epoch 49 of 50 (Figure~\ref{fig:panels}, left). Dropout and remapping are disabled for validation, contributing to its lower loss.
 
 \begin{figure}[H]
 \centering
@@ -705,7 +677,7 @@ size & dev.\ & $|T|$ & legal & optimal & mean gap & fast med. & exact med. & spe
 \end{minipage}
 \end{center}
 
-Table~\ref{tab:scaling} and Figure~\ref{fig:scaling} expose a threshold between quality and latency. LARA stays at 4.6 to 8.7 ms as net size grows because the forward pass is predictable; exact A* is faster on the small cells but crosses over at size 20 for deviation 0.35 and size 40 for 0.15, where the first timeout appears. Replay accepts every stress candidate, but the exact cost rate falls to 30 to 44\% at size 40 and mean gaps reach 8.1 to 11.7. Guidance adds little on this random stress distribution: unguided decoding takes 0.2 to 1.2 ms and beats exact search throughout. Learned inference therefore pays only when its choices informed by the trace improve quality enough to justify the forward pass floor.
+Table~\ref{tab:scaling} and Figure~\ref{fig:scaling} expose a threshold between quality and latency. LARA takes 4.6 to 8.7 ms on this grid; exact A* is faster on the small cells but crosses over at size 20 for deviation 0.35 and size 40 for 0.15, where the first timeout appears. Replay accepts every stress candidate, but the exact cost rate falls to 30 to 44\% at size 40 and mean gaps reach 8.1 to 11.7. Guidance adds little on this random stress distribution: unguided decoding takes 0.2 to 1.2 ms and beats exact search throughout. Learned inference therefore pays only when its choices informed by the trace improve quality enough to justify the forward pass floor.
 
 \subsection{Comparison with Alignment Approximations}
 \label{sec:comparison}
@@ -733,13 +705,13 @@ subset/edit dist. & 70.3\%  & 0.637 & N/A & N/A & N/A & N/A & N/A \\
 \end{tabular}
 \end{table}
 
-All Petri net approximations beat LARA's exact cost rate on held out data; sliding window is perfect because every trace fits its single window of 20 events, so that cell does not exercise its approximation boundary. LARA beats only subset/edit distance there. Sliding window and tandem repeats also dominate stress quality, and discounted A* is faster and more accurate overall. LARA's distinct advantage is coverage: it returns a legal result in every case and has lower medians at size 40 than tandem repeats, sliding window, and fixed horizon. The comparison rules out a claim that the current learned decoder is the best general approximation; it instead locates the contribution in reusable scoring plus an explicit trust boundary. Beam search or decoding in the style of A* over those scores, or certifying a stronger approximate candidate, are the natural next steps.
+All Petri net approximations beat LARA's exact cost rate on held out data; sliding window is perfect because every trace fits its single window of 20 events, so that cell does not exercise its approximation boundary. LARA beats only subset/edit distance there. Sliding window and tandem repeats also dominate stress quality, and discounted A* is faster and more accurate overall. LARA achieved full coverage in this experiment: it returns a legal result in every case and has lower medians at size 40 than tandem repeats, sliding window, and fixed horizon. The comparison rules out a claim that the current learned decoder is the best general approximation; it instead locates the contribution in reusable scoring plus an explicit trust boundary. Beam search or decoding in the style of A* over those scores, or certifying a stronger approximate candidate, are the natural next steps.
 \subsection{Application to Real Life Event Logs}
 \label{sec:reallife}
 
 Without fine tuning, we evaluated the checkpoint on a building permit receipt event log \cite{ReceiptLog} (1{,}434 traces, 116 variants, 27 labels) and a road fines event log sample \cite{RoadTrafficLog} (100 traces, 10 variants, 10 labels). Inductive Miner models \cite{Leemans2013} use noise thresholds 0.0 and 0.5. Unseen labels enter only through hashing, and the fitting receipt net has 47 invisible versus 27 visible transitions.
 
-Replay accepts every real event log candidate (Table~\ref{tab:reallife}), showing that the semantic wrapper remains effective when topology, vocabulary, and trace lengths differ from training. Optimality weighted by traces (74.6 to 100\%) exceeds results by variant because misses concentrate in rare, long variants. Exact A* wins on the small road fines nets, whereas the fast candidate is faster on the tested receipt models with many invisible transitions (16.0 vs. 31.0 ms and 6.7 vs. 12.7 ms). Guided and unguided quality coincide because these nets contain no duplicate labels. The experiment therefore exercises the interface independent of vocabulary and predictable inference, but provides no evidence for the scorer's main ambiguity advantage.
+Replay accepts every real event log candidate (Table~\ref{tab:reallife}), showing that the semantic wrapper remains effective when topology, vocabulary, and trace lengths differ from training. Optimality weighted by traces (74.6 to 100\%) exceeds results by variant because misses concentrate in rare, long variants. Exact A* wins on the small road fines nets, whereas the fast candidate is faster on the tested receipt models with many invisible transitions (16.0 vs. 31.0 ms and 6.7 vs. 12.7 ms). Guided and unguided quality coincide because these nets contain no duplicate labels. The experiment therefore exercises the interface for unseen vocabularies and the measured candidate latency, but provides no evidence for the scorer's main ambiguity advantage.
 
 \begin{table}
 \caption{Results without fine tuning on real life event logs with Inductive Miner models (per variant; trace weighted values weight variants by frequency).}
@@ -764,7 +736,7 @@ Figure~\ref{fig:failuremechanism} contrasts the alignments for a representative 
 
 \begin{figure}[!t]
 \centering
-\resizebox{0.75\textwidth}{!}{%
+\resizebox{0.98\textwidth}{!}{%
 \begin{tikzpicture}[
   font=\scriptsize,
   aligncell/.style={rectangle, draw=black!45, minimum width=7.2mm,
@@ -829,7 +801,7 @@ Figure~\ref{fig:failuremechanism} contrasts the alignments for a representative 
   inner xsep=2mm, inner ysep=1.5mm, fit=(lL1)(lM1)(lL8)(lM8)(laracost)] {};
 \end{scope}
 \end{tikzpicture}}
-\caption{Failure with a gap of 4 (invisible routing omitted): the optimal alignment costs 2; LARA's catch up reaches $m_f$ and costs 6.}
+\caption{A suboptimal candidate with cost gap four (invisible routing omitted). Subscripts distinguish event occurrences, not activity labels: $D_e,D_l$ both denote $D$, and $C_2$ denotes the repeated $C$. The optimal alignment costs two; LARA completes the model too early and incurs cost six.}
 \label{fig:failuremechanism}
 \Description{The observed trace A, early D, B, C, duplicate C, late D is compared across two alignment tables. The optimum skips the early D and duplicate C for cost two. LARA inserts B and C as model moves, synchronizes the early D, reaches the final marking, and must skip the remaining B, C, C, D events, producing cost six and a gap of four.}
 \end{figure}
@@ -837,20 +809,20 @@ Figure~\ref{fig:failuremechanism} contrasts the alignments for a representative 
 \section{Discussion}
 \label{sec:discussion}
 
-\textbf{Position among alignment techniques.} The results do not support replacing exact A* or established approximations with the current decoder. Exact A* is faster on small models, and the four tested Petri net search and compression approximations produce better candidates on held out data. LARA contributes something different: one learned proposal mechanism can process unseen labels and nets behind an unchanged semantic contract. Replay establishes a legal upper bound, while exact cost equality or repair establishes optimality. Fast mode returned a legal alignment for every evaluated input, latency stayed below 9 ms on the scaling grid, and it beat exact A* on the tested larger receipt models with many invisible transitions. Certified mode, however, still ran exact A* in every case and therefore has no demonstrated speedup from start to finish; 91.0\% is the fraction retained after exact comparison. Classical methods remain preferable when their quality and coverage fit the workload. LARA is interesting when portability, a predictable verified first result, and exact evidence on demand matter together.
+\textbf{Position among alignment techniques.} Exact A* is faster on small models, and the tested search and compression approximations yield better candidates. LARA contributes reusable learned scoring for unseen nets and labels within a verification pipeline also applicable to classical candidates. Fast mode returned legal alignments on all evaluated inputs and beat exact A* on the larger receipt models. Certified mode still ran exact A* in every case, so no end-to-end speedup is demonstrated; 91.0\% is the fraction retained after exact comparison. A time-budget policy could reserve candidate generation for slow exact cases, but has not yet been evaluated.
 
-\textbf{What learning contributes now.} The 91.0\% aggregate rate does not mean that every decision needs a neural model. Decoding that is aware of the marking is already strong and cheaper without guidance. The paired ablation isolates two benefits: guidance holds quality at 84.4\% across canonical trees and isomorphic identifier renamings, while the baseline changes, and it raises duplicate prefix optimality by 26.6 points when future trace context must distinguish equal labels. It changes no candidate cost for the other tested motifs. Learning therefore earns its cost in identifiable cases, while structural, approximate, or exact methods remain better choices elsewhere.
+\textbf{What learning contributes now.} The paired ablation isolates two benefits: guidance maintains 84.4\% optimality across canonical trees and identifier renamings, and raises duplicate-prefix optimality by 26.6 points when trace context must distinguish equal labels. It changes no candidate cost for the other tested motifs. Thus the strong marking-aware baseline explains much of the aggregate result; inference is worthwhile only where improved choices justify its cost.
 
-\textbf{Next steps for improving LARA.} The most direct improvement is to let the decoder choose between skipping the current event and inserting model moves: it can compare the trained log-move score with the scores of legal catch-up options. Beam search could then keep several partial alignments and markings instead of committing immediately to one path. Neural scores could also prioritize states during A* search, while the admissible heuristic and stopping rule continue to establish optimality. The replay-verified cost of a candidate provides an upper bound for pruning that search. More broadly, the existing certifier could evaluate both learned and classical candidates, and a portfolio could select the most suitable unguided, learned, approximate, or exact method for each input. Processing multiple trace variants in one batch could reduce inference overhead. In all cases, learning would influence which candidates are explored or returned, while replay and exact comparison would continue to determine legality and optimality.
+\textbf{Next steps.} Joint ranking of log moves and model-move paths could avoid the early completion in Figure~\ref{fig:failuremechanism}; beam search could retain alternative markings. Scores could prioritize exact-search states while admissible bounds and stopping rules retain optimality guarantees, and a replay-verified candidate could provide an incumbent upper bound. A portfolio could choose among learned, unguided, classical approximate, and exact methods under the same certifier. Batching variants could reduce inference overhead. These are possible extensions, not demonstrated improvements.
 
 \textbf{Limitations and validity.} On the largest stress models only 30 to 44\% of candidates are optimal, classical approximations are much closer to the optimum, and inference is needless overhead on simple inputs. Cost intervals are uncalibrated, costs are unitary, and evidence from real event logs covers two event logs. All tested representation pairs occur in training, scaling cells contain 10 samples, and the PM4Py configurations are not an exhaustive tuning study. Paired evaluation, independent replay, and exact references strengthen the comparison, but broader event logs, model classes, costs, lifecycle attributes, and representation shifts are needed before claiming wider generality. Agreement on transition identity remains diagnostic because several optimal alignments may coexist.
 
 \section{Conclusion}
 \label{sec:conclusion}
 
-LARA demonstrates that reusable learned guidance can support Petri net trace alignment while leaving semantic authority with established verification methods. A single checkpoint can process previously unseen labels and nets, return candidates that are independently checked by replay, and make alignment decisions more stable across equivalent representations and more informed when duplicate labels require trace context. This separation combines the adaptability of learned proposals with a clear path to exact certification.
+LARA studies a foundation model for Petri net trace alignment: one scorer pretrained on abstract synthetic nets and traces transfers to unseen process models and labels. Its contribution is reusable move guidance, especially for duplicate labels and stability across identifiers. Replay and exact comparison retain their established roles in checking legality and optimality; the same checks can serve classical approximations.
 
-The architecture also provides a practical foundation for further improvement. The decoder could compare log moves and model moves directly, rather than considering them at different stages. It could also retain several partial alignments, allowing it to recover when an early local choice later proves costly. During exact search, learned scores could prioritize promising states, while the cost of a replay-verified candidate could serve as an upper bound for pruning. A portfolio could generate candidates with both learned and classical methods and evaluate them through the same certifier. Batching multiple trace variants could further reduce inference overhead. These extensions would change how candidates are generated and explored, but not how results are trusted: replay would still establish legality, and exact cost comparison would still establish optimality. LARA therefore provides a basis for progressive alignment services that return a verified candidate first and exact evidence when needed.
+Most alignments are fast with exact methods; a few difficult cases dominate running time. Learned or classical approximations should target those slow cases, for example after an exact-search time budget. The current certified mode still runs exact A* for every input and demonstrates no end-to-end speedup. Joint log/model decisions, beam search, incumbent bounds, and method portfolios remain possible improvements. Progressive services can combine any suitable candidate generator with later exact certification. LARA supplies a pretrained option whose present quality and transfer limits are reported here.
 
 \section*{Acknowledgements}
 
