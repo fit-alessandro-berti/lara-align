@@ -44,7 +44,7 @@ absent from this directory's root and is not restored to the repository.
 Delivered PDF SHA-256:
 
 ```
-0975b6930863d9e3652cc38a2011e25a1c31090e4a5a70fb502071b1020b7613
+26a369a8ffd6a8017aa9762b98aa8af13c93c8bc21595f7b3e37e45ea84762e9
 ```
 
 ## Requested editorial and layout changes
