@@ -1,8 +1,13 @@
 # Applied Sciences submission source
 
-The journal manuscript contains nine main sections, 11 vector figures, 18 tables,
+The journal manuscript contains nine main sections, 12 vector figures, 18 tables,
 and 34 verified references. Data generation and training are integrated into
 Section 5; there is no appendix or separate data-generation document.
+
+The introduction includes a visual outline of the paper. Section 4 begins with
+a three-paragraph overview, and each of its five subsections identifies its
+input, processing, and output. All numbered figures and tables use `figure*` or
+`table*` with `[!t]` or `[!b]` placement and are mentioned in the prose.
 
 The target is the Applied Sciences special issue
 [Process Mining: Theory and Applications](https://www.mdpi.com/journal/applsci/special_issues/87G1T64B1M).

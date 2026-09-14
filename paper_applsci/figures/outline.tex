@@ -1,0 +1,22 @@
+\begin{tikzpicture}[x=1cm,y=1cm]
+\node[box,text width=32mm,minimum height=18mm] (concepts) at (1.8,0)
+  {\textbf{Section~\ref{sec:preliminaries}}\\Concepts, questions,\\and contributions};
+\node[box,text width=32mm,minimum height=18mm] (related) at (6,0)
+  {\textbf{Section~\ref{sec:related}}\\Related work\\and positioning};
+\node[learnbox,text width=32mm,minimum height=18mm] (method) at (10.2,0)
+  {\textbf{Section~\ref{sec:method}}\\Neural proposals,\\replay, and certification};
+\draw[flow] (concepts) -- (related);
+\draw[flow] (related) -- (method);
+\node[learnbox,text width=32mm,minimum height=18mm] (training) at (10.2,-2.4)
+  {\textbf{Section~\ref{sec:training}}\\Synthetic data\\and exact supervision};
+\node[box,text width=32mm,minimum height=18mm] (software) at (6,-2.4)
+  {\textbf{Section~\ref{sec:implementation}}\\Implementation\\and workbench};
+\node[verifybox,text width=32mm,minimum height=18mm] (evaluation) at (1.8,-2.4)
+  {\textbf{Section~\ref{sec:evaluation}}\\Quality, ablations,\\and transfer};
+\draw[flow] (method) -- (training);
+\draw[flow] (training) -- (software);
+\draw[flow] (software) -- (evaluation);
+\node[box,text width=70mm,minimum height=13mm] (conclusions) at (7.4,-4.6)
+  {\textbf{Sections~\ref{sec:discussion} and~\ref{sec:conclusion}}\\Interpretation, limitations, and conclusions};
+\draw[flow] (evaluation.south) |- (conclusions.west);
+\end{tikzpicture}
