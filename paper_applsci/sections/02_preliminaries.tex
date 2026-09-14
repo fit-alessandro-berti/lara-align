@@ -7,7 +7,7 @@ The method combines executable process semantics with a statistical predictor. T
 
 A trace records the order of activities observed for one case. Let $\mathcal A$ be an activity alphabet and let $\sigma=\langle a_1,\ldots,a_n\rangle\in\mathcal A^*$ be a finite trace. Its length is $|\sigma|=n$; the empty trace is $\epsilon$. An event log $\mathcal E$ is a multiset of traces. A \emph{variant} is a distinct activity sequence, and its frequency is the number of cases with that sequence. LARA studies control flow: timestamps, resources, and other event attributes do not enter the scorer or alignment cost.
 
-We represent a labeled Petri net as $SN=(P,T,F,\lambda,m_0,m_f)$. Here $P$ is a finite set of places, $T$ is a disjoint finite set of transitions, and $F\subseteq(P\times T)\cup(T\times P)$ is the arc relation. We use ordinary arcs with weight one in the formal exposition. The labeling function $\lambda:T\to\mathcal A\cup\{\tau\}$ assigns a visible activity or the invisible label $\tau$. A marking $m:P\to\N$ assigns tokens to places, with $\N$ including zero. The initial and final markings are $m_0$ and $m_f$.
+We represent a labeled Petri net as $SN=(P,T,F,\lambda,m_0,m_f)$. Here $P$ is a finite set of places, $T$ is a disjoint finite set of transitions, and $F\subseteq(P\times T)\cup(T\times P)$ is the arc relation. We use ordinary arcs with weight one in the formal exposition. The labeling function $\lambda:T\to\mathcal A\cup\{\tau\}$ assigns a visible activity or the invisible label $\tau\notin\mathcal A$. A marking $m:P\to\N$ assigns tokens to places, with $\N$ including zero. The initial and final markings are $m_0$ and $m_f$; $[p]$ denotes the marking with one token at $p$ and zero elsewhere.
 
 For $t\in T$, its preset ${}^\bullet t=\{p:(p,t)\in F\}$ contains its input places, and its postset $t^\bullet=\{p:(t,p)\in F\}$ contains its output places. The transition is enabled at $m$ when $m(p)\geq1$ for every $p\in{}^\bullet t$. Firing it produces the marking
 \begin{equation}
@@ -15,7 +15,7 @@ For $t\in T$, its preset ${}^\bullet t=\{p:(p,t)\in F\}$ contains its input plac
  \qquad p\in P,
  \label{eq:firing}
 \end{equation}
-written $m\xrightarrow{t}m'$. In words, firing consumes a token from every input and produces a token in every output. A transition whose label is $\tau$ still changes the marking; it simply does not represent a recorded activity. A \emph{complete firing sequence} starts at $m_0$ and reaches exactly $m_f$. We assume that at least one such sequence exists. This assumption ensures that an alignment can always be constructed by using log moves for the trace and model moves for a complete model execution.
+written $m\xrightarrow{t}m'$. In words, firing consumes a token from every input and produces a token in every output. An invisible transition follows the same firing rule without representing a recorded activity; firing can leave a marking unchanged, for example for a self loop. For a finite transition sequence $\rho\in T^*$, $m\xrightarrow{\rho}m'$ means successive enabled firings, with $m\xrightarrow{\epsilon}m$. A \emph{complete firing sequence} starts at $m_0$ and reaches exactly $m_f$. We assume that at least one such sequence exists. This assumption ensures that an alignment can always be constructed by using log moves for the trace and model moves for a complete model execution.
 
 Distinct transitions may carry the same label. We therefore distinguish the identifier $t$ from its visible label $\lambda(t)$. Figure~\ref{fig:running} illustrates why: $t_1$ and $t_2$ both explain an event labeled $b$, but only $t_1$ directly leads to $c$. Matching the label alone does not identify a model execution. Invisible transitions create a related issue: an event may become executable only after unobserved routing steps.
 
@@ -33,7 +33,7 @@ Process trees provide one source of synthetic Petri nets. A visible leaf represe
 \subsection{Alignments: Executability and Deviation Cost}
 \label{sec:alignment}
 
-An alignment is needed because a trace may omit a model activity or contain an activity that the model cannot execute at that point. Let $\skipmove$ denote a skip on one side of an alignment. The permitted moves and their costs are shown in Table~\ref{tab:moves}. A synchronous move consumes one observed event and fires a transition with that label. A log move consumes an event without changing the marking. A model move fires a transition without consuming an event. The pair $(\skipmove,\skipmove)$ is excluded because it explains nothing.
+An alignment is needed because a trace may omit a model activity or contain an activity that the model cannot execute at that point. Let $\skipmove\notin\mathcal A\cup T\cup\{\tau\}$ denote a skip on one side of an alignment. The permitted moves and their costs are shown in Table~\ref{tab:moves}, where $a\in\mathcal A$ and $t\in T$. A synchronous move consumes one observed event and fires a transition with that label. A log move consumes an event without changing the marking. A model move fires a transition without consuming an event. The pair $(\skipmove,\skipmove)$ is excluded because it explains nothing.
 
 \begin{table*}[!t]
 \caption{Move vocabulary and the fixed costs used in this study. An invisible model move is an actual firing, whereas a skip means that nothing happens on that side.}
@@ -51,7 +51,7 @@ Invisible model & $(\skipmove,t)$, $\lambda(t)=\tau$ & Unobserved routing advanc
 \end{tabularx}
 \end{table*}
 
-For a move sequence $\gamma$, its log projection $\pi_L(\gamma)$ removes the model components and skips; its model projection $\pi_T(\gamma)$ removes the log components and skips but retains all transition identities, including invisible transitions. The alignment is \emph{legal} when
+For a finite sequence $\gamma$ of permitted moves, its log projection $\pi_L(\gamma)$ removes the model components and skips; its model projection $\pi_T(\gamma)$ removes the log components and skips but retains all transition identities, including invisible transitions. The alignment is \emph{legal} when
 \begin{equation}
  \pi_L(\gamma)=\sigma
  \quad\text{and}\quad
@@ -65,19 +65,19 @@ Let $c(\gamma)$ be the sum of move costs. The optimal alignment cost is
  \delta(\sigma,SN)=\min_{\gamma\text{ legal for }(\sigma,SN)}c(\gamma).
  \label{eq:optimum}
 \end{equation}
-Under these costs, $\delta$ is the minimum number of visible insertions and deletions needed to explain the trace by a complete model execution. It does not measure a monetary or business loss. A substitution normally requires one log move and one visible model move, giving cost two. Other cost policies may be appropriate in an application, but the empirical results here concern the policy in Table~\ref{tab:moves}.
+The feasible set is nonempty by the complete firing sequence assumption, and its costs are nonnegative integers, so the minimum is finite and attained even if there are infinitely many legal alignments. Under these costs, $\delta$ is the minimum number of visible insertions and deletions needed to explain the trace by a complete model execution. It does not measure a monetary or business loss. Replacing one visible activity by another is represented by one log move and one visible model move, giving cost two; the optimal alignment may instead use a different model execution. Other cost policies may be appropriate in an application, but the empirical results here concern the policy in Table~\ref{tab:moves}.
 
 An optimum need not be unique. Independent activities can be ordered differently, and invisible routes may differ without changing the visible cost. Consequently, matching the exact teacher's move sequence is a stricter diagnostic than achieving the same cost. We will report both, but use cost equality for optimality. For a candidate verified by replay $\widehat\gamma$, its \emph{gap} is
 \begin{equation}
  g=c(\widehat\gamma)-\delta(\sigma,SN)\geq0.
  \label{eq:gap}
 \end{equation}
-If exact search does not finish, the gap is unknown. A returned legal candidate still supplies the upper bound $\delta\leq c(\widehat\gamma)$.
+If exact search does not finish, the gap is generally unknown. A returned legal candidate still supplies $0\leq\delta\leq c(\widehat\gamma)$. In particular, a legal zero cost candidate already implies $\delta=0$ and $g=0$.
 
 \subsection{Exact Search, Replay, and Certificates}
 \label{sec:exactprelim}
 
-The shortest path view explains why finding an alignment and checking one have different computational demands~\cite{Zelst2018}. A search state can be represented as $(i,m)$, where $i$ events have been consumed and $m$ is the current marking. Synchronous and log moves advance $i$; synchronous and model moves update $m$. Search starts at $(0,m_0)$ and ends at $(n,m_f)$. Equivalently, one constructs a synchronous product of the Petri net of the process and a linear Petri net for the trace. The path cost is the alignment cost.
+The shortest path view explains why finding an alignment and checking one have different computational demands~\cite{Zelst2018}. A search state can be represented as $(i,m)$, where $i\in\{0,\ldots,n\}$ events have been consumed and $m$ is the current marking. Synchronous and log moves require $i<n$, consume $a_{i+1}$, and advance $i$ by one. Synchronous and model moves require an enabled transition and update $m$ by Equation~\eqref{eq:firing}; a synchronous move additionally requires its label to equal $a_{i+1}$. Search starts at $(0,m_0)$ and ends at $(n,m_f)$. Equivalently, one constructs a synchronous product of the Petri net of the process and a linear Petri net for the trace. The path cost is the alignment cost. A finite Petri net can have infinitely many reachable markings. Existence of an optimum therefore does not by itself guarantee termination of this search, particularly in the presence of unbounded zero cost invisible behavior.
 
 A* prioritizes states by the sum of the cost already incurred and an estimate of the remaining cost. An estimate is \emph{admissible} when it never overestimates the true minimum remaining cost. Marking equation relaxations obtain useful lower bounds by requiring token balance while relaxing parts of the firing order constraints~\cite{Dongen2018}. They can guide an exact search because their relationship to the original problem is formally justified. LARA's neural scores have no such property and are never substituted for admissible bounds.
 

@@ -24,7 +24,7 @@ Independent replay checks every firing, complete trace consumption, and the fina
  X=(X_P,X_T,E,r,z_T,z_\sigma,C).
  \label{eq:input}
 \end{equation}
-Table~\ref{tab:inputs} summarizes these objects. Place and transition identifiers are sorted to define tensor indices; their strings are not embedded as semantic features. This convention makes the mapping between scores and concrete transitions recoverable during decoding.
+Table~\ref{tab:inputs} summarizes these objects. At the software interface, activity labels are strings, invisible labels are represented by \texttt{None}, and place and transition identifiers are unique strings within each node type. Activity labels and transition identifiers must avoid PM4Py's reserved skip string \texttt{>>}. Place and transition identifiers are sorted to define tensor indices; their strings are not embedded as semantic features. This convention makes the mapping between scores and concrete transitions recoverable during decoding.
 
 \begin{table*}[!t]
 \caption{Neural inputs. A tensor is a numerical array; its dimensions indicate which process objects index its entries. The teacher alignment is absent from this list.}
@@ -49,7 +49,7 @@ Let $d^-(v)$ and $d^+(v)$ be the incoming and outgoing arc counts of node $v$. T
  x_p&=(m_0(p),m_f(p),d^-(p),d^+(p),d^-(p)+d^+(p)),\label{eq:placefeatures}\\
  x_t&=(\ind[\lambda(t)=\tau],d^-(t),d^+(t),c_M(t),c_S(t),s_t),\label{eq:transitionfeatures}
 \end{align}
-where $c_M(t)$ and $c_S(t)$ are the model and synchronous costs, and $s_t=1$ when $t$ has a place that is both an input and an output. Initial and final markings tell the neural network where execution starts and where it should end. Intermediate markings are not input features: they are maintained later by the decoder.
+where $c_M(t)=\ind[\lambda(t)\ne\tau]$, $c_S(t)=0$, and $s_t=\ind[{}^\bullet t\cap t^\bullet\ne\emptyset]$. The zero synchronous cost feature is also stored for invisible transitions, although they cannot synchronize with events. Initial and final markings tell the neural network where execution starts and where it should end. Intermediate markings are not input features: they are maintained later by the decoder.
 
 Graph nodes are places followed by transitions. Every original arc is represented in both directions, with four types: place to transition consumption, transition to place production, reverse consumption, and reverse production. These reverse edges transmit information about a transition's continuation back toward it. In the running example, the two $b$ transitions have the same immediate input place; information from their different output branches helps distinguish them. The encoder reads the graph directly and does not enumerate reachable markings.
 
@@ -85,22 +85,22 @@ The runtime can inspect integer arc weights, but the neural features above do no
 \end{equation}
 The symbols $A_P,A_T,b_P,b_T,e_P,e_T$ and the label table $e$ are learned parameters. They are shared by all input Petri nets. The model therefore learns transformations of structure and labels rather than a separate vector for each named transition in one process.
 
-Two graph blocks combine global self attention with typed local messages. For a node $v$ with incoming typed edges $\mathcal N_v=\{(u,r):(u,v,r)\in E\}$, one block computes
+Two graph blocks combine global self attention with typed local messages. The columns of $E$ store edge endpoints and the corresponding entries of $r$ store their types. For a node $v$, let $\mathcal N_v=\{(E_{1k},r_k):E_{2k}=v,\ 1\leq k\leq2|F|\}$. Writing $H$ for the matrix of current node vectors, one block computes
 \begin{align}
  \mu_v&=\frac{\sum_{(u,r)\in\mathcal N_v}W_rh_u}{\max(1,|\mathcal N_v|)},\label{eq:messages}\\
  \widetilde H&=\LN\bigl(H+\operatorname{Drop}(\operatorname{MHA}(H,H,H)+\mu)\bigr),\label{eq:graphblock}\\
  H'&=\LN\bigl(\widetilde H+\operatorname{Drop}(\operatorname{FF}(\widetilde H))\bigr).
 \end{align}
-Each $W_r$ is specific to an edge type. $\operatorname{MHA}$ is attention with four heads, based on Equation~\eqref{eq:attention}; $\operatorname{FF}$ expands the vector to $4d$ coordinates, applies a smooth nonlinear activation (GELU), and projects it back to $d$. Dropout is active during training only. The average in Equation~\eqref{eq:messages} limits the scale of a message aggregate at nodes of high degree. Self attention adds access to the whole graph, while typed messages retain an explicit local connection to arc direction and role.
+Each $W_r$ is specific to an edge type, and each block has its own learned parameters. $\operatorname{MHA}$ is attention with four heads, based on Equation~\eqref{eq:attention}; $\operatorname{FF}$ expands the vector to $4d$ coordinates, applies a smooth nonlinear activation (GELU) and dropout, and projects it back to $d$. The attention modules also apply dropout to attention weights. All dropout is active during training only. A node without incident edges has $\mu_v=0$; an empty graph bypasses the blocks. The average in Equation~\eqref{eq:messages} limits the scale of a message aggregate at nodes of high degree. Self attention adds access to the whole graph, while typed messages retain an explicit local connection to arc direction and role.
 
-The trace encoder starts with $e_{h(a_i)}+e_i^{\mathrm{pos}}$, adding a learned position vector to each event's label vector. Positions matter because $\langle a,b,c\rangle$ and $\langle c,b,a\rangle$ have different alignment problems despite containing the same labels. A transformer with one layer and four attention heads processes these event vectors. It uses no causal mask: the complete trace, including its suffix, is already available. LARA is therefore an offline alignment method, not a next event predictor restricted to a running prefix. The position table has 4096 rows; the implementation clamps later positions to its final row. The reported traces are much shorter than this limit.
+The trace encoder starts with $e_{h(a_i)}+e_{\min(i-1,4095)}^{\mathrm{pos}}$, adding a learned position vector to each event's label vector. Positions matter because $\langle a,b,c\rangle$ and $\langle c,b,a\rangle$ have different alignment problems despite containing the same labels. A transformer with one layer and four attention heads processes these event vectors. It uses no causal mask: the complete trace, including its suffix, is already available. LARA is therefore an offline alignment method, not a next event predictor restricted to a running prefix. The position table has 4096 rows indexed from zero; the implementation clamps later positions to its final row. The reported traces are much shorter than this limit. An empty trace bypasses this transformer and yields an event matrix with zero rows.
 
-Two cross attention operations then connect graph and trace. Let $G_T$ be the graph's transition vectors and $H_E$ the trace vectors. The final event and transition vectors are
+Two cross attention operations then connect graph and trace. Let $G_T$ be the graph's transition vectors and $H_E$ the trace vectors. When $n>0$ and $|T|>0$, the final event and transition vectors are
 \begin{align}
  V&=\LN\bigl(H_E+\operatorname{MHA}(H_E,G_T,G_T)\bigr),\label{eq:cross1}\\
  U&=\LN\bigl(G_T+\operatorname{MHA}(G_T,H_E,H_E)\bigr).\label{eq:cross2}
 \end{align}
-The two contexts are calculated from the vectors before cross attention. An event can now reflect which transitions are relevant in this Petri net, and a transition can reflect which events occur in this trace. These numerical associations explain how the neural network can use the suffix $c$ to prefer one $b$ transition; they do not guarantee that it learns the appropriate association on every input.
+The two attention modules and their layer normalizations have separate parameters; both contexts are calculated from the vectors before cross attention. If either collection is empty, both cross attention operations and their normalizations are skipped, so $V=H_E$ and $U=G_T$. An event can now reflect which transitions are relevant in this Petri net, and a transition can reflect which events occur in this trace. These numerical associations explain how the neural network can use the suffix $c$ to prefer one $b$ transition; they do not guarantee that it learns the appropriate association on every input.
 
 \textbf{Output.} The encoders return contextual event vectors $V\in\R^{n\times d}$ and transition vectors $U\in\R^{|T|\times d}$, whose rows are $v_i$ and $u_j$. These vectors summarize the supplied Petri net and complete trace for the scoring stage; they do not represent the decoder's changing marking.
 
@@ -109,12 +109,12 @@ The two contexts are calculated from the vectors before cross attention. An even
 
 \textbf{Input.} The scoring stage receives the contextual event vectors $V$, transition vectors $U$, and exact label compatibility matrix $C$.
 
-\textbf{Processing.} Three output heads convert these vectors into preferences for the move vocabulary. With learned parameters $W,w_M,w_L,b_M,b_L$, the scores are
+\textbf{Processing.} Three output heads convert these vectors into preferences for the move vocabulary. Let $\widetilde V=\operatorname{Drop}(V)$ and $\widetilde U=\operatorname{Drop}(U)$ be the vectors after the scoring heads' dropout, with rows $\widetilde v_i,\widetilde u_j$; these equal $v_i,u_j$ at inference. With learned parameters $W,w_M,w_L,b_M,b_L$, the scores are
 \begin{align}
- S_{ij}&=\begin{cases}(Wv_i)^\top u_j/\sqrt d,&C_{ij}=1,\\-10^9,&C_{ij}=0,\end{cases}\label{eq:syncscore}\\
- M_j&=w_M^\top u_j+b_M,\qquad \ell_i=w_L^\top v_i+b_L.\label{eq:otherscores}
+ S_{ij}&=\begin{cases}(W\widetilde v_i)^\top\widetilde u_j/\sqrt d,&C_{ij}=1,\\-10^9,&C_{ij}=0,\end{cases}\label{eq:syncscore}\\
+ M_j&=w_M^\top\widetilde u_j+b_M,\qquad \ell_i=w_L^\top\widetilde v_i+b_L.\label{eq:otherscores}
 \end{align}
-The matrix $S\in\R^{n\times|T|}$ ranks matching transitions for each event. The vector $M\in\R^{|T|}$ ranks model moves. The auxiliary vector $\ell\in\R^n$ is trained to indicate log moves but is not used by the current decoder. The finite value $-10^9$ effectively excludes incompatible labels from softmax calculations.
+The matrix $S\in\R^{n\times|T|}$ ranks matching transitions for each event. The vector $M\in\R^{|T|}$ ranks model moves. The auxiliary vector $\ell\in\R^n$ is trained to indicate log moves but is not used by the current decoder. The finite value $-10^9$ is a numerical approximation to masking, not mathematical exclusion from a softmax. The decoder explicitly restricts synchronous choices to enabled transitions with the original matching label, independently of score magnitudes.
 
 A single forward pass calculates these arrays once per Petri net--trace pair. They depend on the complete input, including initial and final markings, but remain fixed as decoding proceeds. In particular, $M_j$ has no event position index, and neither $S$ nor $M$ is recomputed after a mistaken commitment. This saves repeated neural evaluation but limits adaptation to the decoder's current state. Scores rank alternatives; move costs remain those in Table~\ref{tab:moves}.
 
@@ -134,7 +134,7 @@ At fixed depth and embedding width, graph self attention has quadratic dependenc
 \subsection{Candidate Decoding with the Current Marking}
 \label{sec:decoder}
 
-\textbf{Input.} The decoder receives $SN$, $\sigma$, the fixed score arrays $S,M$, and two search limits: a depth $d_p$ for enabling the next event and a depth $d_f$ for reaching the final marking after all events. The defaults are $d_p=8$ and $d_f=32$; the stress and real log experiments use $d_f=64$.
+\textbf{Input.} The decoder receives $SN$, $\sigma$, the fixed score arrays $S,M$, and two finite nonnegative integer search limits: a depth $d_p$ for enabling the next event and a depth $d_f$ for reaching the final marking after all events. The defaults are $d_p=8$ and $d_f=32$; the stress and real log experiments use $d_f=64$.
 
 \textbf{Processing.} Starting from $m_0$, the decoder turns preferences into a concrete execution by consulting the current marking at every step. Compatible transition labels alone do not enforce the model. Algorithm~\ref{alg:decode} specifies how immediate synchronization, bounded model searches, and log moves are combined.
 
@@ -167,11 +167,11 @@ At fixed depth and embedding width, graph self attention has quadratic dependenc
 \end{algorithmic}
 \end{algorithm}
 
-Each breadth first search explores paths by the number of transition firings. Within an expansion, invisible transitions precede visible transitions, and transitions in the same group are ordered by decreasing $M_j$. The search keeps a visited marking set and stops at the first goal marking found. It does not minimize deviation cost: a short path containing a visible move may be considered before a longer path containing only zero cost invisible moves. Depth limits bound path length but do not impose a fixed limit on the number of explored markings; branching can still make a bounded search expensive.
+Each breadth first search explores paths by the number of transition firings. Within an expansion, invisible transitions precede visible transitions, and transitions in the same group are ordered by decreasing $M_j$. Equal scores are resolved by ascending transition identifier for synchronous choices and descending identifier for model search. Each search starts a fresh visited marking set and stops at the first goal marking found. It does not minimize deviation cost: a short path containing a visible move may be considered before a longer path containing only zero cost invisible moves. Finite depth and finite $T$ ensure termination of each bounded search. The depth limits bound individual paths, without imposing a separate budget on explored markings; branching can still make search expensive.
 
 If no bounded path enables the event, the decoder makes a log move. If a matching transition is already enabled, it synchronizes immediately. This policy never explicitly compares the cost of skipping that event with the downstream consequences of synchronizing it. It also never revises earlier choices. The simplicity gives a low overhead baseline, but it explains the failure pattern examined in Section~\ref{sec:failure}.
 
-In unguided mode, all learned rankings are removed and the forward pass is skipped. The same firing rules, depth limits, and invisible first policy remain. Ties among enabled synchronous transitions follow ascending transition name order; ties in model search follow the runtime's reverse name order. The difference between guided and unguided modes therefore concerns ranking, not relaxed legality. Identifier order is deterministic but has no business meaning, which motivates the renaming experiment.
+In unguided mode, all learned scores are replaced by zero and the forward pass is skipped. The same firing rules, depth limits, invisible first policy, and identifier tie rules remain. The difference between guided and unguided modes therefore concerns ranking, not relaxed legality. Identifier order is deterministic but has no business meaning, which motivates the renaming experiment.
 
 \textbf{Output.} The decoder returns a proposed move sequence $\widehat\gamma$ with concrete transition identities. It consumes the trace but may fail to reach $m_f$ when the bounded completion search is unsuccessful. The sequence therefore goes to independent replay before it can be reported as a verified alignment.
 
@@ -184,16 +184,16 @@ In unguided mode, all learned rankings are removed and the forward pass is skipp
 
 The assurance contract follows immediately from the alignment definition.
 \begin{Proposition}[Verified candidate and cost equality]
-If replay accepts $\widehat\gamma$, then $\delta(\sigma,SN)\leq c(\widehat\gamma)$. If an exact aligner establishes $\delta(\sigma,SN)$ and $c(\widehat\gamma)=\delta(\sigma,SN)$, then $\widehat\gamma$ is optimal, irrespective of whether its move sequence equals the exact aligner's witness.
+If replay accepts $\widehat\gamma$, then $\delta(\sigma,SN)\leq c(\widehat\gamma)$. If an exact aligner establishes $\delta(\sigma,SN)$ for the same trace, marked Petri net, and move costs, and $c(\widehat\gamma)=\delta(\sigma,SN)$, then $\widehat\gamma$ is optimal, irrespective of whether its move sequence equals the exact aligner's witness.
 \end{Proposition}
 \begin{proof}
 Replay acceptance establishes that $\widehat\gamma$ belongs to the feasible set in Equation~\eqref{eq:optimum}. Its cost is therefore at least the minimum over that set. Equality means that it attains the minimum. No property of the neural scores is needed.
 \end{proof}
 
-In \Fast{} mode the system returns the candidate, replay status, and verified cost when available. In \Certified{} mode it additionally calls PM4Py's state equation A* aligner. If an optimal exact result is available, it retains a legal candidate with the same cost; otherwise it returns the exact alignment as a replacement, with replay checks on that result. If exact search times out or fails, a legal candidate remains an upper bound and optimality stays unconfirmed.
+In \Fast{} mode the system returns the candidate, replay status, and verified cost when available. In \Certified{} mode it additionally calls PM4Py's state equation A* aligner. The wrapper explicitly supplies all three cost functions from Table~\ref{tab:moves}, including zero cost for invisible model moves, and compares replayed integer costs without rescaling. If an optimal exact result is available, it retains a legal candidate with the same cost; otherwise it returns the exact alignment as a replacement, with replay checks on that result. Replaying the exact witness establishes its legality; the claim that its cost is minimal relies on the exact backend. If exact search times out or fails, a legal candidate remains an upper bound and the wrapper leaves its certification flag unset. The mathematical optimality of a legal zero cost candidate still follows from nonnegative costs, as explained in Section~\ref{sec:exactprelim}.
 
 \begin{table*}[!t]
-\caption{Meaning of result states. Certification is conditional on successful exact computation, not on a mode name or a learned score.}
+\caption{Result states reported by the wrapper. Its certification flag requires successful exact computation.}
 \label{tab:statuses}
 \centering
 \begin{tabularx}{\linewidth}{@{}lYY@{}}
@@ -204,7 +204,7 @@ Rejected proposal & Replay fails or no proposal is produced & No candidate upper
 Verified candidate & Replay succeeds & Executable explanation; $\delta\leq c(\widehat\gamma)$.\\
 Certified candidate & Replay succeeds; exact optimum has equal cost & Candidate attains the minimum cost.\\
 Exact replacement & Exact optimum available; candidate rejected or has larger cost & Returned exact alignment is optimal.\\
-Exact timeout & Exact optimum remains unavailable & Only the candidate's existing replay evidence, if any.\\
+Exact timeout & No completed exact result & Only the candidate's existing replay evidence, if any.\\
 \bottomrule
 \end{tabularx}
 \end{table*}

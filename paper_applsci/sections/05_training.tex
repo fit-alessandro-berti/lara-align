@@ -83,9 +83,9 @@ This pair tests a conflict between transitions with different input places. The 
 \subsection{Checking Behavioral Equivalence and Usable Structure}
 \label{sec:equivalence}
 
-The representation checks protect the interpretation of a family. If the two Petri nets admitted different visible traces, a cost difference could be semantically correct rather than a representation effect. The generator enumerates complete visible traces and records whether enumeration finishes. Default limits are 5000 explored states, 10,000 complete traces, and visible length 20, with an additional firing bound to prevent unbounded invisible exploration. A comparison is labeled \emph{exact} only if neither enumeration is truncated. A matching bounded prefix is not treated as proof of full language equality.
+The representation checks protect the interpretation of a family. If the two Petri nets admitted different visible traces, a cost difference could be semantically correct rather than a representation effect. The generator enumerates complete visible traces using search records $(m,w,k)$: a marking, the visible word so far, and the number of firings. Distinct words reaching the same marking must remain distinct records. Default limits are 5000 explored records, 10,000 complete traces, visible length 20, and at most $4\cdot20+|T|$ firings per path. Reaching a limit while further exploration is needed makes the enumeration incomplete. For the generated representations, no transition is enabled at $m_f$, so stopping there cannot omit longer complete executions. This stopping rule would need reconsideration for arbitrary nets that can leave and revisit $m_f$. A comparison is labeled \emph{exact} only if both enumerations finish without truncation and their languages agree. Matching sets found within bounds are not proof of full language equality.
 
-Generation rejects mismatching languages, an empty complete language, an unreachable final marking, or a dead transition. Here dead means that the structural exploration finds no reachable firing of that transition. These checks are useful filters, but do not constitute a general proof of soundness for arbitrary workflow Petri nets. The default training configuration also rejects families whose equivalence check is only bounded. All accepted rows in the reference training, validation, and test corpus have exact language certificates within the configured bounds.
+Generation rejects mismatching enumerated languages or an empty enumerated complete language. A separate bounded marking exploration must witness the final marking and at least one firing of every transition. A transition is dead if it can never fire from a reachable marking; failure to observe a firing in a truncated search does not prove deadness. These are conservative acceptance filters, and even witnessing the final marking and every transition does not establish that every reachable marking can complete, as workflow soundness requires. The default configuration additionally rejects bounded equivalence checks in the training split. All accepted rows in the reference training, validation, and test corpus have exact language certificates within the configured bounds.
 
 The cost comparison used later has a formal rationale. Let $d_{\mathrm{ID}}(\sigma,w)$ be insertion/deletion distance, with unit cost for each inserted or deleted visible activity. With the costs in Table~\ref{tab:moves},
 \begin{equation}
@@ -220,18 +220,18 @@ Test & 128 & 512 & 32\\
 \subsection{Training the Move Scorer}
 \label{sec:loss}
 
-The loss expresses which aspects of an exact witness the neural network should imitate. It does not differentiate through Petri net execution or prove the predicted sequence correct. Let $I=\{i:y_i\geq0\}$ and $J_i=\{j:C_{ij}=1\}$. When $y_i$ is used as a matrix column below, its stored zero based index is converted to the corresponding column. For $i\in I$, normalize only compatible synchronous scores:
+The loss expresses which aspects of an exact witness the neural network should imitate. It does not differentiate through Petri net execution or prove the predicted sequence correct. The training objective assumes $|T|>0$, as in the generated families, while allowing $n=0$. Let $I=\{i:y_i\geq0\}$ and $J_i=\{j:C_{ij}=1\}$. When $y_i$ is used as a matrix column below, its stored zero based index is converted to the corresponding column. Each active teacher target belongs to $J_i$, so $J_i\ne\emptyset$ for $i\in I$. The implementation applies log-softmax to the full score row after the finite masking in Equation~\eqref{eq:syncscore}; the corresponding probabilities are
 \begin{equation}
- p_{ij}=\frac{e^{S_{ij}}}{\sum_{k\in J_i}e^{S_{ik}}},\qquad j\in J_i.
+ p_{ij}=\frac{e^{S_{ij}}}{\sum_{k=1}^{|T|}e^{S_{ik}}},\qquad j\in\{1,\ldots,|T|\},\quad i\in I.
 \end{equation}
-Cross entropy penalizes putting little mass on the teacher transition. With smoothing $\epsilon_s=0.05$, it is
+Cross entropy penalizes putting little mass on the teacher transition. Smoothing allocates target mass only to compatible transitions. With $\epsilon_s=0.05$, the loss is
 \begin{equation}
  \mathcal L_{\mathrm{sync}}=-\frac1{|I|}\sum_{i\in I}
  \left[(1-\epsilon_s)\log p_{i,y_i}
  +\frac{\epsilon_s}{|J_i|}\sum_{j\in J_i}\log p_{ij}\right].
  \label{eq:syncloss}
 \end{equation}
-This assigns 95\% of the target mass to the teacher and spreads the remaining 5\% uniformly across compatible transitions. In the worked row, the two $A$ transitions receive target masses $.025$ and $.975$. An event with a single compatible transition contributes zero synchronous loss, because there is no label compatible choice to learn. If $I$ is empty, the term is zero.
+This assigns 95\% of the target mass to the teacher and spreads the remaining 5\% uniformly across compatible transitions. In the worked row, the two $A$ transitions receive target masses $.025$ and $.975$. When the masked entries underflow to zero after softmax stabilization, this is numerically equivalent to normalizing only over $J_i$, and an event with one compatible transition contributes zero synchronous loss. That equivalence is numerical, not an identity for arbitrary real scores with a finite mask. If $I$ is empty, the term is zero; log events and masked synchronous targets never require normalization of a row with no compatible transition.
 
 For binary decisions, define the binary cross entropy $\BCE(z,u)=\log(1+e^z)-uz$, evaluated directly from logit $z$ with a numerically stable implementation. It compares the sigmoid probability with target $u$. A positive target encourages a high score and a negative target a low score. Binary smoothing maps target zero to $.03$ and target one to $.97$. The other move losses are
 \begin{equation}
@@ -244,14 +244,14 @@ An empty output contributes zero. The log head receives supervision even though 
 \subsection{Auxiliary Cost and Region Objectives}
 \label{sec:auxiliary}
 
-The reference architecture also contains auxiliary region and cost heads. Their role must be explained because they contribute to the training objective, although they do not produce local executable alignments or participate in certification. A learned router maps each transition and event vector to a softmax distribution over $R=6$ latent regions, denoted $Q^T_{jr}$ and $Q^E_{ir}$. ``Region'' means an internal grouping in representation space; it is not a verified subnet decomposition.
+The reference architecture also contains auxiliary region and cost heads. Their role must be explained because they contribute to the training objective, although they do not produce local executable alignments or participate in certification. A learned router applies dropout followed by separate affine maps for transitions and events, then a row-wise softmax over $R=6$ latent regions. The resulting assignments are denoted $Q^T_{jr}$ and $Q^E_{ir}$. ``Region'' means an internal grouping in representation space; it is not a verified subnet decomposition.
 
 For each region, normalized weighted means summarize transitions and events:
 \begin{equation}
  \bar u_r=\frac{\sum_jQ^T_{jr}u_j}{\max(10^{-6},\sum_jQ^T_{jr})},\qquad
  \bar v_r=\frac{\sum_iQ^E_{ir}v_i}{\max(10^{-6},\sum_iQ^E_{ir})}.
 \end{equation}
-A small feedforward neural network transforms their concatenation into $h_r$. Two heads produce $\widehat l_r=\operatorname{softplus}(w_l^\top h_r+b_l)$ and $\widehat u_r=\widehat l_r+\operatorname{softplus}(w_u^\top h_r+b_u)$, where $\operatorname{softplus}(x)=\log(1+e^x)$. This enforces nonnegative ordered endpoints. It does not enforce that the true alignment cost lies between them. Only their aggregate upper endpoint is supervised:
+A missing event collection gives $\bar v_r=0$. A feedforward neural network transforms the concatenated summaries through affine maps of widths $2d\to d\to d$, each followed by GELU and training-only dropout, to obtain $h_r$. Its weights are shared across regions. Two heads produce $\widehat l_r=\operatorname{softplus}(w_l^\top h_r+b_l)$ and $\widehat u_r=\widehat l_r+\operatorname{softplus}(w_u^\top h_r+b_u)$, where $\operatorname{softplus}(x)=\log(1+e^x)$. This enforces nonnegative ordered endpoints. It does not enforce that the true alignment cost lies between them. Only their aggregate upper endpoint is supervised:
 \begin{equation}
  \widehat c=\sum_r\widehat u_r,\qquad
  \mathcal L_{\mathrm{cost}}=H_1(\widehat c-\delta),\qquad
@@ -260,19 +260,22 @@ A small feedforward neural network transforms their concatenation into $h_r$. Tw
 \end{equation}
 The smooth-L1 penalty is quadratic near the target and grows linearly for larger errors. The code names these endpoints ``lower bounds'' and ``upper bounds'', but they are predictions without admissibility guarantees. We therefore never use those names as formal claims. The architecture also exposes a vector of ``sketch'' logits and a nonnegative ``uncertainty'' scalar per region. These are reserved auxiliary outputs: no target gives the sketch entries an alignment meaning, and no calibration validates the uncertainty scalar. Neither has a direct supervised loss or enters the decoder.
 
-Three regularizers influence the latent grouping. Let $U_p$ be the set of distinct transitions incident to place $p$, ignoring arc direction. The boundary term is
+Three regularizers influence the latent grouping. Let $U_p=\{j:(p,t_j)\in F\text{ or }(t_j,p)\in F\}$ be the set of distinct transition indices incident to place $p$, ignoring arc direction. The boundary term averages over unordered pairs of distinct indices:
 \begin{equation}
  \mathcal L_{\mathrm{boundary}}=
- \frac{\sum_{p\in P}\sum_{\{j,k\}\subseteq U_p}
+ \frac{\sum_{p\in P}\sum_{\substack{j,k\in U_p\\j<k}}
  (1-\sum_rQ^T_{jr}Q^T_{kr})}{\sum_{p\in P}\binom{|U_p|}{2}},
  \label{eq:boundary}
 \end{equation}
-set to zero when the denominator is zero. It favors similar assignments for transitions sharing a place. A pair sharing more than one place is counted for each shared place. Define the mean load $a_r=(\sum_jQ^T_{jr}+\sum_iQ^E_{ir})/(|T|+n)$ and entropy $H(q)=-\sum_rq_r\log q_r$. Then
+set to zero when the denominator is zero. It favors assigning transitions sharing a place to the same region. A pair sharing more than one place is counted for each shared place. Define the mean load $a_r=(\sum_jQ^T_{jr}+\sum_iQ^E_{ir})/(|T|+n)$ and the numerically stabilized entropy $H_\eta(q)=-\sum_rq_r\log\max(\eta,q_r)$ with $\eta=10^{-8}$. Then
 \begin{align}
  \mathcal L_{\mathrm{balance}}&=\frac1R\sum_r(a_r-1/R)^2,\label{eq:balance}\\
- \mathcal L_{\mathrm{entropy}}&=\frac12\left(\frac1{|T|}\sum_jH(Q^T_j)+\frac1n\sum_iH(Q^E_i)\right).\label{eq:entropy}
+ \mathcal L_{\mathrm{entropy}}&=\begin{cases}
+ \dfrac12\left(\dfrac1{|T|}\sum_jH_\eta(Q^T_j)+\dfrac1n\sum_iH_\eta(Q^E_i)\right),&n>0,\\[3pt]
+ \dfrac1{|T|}\sum_jH_\eta(Q^T_j),&n=0.
+ \end{cases}\label{eq:entropy}
 \end{align}
-For an empty trace, these terms use transitions only; logarithm arguments are clamped at $10^{-8}$ in code. Minimizing the positive entropy term encourages concentrated assignments, while balance discourages using a single region for everything. These competing preferences shape representations, not verified process fragments. No ablation in this study isolates the benefit of these auxiliary terms.
+For an empty trace, the load also uses transitions only. For a nonempty trace, balance weights every event and transition equally, whereas entropy averages the two collections separately and gives each collection half the weight. Minimizing the positive entropy term encourages concentrated assignments, while balance discourages using a single region for everything. These competing preferences shape representations, not verified process fragments. No ablation in this study isolates the benefit of these auxiliary terms.
 
 \subsection{Optimization and Checkpoint Selection}
 
