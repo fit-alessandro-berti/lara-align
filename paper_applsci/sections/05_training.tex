@@ -233,7 +233,7 @@ Cross entropy penalizes putting little mass on the teacher transition. With smoo
 \end{equation}
 This assigns 95\% of the target mass to the teacher and spreads the remaining 5\% uniformly across compatible transitions. In the worked row, the two $A$ transitions receive target masses $.025$ and $.975$. An event with a single compatible transition contributes zero synchronous loss, because there is no label compatible choice to learn. If $I$ is empty, the term is zero.
 
-For binary decisions, define $\BCE(z,u)=\log(1+e^z)-uz$, evaluated with a numerically stable implementation. A positive target encourages a high score and a negative target a low score. Binary smoothing maps target zero to $.03$ and target one to $.97$. The other move losses are
+For binary decisions, define the binary cross entropy $\BCE(z,u)=\log(1+e^z)-uz$, evaluated directly from logit $z$ with a numerically stable implementation. It compares the sigmoid probability with target $u$. A positive target encourages a high score and a negative target a low score. Binary smoothing maps target zero to $.03$ and target one to $.97$. The other move losses are
 \begin{equation}
  \mathcal L_{\mathrm{log}}=\frac1n\sum_i\BCE(\ell_i,.94q_i+.03),\qquad
  \mathcal L_{\mathrm{model}}=\frac1{|T|}\sum_j\BCE(M_j,.94b_j+.03).
@@ -258,7 +258,7 @@ A small feedforward neural network transforms their concatenation into $h_r$. Tw
  H_1(e)=\begin{cases}e^2/2,&|e|<1,\\|e|-1/2,&|e|\geq1.\end{cases}
  \label{eq:costloss}
 \end{equation}
-The smooth-L1 penalty is quadratic near the target and grows linearly for larger errors. The code names these endpoints ``lower bounds'' and ``upper bounds'', but they are predictions without admissibility guarantees. We therefore never use those names as formal claims. Sketch and uncertainty heads are also exposed by the architecture; they have no direct supervised loss and do not enter the decoder.
+The smooth-L1 penalty is quadratic near the target and grows linearly for larger errors. The code names these endpoints ``lower bounds'' and ``upper bounds'', but they are predictions without admissibility guarantees. We therefore never use those names as formal claims. The architecture also exposes a vector of ``sketch'' logits and a nonnegative ``uncertainty'' scalar per region. These are reserved auxiliary outputs: no target gives the sketch entries an alignment meaning, and no calibration validates the uncertainty scalar. Neither has a direct supervised loss or enters the decoder.
 
 Three regularizers influence the latent grouping. Let $U_p$ be the set of distinct transitions incident to place $p$, ignoring arc direction. The boundary term is
 \begin{equation}

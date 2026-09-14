@@ -16,7 +16,7 @@ For the LARA timing measurements, fast mode latency includes feature extraction,
 
 The default test decoder uses catch up depth eight and completion depth 32. Scaling and real log scripts use completion depth 64 while keeping the catch up depth at eight. Exact timeouts in the stress benchmark are 30 seconds, and approximation calls receive five seconds. A timeout leaves the exact cost unknown; the corresponding candidate is included in coverage statistics but excluded from cost gap and optimality calculations that require the optimum. The tables state these denominators explicitly.
 
-For representation specific guidance differences, 95\% percentile intervals resample whole families 10,000 times with seed 13. A cell contains 32 families with two observations each. Resampling families respects the dependence between observations and representations. These intervals describe sampling within the fixed generator and checkpoint; they do not include variability from retraining with different seeds.
+For representation specific guidance differences, a family bootstrap constructs 10,000 resampled datasets by drawing whole families with replacement, using seed 13 to make the random draws reproducible. The 2.5th and 97.5th percentiles of the resampled differences define the reported 95\% intervals. A cell contains 32 families with two observations each. Resampling families respects the dependence between observations and representations. These intervals describe sampling within the fixed generator and checkpoint; they do not include variability from retraining with different seeds.
 
 \subsection{Candidate Quality on the Synthetic Test Split}
 \label{sec:indist}

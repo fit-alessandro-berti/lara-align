@@ -5,7 +5,7 @@ An alignment method becomes useful to an analyst only when its explanations and 
 
 \subsection{Software Components and Interfaces}
 
-The implementation is available at \url{https://github.com/fit-alessandro-berti/lara-align}. It uses PyTorch for neural computation and PM4Py for Petri net and event log objects, process discovery, and exact alignment~\cite{Berti2023}. The package provides Python and command line interfaces; the workbench uses Streamlit. Table~\ref{tab:modules} maps the conceptual stages to their implementation modules. This separation allows candidate generation experiments to reuse the same independent verifier.
+The application is publicly available at \url{https://lara-pm.app}, and the implementation is available at \url{https://github.com/fit-alessandro-berti/lara-align}.\footnote{The data checkpoint is available at \url{http://www.alessandroberti.it/data_lara_latest.tar.gz}, and the trained checkpoint is available at \url{http://www.alessandroberti.it/checkpoint_lara_latest.tar.gz}.} It uses PyTorch for neural computation and PM4Py for Petri net and event log objects, process discovery, and exact alignment~\cite{Berti2023}. The package provides Python and command line interfaces; the workbench uses Streamlit. Table~\ref{tab:modules} maps the conceptual stages to their implementation modules. This separation allows candidate generation experiments to reuse the same independent verifier.
 
 \begin{table*}[!t]
 \caption{Implementation responsibilities in the \texttt{lara\_align} package. A module's output is not given stronger guarantees than the checks it performs.}

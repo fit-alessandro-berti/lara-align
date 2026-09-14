@@ -1,6 +1,49 @@
 # Final manuscript validation
 
-## Current manuscript revisions (14 September 2026)
+## Machine learning preliminaries and availability revision (14 September 2026)
+
+- Section 2.4 is titled "Machine Learning Preliminaries". It introduces input
+  features and tensors, embeddings and encoders, layers and prediction heads,
+  graph message passing, attention, transformers, normalization, masks, logits,
+  calibration, losses, auxiliary regions, data splits, optimization, and
+  regularization before their detailed use. Section 2.5 retains the explanations
+  of pretraining, fine tuning, zero shot reuse, and distribution shift.
+- First-use explanations also cover recurrent models in Section 3, unused
+  auxiliary outputs in Section 5, family bootstrap intervals in Section 7, and
+  beam search in Section 8. The numerical method and results are unchanged.
+- Six primary references support further reading on deep learning, GELU, layer
+  normalization, calibration, label smoothing, and dropout. All 40 bibliography
+  entries are cited and have source records in `reference-metadata.json`. The
+  six added records were verified on 14 September; the earlier audit remains
+  dated 11 September 2026.
+- Section 6 links to https://lara-pm.app and has one footnote with the author's
+  exact HTTP download URLs for the data and trained checkpoints. The data
+  availability statement also names the public application and points to the
+  downloads. All three endpoints returned HTTP 200 when checked on 14 September;
+  the three exact URLs are clickable in the PDF. The footnote appears on page 28.
+- `make submission` succeeds, producing a 45-page `build/main.pdf` and a valid
+  `build/submission.zip`. All 45 archived files match the working sources.
+- Pages 6--9, 28, 42, and 43 were rendered and visually reviewed. The preliminaries,
+  footnote, availability statement, acknowledgments, and added references fit
+  the layout. The final LaTeX and BibTeX logs contain no unresolved references,
+  missing glyphs, or overfull/underfull boxes. The only pdfTeX warning remains
+  the supplied MDPI logo's PDF version (1.7 versus output 1.5).
+- All 101 source labels are unique and all cross-references resolve. The 15
+  figures and 17 tables retain starred floats at `[!t]` or `[!b]`. Both screenshot
+  assets still match the supplied originals byte for byte. Figure 4 is now on
+  page 17, and Figures 9 and 10 are on pages 30 and 31.
+- Numerical experiments were not rerun for these manuscript-only changes.
+
+Current PDF SHA-256:
+
+```
+99b420abfe2153594f474b5ef9f73dbe0ca4df87844f275cbc44588cc5a6abc5
+```
+
+The records below describe earlier versions. Their page counts, page positions,
+and PDF hashes are historical; the checks above describe the current manuscript.
+
+## Earlier manuscript revisions (14 September 2026)
 
 - Figure 1 on page 2 now outlines the method: synthetic supervision, a reusable
   scorer, candidate decoding, independent replay, and optional exact certification.
@@ -31,7 +74,7 @@
 - The acknowledgments use the author's requested two-sentence wording, verified
   in the extracted PDF text after rebuilding the PDF and submission archive.
 
-Current PDF SHA-256:
+Earlier PDF SHA-256:
 
 ```
 3e6fde750fc5db6ddf8b730a55818d0b375dbdd42e9e16edd8c5c533c7b5a30d

@@ -770,6 +770,163 @@
       "notes": [
         "The author-posted paper explicitly identifies ICLR 2019. The OpenReview landing page presents a browser challenge; authors, title, and venue were checked in the arXiv record and PDF."
       ]
+    },
+    "LeCun2015": {
+      "sources": [
+        "https://www.nature.com/articles/nature14539"
+      ],
+      "verified_metadata": {
+        "title": "Deep learning",
+        "authors": [
+          "Yann LeCun",
+          "Yoshua Bengio",
+          "Geoffrey Hinton"
+        ],
+        "year": 2015,
+        "container": [
+          "Nature"
+        ],
+        "volume": "521",
+        "pages_or_article": "436–444",
+        "doi": "10.1038/nature14539"
+      },
+      "notes": [
+        "Overview used for learned representations and backpropagation."
+      ],
+      "checked_on": "2026-09-14"
+    },
+    "Hendrycks2016": {
+      "sources": [
+        "https://arxiv.org/abs/1606.08415"
+      ],
+      "verified_metadata": {
+        "title": "Gaussian Error Linear Units (GELUs)",
+        "authors": [
+          "Dan Hendrycks",
+          "Kevin Gimpel"
+        ],
+        "year": 2016,
+        "publisher": "arXiv",
+        "doi": "10.48550/arXiv.1606.08415"
+      },
+      "notes": [
+        "The year identifies the first preprint submission, 27 June 2016; the record also lists later revisions."
+      ],
+      "checked_on": "2026-09-14"
+    },
+    "Ba2016": {
+      "sources": [
+        "https://arxiv.org/abs/1607.06450"
+      ],
+      "verified_metadata": {
+        "title": "Layer Normalization",
+        "authors": [
+          "Jimmy Lei Ba",
+          "Jamie Ryan Kiros",
+          "Geoffrey E. Hinton"
+        ],
+        "year": 2016,
+        "publisher": "arXiv",
+        "doi": "10.48550/arXiv.1607.06450"
+      },
+      "notes": [
+        "Source for normalization within a representation and learned scales and offsets."
+      ],
+      "checked_on": "2026-09-14"
+    },
+    "Guo2017": {
+      "sources": [
+        "https://proceedings.mlr.press/v70/guo17a.html"
+      ],
+      "verified_metadata": {
+        "title": "On Calibration of Modern Neural Networks",
+        "authors": [
+          "Chuan Guo",
+          "Geoff Pleiss",
+          "Yu Sun",
+          "Kilian Q. Weinberger"
+        ],
+        "year": 2017,
+        "container": [
+          "34th International Conference on Machine Learning",
+          "Proceedings of Machine Learning Research"
+        ],
+        "volume": "70",
+        "pages_or_article": "1321–1330",
+        "publisher": "PMLR"
+      },
+      "notes": [
+        "Source for the distinction between normalized scores and calibrated probabilities."
+      ],
+      "checked_on": "2026-09-14"
+    },
+    "Szegedy2016": {
+      "sources": [
+        "https://openaccess.thecvf.com/content_cvpr_2016/html/Szegedy_Rethinking_the_Inception_CVPR_2016_paper.html",
+        "https://openaccess.thecvf.com/content_cvpr_2016/papers/Szegedy_Rethinking_the_Inception_CVPR_2016_paper.pdf",
+        "https://api.crossref.org/works/10.1109/CVPR.2016.308"
+      ],
+      "verified_metadata": {
+        "title": "Rethinking the Inception Architecture for Computer Vision",
+        "authors": [
+          "Christian Szegedy",
+          "Vincent Vanhoucke",
+          "Sergey Ioffe",
+          "Jon Shlens",
+          "Zbigniew Wojna"
+        ],
+        "year": 2016,
+        "container": [
+          "2016 IEEE Conference on Computer Vision and Pattern Recognition (CVPR)"
+        ],
+        "pages_or_article": "2818–2826",
+        "publisher": "IEEE",
+        "doi": "10.1109/CVPR.2016.308"
+      },
+      "notes": [
+        "Section 7 introduces label smoothing; the paper was checked for support beyond its title and abstract."
+      ],
+      "checked_on": "2026-09-14"
+    },
+    "Srivastava2014": {
+      "sources": [
+        "https://jmlr.org/papers/v15/srivastava14a.html"
+      ],
+      "verified_metadata": {
+        "title": "Dropout: A Simple Way to Prevent Neural Networks from Overfitting",
+        "authors": [
+          "Nitish Srivastava",
+          "Geoffrey Hinton",
+          "Alex Krizhevsky",
+          "Ilya Sutskever",
+          "Ruslan Salakhutdinov"
+        ],
+        "year": 2014,
+        "container": [
+          "Journal of Machine Learning Research"
+        ],
+        "volume": "15",
+        "issue": "56",
+        "pages_or_article": "1929–1958"
+      },
+      "notes": [
+        "Source for dropout during training and its role in limiting overfitting."
+      ],
+      "checked_on": "2026-09-14"
     }
-  }
+  },
+  "additional_checks": [
+    {
+      "checked_on": "2026-09-14",
+      "entries": [
+        "LeCun2015",
+        "Hendrycks2016",
+        "Ba2016",
+        "Guo2017",
+        "Szegedy2016",
+        "Srivastava2014"
+      ],
+      "scope": "Six added machine learning references: metadata and support for the cited concept. The original 34-entry audit remains dated 11 September 2026."
+    }
+  ]
 }
