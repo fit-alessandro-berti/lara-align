@@ -1,0 +1,88 @@
+\documentclass[11pt,a4paper]{letter}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage[margin=25mm]{geometry}
+\usepackage{microtype}
+\usepackage[hidelinks]{hyperref}
+
+\hypersetup{
+  pdftitle={Cover Letter: Reusable Neural Guidance for Petri Net Alignments with Replay Verification},
+  pdfauthor={Alessandro Berti and Wil M. P. van der Aalst}
+}
+\pagestyle{empty}
+\setlength{\longindentation}{0pt}
+\setlength{\indentedwidth}{\textwidth}
+\setlength{\parskip}{0.5em}
+% The letter class leaves six medium skips above the typed signature.
+\setlength{\medskipamount}{3pt}
+
+\address{Alessandro Berti\\
+  Process and Data Science (PADS)\\
+  RWTH Aachen University\\
+  Aachen, Germany\\
+  \href{mailto:a.berti@pads.rwth-aachen.de}{a.berti@pads.rwth-aachen.de}}
+\signature{Alessandro Berti\\
+  Corresponding author, on behalf of both authors}
+\date{\today}
+
+% Compile from this directory with:
+% pdflatex -output-directory=build -interaction=nonstopmode -halt-on-error cover_letter.tex
+% Before submission, the corresponding author should verify the publication
+% status and author-approval declarations below. If the manuscript was previously
+% submitted to an MDPI journal, add that history and the previous manuscript ID.
+
+\begin{document}
+\begin{letter}{Guest Editors\\
+  Special Issue ``Process Mining: Theory and Applications''\\
+  \textit{Applied Sciences}}
+
+\opening{Dear Guest Editors,}
+
+We submit our manuscript, ``Reusable Neural Guidance for Petri Net Alignments
+with Replay Verification'', by Alessandro Berti and Wil M. P. van der Aalst,
+for consideration as a research article in this special issue of
+\textit{Applied Sciences}.
+
+Alignments provide executable explanations of deviations between event traces
+and process models, but exact computation can become expensive. Our method,
+LARA (Learned Alignment with Replay Assurance), uses one pretrained neural
+scorer to guide alignment construction across Petri nets and activity
+vocabularies. It combines learned move preferences with a decoder that tracks
+the marking, independent replay,
+and optional exact certification. Successful replay establishes executability
+and a cost upper bound; completed exact search establishes optimality or
+provides a replacement alignment. The paper also presents a synthetic
+supervision procedure that pairs equivalent process representations with shared
+observations and exact alignment targets.
+
+On 512 synthetic test inputs, all candidates pass replay, and learned guidance
+increases the proportion with optimal cost from 86.9\% to 91.0\% compared with
+the same decoder without learned guidance. The largest improvement concerns
+choices between transitions with duplicate activity labels. Experiments on
+larger synthetic models and two public event logs examine reuse and the tradeoff
+between candidate latency and quality. The evaluation also documents the
+method's limits: established approximations generally produce better candidates,
+and the current certification mode invokes exact search for every trace.
+
+The manuscript fits the special issue by connecting process mining theory,
+machine learning, and practical conformance analysis with explicit guarantees
+for alignment results. The public implementation, synthetic
+corpus, trained checkpoint, and experiment records support reproducibility;
+an interactive workbench is available at \url{https://lara-pm.app}.
+The manuscript discloses Wil M. P. van der Aalst's Celonis affiliation and the
+use of generative AI tools.
+
+% Author declarations: retain after confirming that both statements are accurate.
+We confirm that neither this manuscript nor any part of its content has been
+published in another journal or is being considered for publication elsewhere.
+Both authors have approved the manuscript and agree to its submission to
+\textit{Applied Sciences}.
+
+Thank you for considering our manuscript.
+
+\closing{Sincerely,}
+
+\end{letter}
+\end{document}
