@@ -1,5 +1,63 @@
 # Final manuscript validation
 
+## Reference and citation-context audit (14 September 2026)
+
+All 40 works cited by the previous manuscript were located in primary records.
+The bibliography now contains 41 cited entries after the following corrections:
+
+- Replaced `Rizk2022`, the four-author arXiv preprint, with the published
+  `Rizk2024` chapter: five authors including Austin Narcomey, LNBIP 492,
+  pages 44--56, DOI `10.1007/978-3-031-50974-2_4`. The chapter was published
+  in 2024 following the 2023 workshop. All three citation sites were updated.
+- Added `Leemans2014`, DOI `10.1007/978-3-319-06257-0_6`, for Inductive
+  Miner's infrequent-behavior variant. Section 7 now attributes the zero-noise
+  experiment to the original 2013 method and the positive-noise experiment to
+  the 2014 variant, matching PM4Py's IM/IMf dispatch.
+- Added the missing Nature issue number, 7553, to `LeCun2015`.
+- Clarified that fixed-horizon alignment uses a marking-equation tail estimate
+  and that sliding-window alignment uses global structural information.
+- Corrected the subset/edit-distance comparison to describe conformance
+  estimates and bounds over representative model behavior, obtained through
+  simulation or selected trace alignments. The prose distinguishes these
+  published outputs from the PM4Py variant's additional reconstruction of full
+  executable transition sequences, including invisible moves. Table 2 agrees
+  with this distinction.
+
+`reference-metadata.json` records a fresh check date, citation locations, a
+support assessment, and a primary evidence URL for every current entry.
+The review used publisher/author abstracts, book and dataset descriptions, and
+specific full-text passages for detailed claims, including Sections 3--4 of
+Fani Sani et al., Section 2 of Gilmer et al., Sections 3.1--3.3 of Vaswani et al.,
+and Section 7 of Szegedy et al. Seven works remain explicitly identified as
+preprints. Crossref rate-limit responses were retried successfully. OpenReview
+still presents a browser challenge; the author-posted AdamW record independently
+confirms the title, authors, ICLR 2019 publication, and cited method.
+
+Validation of this revision:
+
+- `make submission` succeeds, producing a 46-page `build/main.pdf` and a valid
+  `build/submission.zip`. All 45 archived source files match the working files.
+- All 41 bibliography entries are unique, cited, present in the rendered
+  bibliography, and covered by the metadata/support records. Every DOI or
+  publisher URL has a matching clickable link in the PDF.
+- All 101 labels are unique and all 84 cross-reference uses resolve.
+- Pages 10--12, 39, and 43--46 were rendered and visually reviewed. The updated
+  comparison table, prose, citations, author list, and bibliography fit the
+  layout. LaTeX and BibTeX report no unresolved citations, missing glyphs,
+  or overfull/underfull boxes. The existing pdfTeX warning concerns only the
+  supplied MDPI logo's PDF version (1.7 versus output 1.5).
+- `git diff --check` passes. Numerical experiments were not rerun for these
+  reference and editorial changes.
+
+PDF SHA-256 for this revision:
+
+```
+6d004c3656ccbce983b7c07bbeab9b636473652de33741991380ab0587d473cc
+```
+
+The records below describe earlier revisions; their counts and PDF hashes are
+historical.
+
 ## Machine learning preliminaries and availability revision (14 September 2026)
 
 - Section 2.4 is titled "Machine Learning Preliminaries". It introduces input

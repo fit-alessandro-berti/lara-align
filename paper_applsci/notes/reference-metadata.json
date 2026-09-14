@@ -1,6 +1,6 @@
 {
-  "checked_on": "2026-09-11",
-  "scope": "Every bibliography entry: existence, author order and name rendering, title, publication year, venue or source type, volume, pages or article number where applicable, and persistent link. Capitalization and punctuation follow the manuscript style.",
+  "checked_on": "2026-09-14",
+  "scope": "Every bibliography entry: existence, author order and name rendering, title, publication year, venue or source type, volume, pages or article number where applicable, and persistent link. Citation relevance was checked against primary abstracts, book descriptions, dataset descriptions, and full-text passages for detailed claims. Capitalization and punctuation follow the manuscript style.",
   "style_source": "https://www.mdpi.com/files/authors/mdpi_references_guide.pdf",
   "entries": {
     "Aalst2016": {
@@ -22,11 +22,20 @@
         "edition": 2,
         "publisher": "Springer, Berlin, Heidelberg"
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/01_introduction.tex"
+        ],
+        "assessment": "Book overview and conformance-checking chapter in the table of contents support the introduction to event logs, models, and alignments.",
+        "source": "https://link.springer.com/book/10.1007/978-3-662-49851-4"
+      }
     },
     "Adriansyah2011": {
       "sources": [
-        "https://api.crossref.org/works/10.1109/edoc.2011.12"
+        "https://api.crossref.org/works/10.1109/edoc.2011.12",
+        "https://www.vdaalst.com/publications/p630.pdf"
       ],
       "verified_metadata": {
         "title": "Conformance Checking Using Cost-Based Fitness Analysis",
@@ -44,7 +53,16 @@
         "pages_or_article": "55-64",
         "doi": "10.1109/edoc.2011.12"
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/01_introduction.tex",
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The author-posted paper describes cost-based replay with skipped and inserted activities, supporting the origin of cost-based alignment and deviation diagnosis.",
+        "source": "https://www.vdaalst.com/publications/p630.pdf"
+      }
     },
     "Zelst2018": {
       "sources": [
@@ -71,7 +89,16 @@
       },
       "notes": [
         "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/02_preliminaries.tex",
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The abstract explicitly formulates optimal alignment as shortest-path search in the synchronous product state space.",
+        "source": "https://link.springer.com/chapter/10.1007/978-3-662-58381-4_1"
+      }
     },
     "Dongen2018": {
       "sources": [
@@ -97,7 +124,16 @@
       },
       "notes": [
         "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/02_preliminaries.tex",
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The abstract describes marking-equation guidance, the extended marking equation, and exact alignment computation.",
+        "source": "https://link.springer.com/chapter/10.1007/978-3-319-98648-7_12"
+      }
     },
     "Schwanen2026": {
       "sources": [
@@ -112,7 +148,15 @@
         ],
         "year": 2026
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The arXiv abstract states PSPACE-completeness for safe nets and safe sound workflow nets, and NP-completeness for restricted classes including process trees. The manuscript makes only a qualitative hardness claim and explicitly calls this work a preprint.",
+        "source": "https://arxiv.org/abs/2603.05331"
+      }
     },
     "Aalst2013": {
       "sources": [
@@ -132,11 +176,20 @@
         "pages_or_article": "471-507",
         "doi": "10.1007/s10619-013-7127-5"
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The abstract describes splitting process-mining problems into smaller problems whose results can be combined; it supports generic semantic decomposition.",
+        "source": "https://link.springer.com/article/10.1007/s10619-013-7127-5"
+      }
     },
     "Lee2018": {
       "sources": [
-        "https://api.crossref.org/works/10.1016/j.ins.2018.07.026"
+        "https://api.crossref.org/works/10.1016/j.ins.2018.07.026",
+        "https://research.tue.nl/en/publications/recomposing-conformance-closing-the-circle-on-decomposed-alignmen/"
       ],
       "verified_metadata": {
         "title": "Recomposing conformance: Closing the circle on decomposed alignment-based conformance checking in process mining",
@@ -158,11 +211,20 @@
       },
       "notes": [
         "Spaces separate initials in the BibTeX author field to prevent BibTeX from dropping initials."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The authors' institutional abstract describes iterative recomposition for exact fitness, or an interval containing it under a time bound. This supports local/global conformance consistency, not a claim that every local alignment can simply be concatenated.",
+        "source": "https://research.tue.nl/en/publications/recomposing-conformance-closing-the-circle-on-decomposed-alignmen/"
+      }
     },
     "Berti2023": {
       "sources": [
-        "https://api.crossref.org/works/10.1016/j.simpa.2023.100556"
+        "https://api.crossref.org/works/10.1016/j.simpa.2023.100556",
+        "https://www.sciencedirect.com/science/article/pii/S2665963823000933"
       ],
       "verified_metadata": {
         "title": "PM4Py: A process mining library for Python",
@@ -180,7 +242,15 @@
         "pages_or_article": "100556",
         "doi": "10.1016/j.simpa.2023.100556"
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/06_implementation.tex"
+        ],
+        "assessment": "The publisher abstract supports attribution of the PM4Py process-mining library. Version-specific baseline behavior was also checked in the installed PM4Py sources used by the benchmark.",
+        "source": "https://www.sciencedirect.com/science/article/pii/S2665963823000933"
+      }
     },
     "Leemans2013": {
       "sources": [
@@ -208,13 +278,55 @@
       },
       "notes": [
         "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/07_evaluation.tex"
+        ],
+        "assessment": "The abstract introduces discovery of sound, fitting block-structured models. The citation now accompanies the zero-noise Inductive Miner case; infrequent behavior is attributed separately to Leemans2014.",
+        "source": "https://link.springer.com/chapter/10.1007/978-3-642-38697-8_17"
+      }
+    },
+    "Leemans2014": {
+      "sources": [
+        "https://api.crossref.org/works/10.1007/978-3-319-06257-0_6",
+        "https://link.springer.com/chapter/10.1007/978-3-319-06257-0_6"
+      ],
+      "verified_metadata": {
+        "title": "Discovering Block-Structured Process Models from Event Logs Containing Infrequent Behaviour",
+        "authors": [
+          "Sander J. J. Leemans",
+          "Dirk Fahland",
+          "Wil M. P. van der Aalst"
+        ],
+        "year": 2014,
+        "container": [
+          "Lecture Notes in Business Information Processing",
+          "Business Process Management Workshops"
+        ],
+        "series_volume": "171",
+        "pages_or_article": "66-78",
+        "doi": "10.1007/978-3-319-06257-0_6"
+      },
+      "notes": [
+        "Added for the positive noise-threshold experiment. PM4Py selects IMf when noise_threshold > 0 and IM otherwise; the original 2013 Inductive Miner reference remains appropriate for the zero-threshold experiment. The workshop took place in 2013; the chapter was published in 2014."
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/07_evaluation.tex"
+        ],
+        "assessment": "The publisher abstract specifically addresses infrequent behavior. Section 7 now cites this variant for the positive noise threshold, consistent with the benchmark call and PM4Py's IM/IMf dispatch.",
+        "source": "https://link.springer.com/chapter/10.1007/978-3-319-06257-0_6"
+      }
     },
     "Vaswani2017": {
       "sources": [
         "https://papers.nips.cc/paper_files/paper/2017/hash/3f5ee243547dee91fbd053c1c4a845aa-Abstract.html",
         "https://proceedings.neurips.cc/paper_files/paper/2017/hash/3f5ee243547dee91fbd053c1c4a845aa-Abstract.html",
-        "https://papers.nips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Bibtex.bib"
+        "https://papers.nips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Bibtex.bib",
+        "https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf"
       ],
       "verified_metadata": {
         "title": "Attention is All you Need",
@@ -233,7 +345,16 @@
       },
       "notes": [
         "The publisher BibTeX export gives volume 30 and leaves pages empty. The unverified page range was omitted; the Polish initial in Łukasz Kaiser is preserved."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/02_preliminaries.tex",
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "Sections 3.1-3.3 of the proceedings PDF support the attention equation, self/encoder-decoder attention, multihead attention, residual connections, and transformer feedforward blocks.",
+        "source": "https://proceedings.neurips.cc/paper_files/paper/2017/file/3f5ee243547dee91fbd053c1c4a845aa-Paper.pdf"
+      }
     },
     "Bukhsh2021": {
       "sources": [
@@ -248,11 +369,20 @@
         ],
         "year": 2021
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The arXiv abstract describes transformer-based next-activity, event-time, and remaining-time prediction. It supports predictive monitoring, not alignment generation.",
+        "source": "https://arxiv.org/abs/2104.00721"
+      }
     },
     "Genga2025": {
       "sources": [
-        "https://api.crossref.org/works/10.1007/s44311-025-00015-7"
+        "https://api.crossref.org/works/10.1007/s44311-025-00015-7",
+        "https://link.springer.com/article/10.1007/s44311-025-00015-7"
       ],
       "verified_metadata": {
         "title": "Artificial intelligence in conformance checking: state of the art and research agenda",
@@ -271,7 +401,15 @@
       },
       "notes": [
         "Article number 9 is stored in the pages field because the supplied MDPI BibTeX style ignores articleno."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The publisher abstract describes a systematic review and research agenda connecting AI and conformance checking; it supports the related-work framing.",
+        "source": "https://link.springer.com/article/10.1007/s44311-025-00015-7"
+      }
     },
     "ReceiptLog": {
       "sources": [
@@ -287,7 +425,15 @@
         "publisher": "Eindhoven University of Technology",
         "doi": "10.4121/uuid:a07386a5-7be3-4367-9535-70bc9e77dbe6"
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/07_evaluation.tex"
+        ],
+        "assessment": "The DataCite description identifies the receiving phase of a building-permit process in the CoSeLoG project. This establishes dataset provenance; local case/variant counts are experimental facts.",
+        "source": "https://api.datacite.org/dois/10.4121/uuid:a07386a5-7be3-4367-9535-70bc9e77dbe6"
+      }
     },
     "RoadTrafficLog": {
       "sources": [
@@ -304,7 +450,15 @@
         "publisher": "Eindhoven University of Technology",
         "doi": "10.4121/uuid:270fd440-1057-4fb9-89a9-b699b47990f5"
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/07_evaluation.tex"
+        ],
+        "assessment": "The DataCite description identifies a real-life road-traffic-fine management event log. The manuscript explicitly identifies its input as a 100-case repository sample, rather than the complete public dataset.",
+        "source": "https://api.datacite.org/dois/10.4121/uuid:270fd440-1057-4fb9-89a9-b699b47990f5"
+      }
     },
     "Boltenhagen2021": {
       "sources": [
@@ -332,13 +486,23 @@
       },
       "notes": [
         "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex",
+          "sections/07_evaluation.tex"
+        ],
+        "assessment": "The publisher abstract describes a modified distance function and A* search whose results approximate the classical objective. The comparison now explicitly distinguishes a modified objective from local search commitments.",
+        "source": "https://link.springer.com/chapter/10.1007/978-3-030-85469-0_17"
+      }
     },
     "Dongen2017": {
       "sources": [
         "https://api.crossref.org/works/10.1007/978-3-319-59536-8_7",
         "https://link.springer.com/chapter/10.1007/978-3-319-59536-8_7",
-        "https://link.springer.com/book/10.1007/978-3-319-59536-8"
+        "https://link.springer.com/book/10.1007/978-3-319-59536-8",
+        "https://link.springer.com/content/pdf/10.1007/978-3-319-59536-8_7.pdf"
       ],
       "verified_metadata": {
         "title": "Aligning Modeled and Observed Behavior: A Compromise Between Computation Complexity and Quality",
@@ -361,7 +525,16 @@
       },
       "notes": [
         "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex",
+          "sections/07_evaluation.tex"
+        ],
+        "assessment": "The publisher PDF defines the marking equation and the (k,x) sequential alignment algorithm. Definition 8 and Algorithm 1 combine executable moves with a remaining-cost vector. This supports the revised description of prefix execution plus a marking-equation tail estimate, also documented in PM4Py's implementation.",
+        "source": "https://link.springer.com/content/pdf/10.1007/978-3-319-59536-8_7.pdf"
+      }
     },
     "ReissnerTandem2020": {
       "sources": [
@@ -378,7 +551,16 @@
       },
       "notes": [
         "Family, given name syntax preserves compound surnames."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex",
+          "sections/07_evaluation.tex"
+        ],
+        "assessment": "The arXiv abstract describes tandem-repeat compression and reconstruction with a cost that does not underestimate the optimal cost. The 2020 citation denotes the first submission; the current preprint was revised in 2022.",
+        "source": "https://arxiv.org/abs/2004.01781"
+      }
     },
     "Bogdanov2024": {
       "sources": [
@@ -393,13 +575,23 @@
         ],
         "year": 2024
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex",
+          "sections/07_evaluation.tex"
+        ],
+        "assessment": "The arXiv abstract explicitly describes sliding windows plus global trace/model structural information. The revised comparison credits that global information rather than suggesting the method sees only a local window.",
+        "source": "https://arxiv.org/abs/2406.05439"
+      }
     },
     "FaniSani2020": {
       "sources": [
         "https://api.crossref.org/works/10.1007/978-3-030-49435-3_15",
         "https://link.springer.com/chapter/10.1007/978-3-030-49435-3_15",
-        "https://link.springer.com/book/10.1007/978-3-030-49435-3"
+        "https://link.springer.com/book/10.1007/978-3-030-49435-3",
+        "https://link.springer.com/content/pdf/10.1007/978-3-030-49435-3_15.pdf"
       ],
       "verified_metadata": {
         "title": "Conformance Checking Approximation Using Subset Selection and Edit Distance",
@@ -422,11 +614,21 @@
       "notes": [
         "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record.",
         "Family, given name syntax preserves compound surnames."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex",
+          "sections/07_evaluation.tex"
+        ],
+        "assessment": "Sections 3-4 of the publisher PDF describe visible model traces, edit-distance conformance estimates and bounds. Section 4.1 obtains model behavior by simulation or by aligning selected log traces. The revised text distinguishes this from PM4Py's additional retention of full transition sequences, including invisible moves.",
+        "source": "https://link.springer.com/content/pdf/10.1007/978-3-030-49435-3_15.pdf"
+      }
     },
     "Carmona2018": {
       "sources": [
-        "https://api.crossref.org/works/10.1007/978-3-319-99414-7"
+        "https://api.crossref.org/works/10.1007/978-3-319-99414-7",
+        "https://link.springer.com/book/10.1007/978-3-319-99414-7"
       ],
       "verified_metadata": {
         "title": "Conformance Checking: Relating Processes and Models",
@@ -443,11 +645,21 @@
         "pages_or_article": null,
         "doi": "10.1007/978-3-319-99414-7"
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/01_introduction.tex",
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The book overview covers formal correspondence between modeled and recorded behavior, conformance algorithms, and interpretation of their diagnostic results.",
+        "source": "https://link.springer.com/book/10.1007/978-3-319-99414-7"
+      }
     },
     "Rozinat2008": {
       "sources": [
-        "https://api.crossref.org/works/10.1016/j.is.2007.07.001"
+        "https://api.crossref.org/works/10.1016/j.is.2007.07.001",
+        "https://research.tue.nl/en/publications/conformance-checking-of-processes-based-on-monitoring-real-behavi/"
       ],
       "verified_metadata": {
         "title": "Conformance checking of processes based on monitoring real behavior",
@@ -466,7 +678,15 @@
       },
       "notes": [
         "Spaces separate initials in the BibTeX author field to prevent BibTeX from dropping initials."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The authors' institutional abstract describes log/model fitness and diagnostic conformance checking. Berti2021 also documents the token-replay lineage cited alongside it.",
+        "source": "https://research.tue.nl/en/publications/conformance-checking-of-processes-based-on-monitoring-real-behavi/"
+      }
     },
     "Berti2021": {
       "sources": [
@@ -492,11 +712,20 @@
       },
       "notes": [
         "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The publisher abstract describes scalable token-based replay and improved diagnostics, including avoidance of token flooding; it supports the token-replay discussion.",
+        "source": "https://link.springer.com/chapter/10.1007/978-3-662-63079-2_1"
+      }
     },
     "Casas2024": {
       "sources": [
-        "https://api.crossref.org/works/10.1016/j.eswa.2023.122467"
+        "https://api.crossref.org/works/10.1016/j.eswa.2023.122467",
+        "https://citius.gal/static/e5be2a0fa80b4a95136d6ad3cf33d056/1_s2_0_s095741742302969x_main_20231130124049998_9bdabca7ea.pdf"
       ],
       "verified_metadata": {
         "title": "REACH: Researching Efficient Alignment-based Conformance Checking",
@@ -514,11 +743,20 @@
         "pages_or_article": "122467",
         "doi": "10.1016/j.eswa.2023.122467"
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The author-hosted published PDF describes exact A* search using a partial reachability graph and reductions in explored states. This supports placing REACH among exact alignment methods.",
+        "source": "https://citius.gal/static/e5be2a0fa80b4a95136d6ad3cf33d056/1_s2_0_s095741742302969x_main_20231130124049998_9bdabca7ea.pdf"
+      }
     },
     "Padro2022": {
       "sources": [
-        "https://api.crossref.org/works/10.1016/j.is.2020.101703"
+        "https://api.crossref.org/works/10.1016/j.is.2020.101703",
+        "https://www.sciencedirect.com/science/article/pii/S0306437920301484"
       ],
       "verified_metadata": {
         "title": "Computation of alignments of business processes through relaxation labeling and local optimal search",
@@ -535,7 +773,15 @@
         "pages_or_article": "101703",
         "doi": "10.1016/j.is.2020.101703"
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The publisher abstract and introduction describe relaxation labeling over a partial-order representation combined with local A* to produce executable, possibly suboptimal alignments; the manuscript appropriately distinguishes it from the earlier non-replayable approximation.",
+        "source": "https://www.sciencedirect.com/science/article/pii/S0306437920301484"
+      }
     },
     "Schuster2021": {
       "sources": [
@@ -563,11 +809,20 @@
       },
       "notes": [
         "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The publisher abstract explicitly describes hierarchical process-tree decomposition into alignment subproblems followed by composition.",
+        "source": "https://link.springer.com/chapter/10.1007/978-3-030-72693-5_19"
+      }
     },
     "Munoz2014": {
       "sources": [
-        "https://api.crossref.org/works/10.1016/j.is.2014.04.003"
+        "https://api.crossref.org/works/10.1016/j.is.2014.04.003",
+        "https://www.vdaalst.com/publications/p805.pdf"
       ],
       "verified_metadata": {
         "title": "Single-Entry Single-Exit decomposed conformance checking",
@@ -587,11 +842,20 @@
       },
       "notes": [
         "Spaces separate initials in the BibTeX author field to prevent BibTeX from dropping initials."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The author-posted abstract describes SESE decomposition into independently analyzed model/log fragments and improved diagnostics.",
+        "source": "https://www.vdaalst.com/publications/p805.pdf"
+      }
     },
     "Sommers2021": {
       "sources": [
-        "https://api.crossref.org/works/10.1109/icpm53251.2021.9576849"
+        "https://api.crossref.org/works/10.1109/icpm53251.2021.9576849",
+        "https://arxiv.org/abs/2109.05835"
       ],
       "verified_metadata": {
         "title": "Process Discovery Using Graph Neural Networks",
@@ -609,7 +873,15 @@
         "pages_or_article": "40-47",
         "doi": "10.1109/icpm53251.2021.9576849"
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The author-posted abstract describes supervised graph-neural process discovery trained on synthetic log/model pairs and tested on previously unseen logs. The manuscript correctly identifies its output as a Petri net.",
+        "source": "https://arxiv.org/abs/2109.05835"
+      }
     },
     "Tax2017": {
       "sources": [
@@ -639,11 +911,20 @@
       "notes": [
         "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record.",
         "Family, given name syntax preserves compound surnames."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The publisher abstract covers LSTM prediction of next events, timestamps, continuations, and remaining time from running cases.",
+        "source": "https://link.springer.com/chapter/10.1007/978-3-319-59536-8_30"
+      }
     },
     "Bengio2021": {
       "sources": [
-        "https://api.crossref.org/works/10.1016/j.ejor.2020.07.063"
+        "https://api.crossref.org/works/10.1016/j.ejor.2020.07.063",
+        "https://www.sciencedirect.com/science/article/pii/S0377221720306895"
       ],
       "verified_metadata": {
         "title": "Machine learning for combinatorial optimization: A methodological tour d’horizon",
@@ -661,11 +942,20 @@
         "pages_or_article": "405-421",
         "doi": "10.1016/j.ejor.2020.07.063"
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The publisher highlights describe a survey of machine learning for combinatorial optimization, including learning expensive heuristic decisions. This supports the general solver-guidance connection.",
+        "source": "https://www.sciencedirect.com/science/article/pii/S0377221720306895"
+      }
     },
     "Gilmer2017": {
       "sources": [
-        "https://proceedings.mlr.press/v70/gilmer17a.html"
+        "https://proceedings.mlr.press/v70/gilmer17a.html",
+        "https://proceedings.mlr.press/v70/gilmer17a/gilmer17a.pdf"
       ],
       "verified_metadata": {
         "title": "Neural Message Passing for Quantum Chemistry",
@@ -681,7 +971,16 @@
         "series": "Proceedings of Machine Learning Research",
         "series_volume": "70"
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/02_preliminaries.tex",
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "Section 2 of the proceedings PDF defines neighbor message aggregation, node updates, graph readout, and discrete edge-type-specific transformations. It supports the generic graph building blocks, not a claim that this paper introduces Petri-net guidance.",
+        "source": "https://proceedings.mlr.press/v70/gilmer17a/gilmer17a.pdf"
+      }
     },
     "Yonetani2021": {
       "sources": [
@@ -701,7 +1000,15 @@
         "series": "Proceedings of Machine Learning Research",
         "series_volume": "139"
       },
-      "notes": []
+      "notes": [],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The PMLR abstract describes a learned guidance map coupled to differentiable A* for path planning. The manuscript correctly distinguishes LARA's non-differentiable candidate generation from that method.",
+        "source": "https://proceedings.mlr.press/v139/yonetani21a.html"
+      }
     },
     "Bommasani2021": {
       "sources": [
@@ -729,26 +1036,55 @@
       },
       "notes": [
         "The bibliography lists the first ten authors followed by et al., as permitted by the MDPI reference guide."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/01_introduction.tex",
+          "sections/02_preliminaries.tex",
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The author-deposited abstract defines foundation models by broad pretraining and adaptation across tasks. The manuscript appropriately qualifies LARA's much narrower reuse claim.",
+        "source": "https://api.datacite.org/dois/10.48550/arxiv.2108.07258"
+      }
     },
-    "Rizk2022": {
+    "Rizk2024": {
       "sources": [
-        "https://api.datacite.org/dois/10.48550/arxiv.2210.14739",
-        "https://arxiv.org/abs/2210.14739"
+        "https://api.crossref.org/works/10.1007/978-3-031-50974-2_4",
+        "https://link.springer.com/chapter/10.1007/978-3-031-50974-2_4",
+        "https://research.ibm.com/publications/a-case-for-business-process-specific-foundation-models"
       ],
       "verified_metadata": {
         "title": "A Case for Business Process-Specific Foundation Models",
         "authors": [
-          "Rizk, Yara",
-          "Venkateswaran, Praveen",
-          "Isahagian, Vatche",
-          "Muthusamy, Vinod"
+          "Yara Rizk",
+          "Praveen Venkateswaran",
+          "Vatche Isahagian",
+          "Austin Narcomey",
+          "Vinod Muthusamy"
         ],
-        "year": 2022,
-        "publisher": "arXiv",
-        "doi": "10.48550/arxiv.2210.14739"
+        "year": 2024,
+        "container": [
+          "Lecture Notes in Business Information Processing",
+          "Business Process Management Workshops"
+        ],
+        "series_volume": "492",
+        "pages_or_article": "44-56",
+        "doi": "10.1007/978-3-031-50974-2_4"
       },
-      "notes": []
+      "notes": [
+        "Replaces the 2022 arXiv preprint (Rizk2022, arXiv:2210.14739). The published version adds Austin Narcomey as fourth author. The workshop took place in 2023; Springer dates the proceedings chapter to 2024."
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/01_introduction.tex",
+          "sections/02_preliminaries.tex",
+          "sections/03_related_work.tex"
+        ],
+        "assessment": "The published chapter abstract motivates foundation models specialized for business-process data and discusses transfer/few-shot next-activity prediction. It supports the same reuse motivation as the replaced preprint.",
+        "source": "https://link.springer.com/chapter/10.1007/978-3-031-50974-2_4"
+      }
     },
     "AdamW2019": {
       "sources": [
@@ -769,7 +1105,16 @@
       },
       "notes": [
         "The author-posted paper explicitly identifies ICLR 2019. The OpenReview landing page presents a browser challenge; authors, title, and venue were checked in the arXiv record and PDF."
-      ]
+      ],
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/02_preliminaries.tex",
+          "sections/05_training.tex"
+        ],
+        "assessment": "The arXiv record identifies the ICLR 2019 publication, and its abstract describes decoupling weight decay from adaptive optimization. The OpenReview URL still presents a browser challenge; the author-posted record provides independent primary verification.",
+        "source": "https://arxiv.org/abs/1711.05101"
+      }
     },
     "LeCun2015": {
       "sources": [
@@ -788,16 +1133,26 @@
         ],
         "volume": "521",
         "pages_or_article": "436–444",
-        "doi": "10.1038/nature14539"
+        "doi": "10.1038/nature14539",
+        "issue": "7553"
       },
       "notes": [
-        "Overview used for learned representations and backpropagation."
+        "Overview used for learned representations and backpropagation.",
+        "Added the issue number 7553 from the publisher-deposited Crossref record."
       ],
-      "checked_on": "2026-09-14"
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/02_preliminaries.tex"
+        ],
+        "assessment": "The Nature abstract explains learned representations across layers and backpropagation, supporting the general machine-learning preliminaries.",
+        "source": "https://www.nature.com/articles/nature14539"
+      }
     },
     "Hendrycks2016": {
       "sources": [
-        "https://arxiv.org/abs/1606.08415"
+        "https://arxiv.org/abs/1606.08415",
+        "https://api.datacite.org/dois/10.48550/arxiv.1606.08415"
       ],
       "verified_metadata": {
         "title": "Gaussian Error Linear Units (GELUs)",
@@ -812,11 +1167,19 @@
       "notes": [
         "The year identifies the first preprint submission, 27 June 2016; the record also lists later revisions."
       ],
-      "checked_on": "2026-09-14"
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/02_preliminaries.tex"
+        ],
+        "assessment": "The author-deposited abstract introduces GELU as x times the standard normal CDF, supporting its identification as a smooth activation.",
+        "source": "https://api.datacite.org/dois/10.48550/arxiv.1606.08415"
+      }
     },
     "Ba2016": {
       "sources": [
-        "https://arxiv.org/abs/1607.06450"
+        "https://arxiv.org/abs/1607.06450",
+        "https://api.datacite.org/dois/10.48550/arxiv.1607.06450"
       ],
       "verified_metadata": {
         "title": "Layer Normalization",
@@ -832,7 +1195,14 @@
       "notes": [
         "Source for normalization within a representation and learned scales and offsets."
       ],
-      "checked_on": "2026-09-14"
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/02_preliminaries.tex"
+        ],
+        "assessment": "The author-deposited abstract describes normalization within one training case and per-neuron adaptive bias and gain, supporting the layer-normalization explanation.",
+        "source": "https://api.datacite.org/dois/10.48550/arxiv.1607.06450"
+      }
     },
     "Guo2017": {
       "sources": [
@@ -858,7 +1228,14 @@
       "notes": [
         "Source for the distinction between normalized scores and calibrated probabilities."
       ],
-      "checked_on": "2026-09-14"
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/02_preliminaries.tex"
+        ],
+        "assessment": "The PMLR abstract defines confidence calibration in terms of actual correctness likelihood and discusses miscalibration of normalized neural predictions.",
+        "source": "https://proceedings.mlr.press/v70/guo17a.html"
+      }
     },
     "Szegedy2016": {
       "sources": [
@@ -886,7 +1263,14 @@
       "notes": [
         "Section 7 introduces label smoothing; the paper was checked for support beyond its title and abstract."
       ],
-      "checked_on": "2026-09-14"
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/02_preliminaries.tex"
+        ],
+        "assessment": "Section 7 of the CVPR PDF introduces label smoothing by mixing a one-hot target with a less concentrated distribution; this directly supports the cited concept despite the computer-vision title.",
+        "source": "https://openaccess.thecvf.com/content_cvpr_2016/papers/Szegedy_Rethinking_the_Inception_CVPR_2016_paper.pdf"
+      }
     },
     "Srivastava2014": {
       "sources": [
@@ -912,7 +1296,14 @@
       "notes": [
         "Source for dropout during training and its role in limiting overfitting."
       ],
-      "checked_on": "2026-09-14"
+      "checked_on": "2026-09-14",
+      "citation_support": {
+        "cited_in": [
+          "sections/02_preliminaries.tex"
+        ],
+        "assessment": "The JMLR abstract describes randomly dropping units during training and using an unthinned network at test time to limit overfitting.",
+        "source": "https://jmlr.org/papers/v15/srivastava14a.html"
+      }
     }
   },
   "additional_checks": [
@@ -927,6 +1318,54 @@
         "Srivastava2014"
       ],
       "scope": "Six added machine learning references: metadata and support for the cited concept. The original 34-entry audit remains dated 11 September 2026."
+    },
+    {
+      "checked_on": "2026-09-14",
+      "entries": [
+        "Aalst2016",
+        "Adriansyah2011",
+        "Zelst2018",
+        "Dongen2018",
+        "Schwanen2026",
+        "Aalst2013",
+        "Lee2018",
+        "Berti2023",
+        "Leemans2013",
+        "Leemans2014",
+        "Vaswani2017",
+        "Bukhsh2021",
+        "Genga2025",
+        "ReceiptLog",
+        "RoadTrafficLog",
+        "Boltenhagen2021",
+        "Dongen2017",
+        "ReissnerTandem2020",
+        "Bogdanov2024",
+        "FaniSani2020",
+        "Carmona2018",
+        "Rozinat2008",
+        "Berti2021",
+        "Casas2024",
+        "Padro2022",
+        "Schuster2021",
+        "Munoz2014",
+        "Sommers2021",
+        "Tax2017",
+        "Bengio2021",
+        "Gilmer2017",
+        "Yonetani2021",
+        "Bommasani2021",
+        "Rizk2024",
+        "AdamW2019",
+        "LeCun2015",
+        "Hendrycks2016",
+        "Ba2016",
+        "Guo2017",
+        "Szegedy2016",
+        "Srivastava2014"
+      ],
+      "scope": "Fresh existence and citation-support audit of all 40 original works and the added infrequent-behavior reference. Replaced Rizk2022 with the published Rizk2024 chapter; added Leemans2014 and the Nature issue number; clarified fixed-horizon, sliding-window, and subset/edit-distance descriptions. Crossref rate-limit responses were retried successfully; OpenReview was corroborated using the author-posted ICLR paper."
     }
-  ]
+  ],
+  "initial_checked_on": "2026-09-11"
 }

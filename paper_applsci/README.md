@@ -1,7 +1,7 @@
 # Applied Sciences submission source
 
 The journal manuscript contains nine main sections, 15 figures (13 vector
-figures and two tool screenshots), 17 tables, and 40 verified references.
+figures and two tool screenshots), 17 tables, and 41 verified references.
 Data generation and training are integrated into
 Section 5; there is no appendix or separate data-generation document.
 
@@ -54,11 +54,18 @@ and trained checkpoint downloads in a footnote.
 
 ## Bibliography verification
 
-`notes/reference-metadata.json` records primary sources for all 40 references.
+`notes/reference-metadata.json` records primary sources and citation-support
+assessments for all 41 references, rechecked on 14 September 2026.
 Sources include publisher pages and metadata, DataCite dataset records, PMLR
 and NeurIPS proceedings, and author-posted arXiv papers. The bibliography
 preserves compound surnames and initials, identifies preprints explicitly,
 and includes a DOI or persistent publisher URL for every entry.
+
+The audit replaces the business-process foundation-model preprint with its
+published 2024 chapter and complete author list, adds the reference for Inductive
+Miner's infrequent-behavior variant, and distinguishes the outputs and use of
+global information in the cited approximation methods. Detailed findings and
+build checks are recorded in `notes/validation.md`.
 
 ## Reproducing figures
 
