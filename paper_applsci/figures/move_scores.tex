@@ -1,0 +1,68 @@
+% Adapted from the complete move-score example in paper/main.tex.
+% Values match data/evidence.json: running_example_scores.
+\begin{tikzpicture}[x=1cm,y=1cm,
+  scorebadge/.style={draw=learnblue,fill=softblue,rounded corners=2pt,
+    inner sep=3pt,font=\small},
+  lowscore/.style={scorebadge,draw=muted!60,fill=softgray,text=muted}]
+\node[paneltitle] at (0,2.35) {Learned scores distinguish the two $b$ transitions};
+\node[place] (p0) at (.3,0) {}; \fill[ink] (p0) circle (.065);
+\node[transition] (ta) at (1.65,0) {$a$};
+\node[place] (p1) at (3,0) {};
+\node[transition,line width=1.3pt] (t1) at (4.35,.85) {$b$};
+\node[transition,draw=muted,fill=softgray] (t2) at (4.35,-.85) {$b$};
+\node[place] (p2) at (5.7,.85) {};
+\node[place] (p3) at (5.7,-.85) {};
+\node[transition] (tc) at (7.05,.85) {$c$};
+\node[transition,draw=muted,fill=softgray] (td) at (7.05,-.85) {$d$};
+\node[place] (p4) at (8.4,0) {};
+\node[silent] (tt) at (9.75,0) {$\tau$};
+\node[place,double] (p5) at (11.1,0) {};
+\foreach \a/\b in {p0/ta,ta/p1,p1/t1,t1/p2,p2/tc,tc/p4,p4/tt,tt/p5}
+  \draw[arc,draw=learnblue,line width=1pt] (\a) -- (\b);
+\foreach \a/\b in {p1/t2,t2/p3,p3/td,td/p4}
+  \draw[arc,draw=muted] (\a) -- (\b);
+\node[annotation,below=3mm of p0] {$p_0$ ($m_0$)};
+\node[annotation,below=3mm of p1] {$p_1$};
+\node[annotation,below=3mm of p4] {$p_4$};
+\node[annotation,below=3mm of p5] {$p_5$ ($m_f$)};
+\node[annotation,above right=1mm and 1mm of p2] {$p_2$};
+\node[annotation,below right=1mm and 1mm of p3] {$p_3$};
+\foreach \a/\l in {ta/t_a,tc/t_c,tt/t_\tau}
+  \node[annotation,above=2mm of \a] {$\l$};
+\node[annotation,below=2mm of td] {$t_d$};
+\node[scorebadge] at (4.35,1.65) {$t_1$: $S_{2,1}=0.067$};
+\node[lowscore] at (4.35,-1.65) {$t_2$: $S_{2,2}=0.039$};
+
+\node[paneltitle] at (0,-2.6) {Decoded candidate for $\sigma=\langle a,b,c\rangle$};
+\node[annotation,anchor=east] at (2.1,-3.65) {log};
+\node[annotation,anchor=east] at (2.1,-4.35) {model};
+\node[annotation] at (.4,-4) {$\gamma=$};
+\foreach \x/\a/\t in {3.3/a/t_a,5.3/b/t_1,7.3/c/t_c,9.3/\skipmove/t_\tau}{
+  \node[alcell,minimum width=20mm,fill=softgray] at (\x,-3.65) {$\a$};
+  \node[alcell,minimum width=20mm,fill=softblue] at (\x,-4.35) {$\t$};}
+\node[alcell,minimum width=20mm,fill=learnblue!18,draw=learnblue,line width=1pt]
+  at (5.3,-4.35) {$t_1$};
+\foreach \x/\ruletext in {3.3/unique match,5.3/highest score,7.3/unique match,9.3/completion}
+  \node[font=\small,text=muted,anchor=south] at (\x,-3.18) {\ruletext};
+\node[verifybox,text width=16mm,inner sep=4pt] at (11.5,-4)
+  {$c(\gamma)=0$};
+\node[annotation,anchor=west] at (0,-5.15)
+  {$[p_0]\xrightarrow{t_a}[p_1]\xrightarrow{t_1}[p_2]\xrightarrow{t_c}[p_4]\xrightarrow{t_\tau}[p_5]=m_f$};
+\end{tikzpicture}
+
+\medskip
+{\small
+\begin{tabular}{@{}lrrrrrr@{}}
+\toprule
+Output & $t_1$ & $t_2$ & $t_a$ & $t_c$ & $t_d$ & $t_\tau$\\
+\midrule
+$S_{1,:}$: event $a$ & -- & -- & $0.353$ & -- & -- & --\\
+$S_{2,:}$: event $b$ & $0.067$ & $0.039$ & -- & -- & -- & --\\
+$S_{3,:}$: event $c$ & -- & -- & -- & $0.876$ & -- & --\\
+$M$ & $-1.357$ & $-1.401$ & $-1.030$ & $-1.830$ & $-1.837$ & $2.519$\\
+\bottomrule
+\end{tabular}
+\par\smallskip
+$\ell=(-1.682,-1.618,-1.527)$ (unused by the decoder);
+-- denotes the mask value $-10^9$.
+\par}

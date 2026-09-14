@@ -41,15 +41,13 @@ The page summarizes the log and Petri net, lists activity labels and duplicate l
 
 \subsection{Progressive Results and Trace Inspection}
 
-The Live Run page offers fast candidates, progressive certification, and an exact baseline. In candidate modes it first produces and independently verifies the proposal for a variant. The result can be displayed immediately, while exact work is a subsequent stage when selected. Statuses distinguish a ready candidate, an illegal candidate, exact computation, certification, repair, timeout, and failure. A timeout retains the evidence already obtained; it does not fill in an unknown optimum.
+The Live Run page offers fast candidates, progressive certification, and an exact baseline. Figure~\ref{fig:tool-live-run} shows its progress indicators and variant results. In candidate modes it first produces and independently verifies the proposal for a variant. The result can be displayed immediately, while exact work is a subsequent stage when selected. Statuses distinguish a ready candidate, an illegal candidate, exact computation, certification, repair, timeout, and failure. A timeout retains the evidence already obtained; it does not fill in an unknown optimum.
 
-The Trace Inspector aligns candidate and exact explanations to common observed event positions. It exposes concrete transition identities, which is especially useful for duplicate labels, and allows the model projection to be replayed through precomputed marking snapshots. An analyst can therefore see both where an event was skipped and which enabled transition the decoder chose. Neural score diagnostics are supplementary preferences. They are not labeled as causal explanations or calibrated certainty about correctness.
+The Trace Inspector aligns candidate and exact explanations to common observed event positions, as shown in Figure~\ref{fig:tool-trace-inspector}. It exposes concrete transition identities, which is especially useful for duplicate labels, and allows the model projection to be replayed through precomputed marking snapshots. An analyst can therefore see both where an event was skipped and which enabled transition the decoder chose. Neural score diagnostics are supplementary preferences. They are not labeled as causal explanations or calibrated certainty about correctness.
 
 Results can be exported as variant level and case level CSV, detailed JSON, execution logs, and per alignment move tables. Candidate cost, exact cost, gap, legality, and certification remain separate fields. This makes subsequent analysis auditable: a CSV consumer can select only certified optima or deliberately study the latency and quality of verified candidates. The optional experiment dashboard reads stored metric files for training curve and benchmark inspection.
 
-% Optional insertion point for author supplied screenshots. The scientific
-% explanation above is complete without screenshots. See figures/README.md.
-\InputIfFileExists{figures/implementation_screenshots.tex}{}{}
+\input{figures/implementation_screenshots}
 
 \subsection{Reproducibility and Experiment Artifacts}
 

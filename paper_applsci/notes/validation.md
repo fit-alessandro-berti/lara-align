@@ -1,6 +1,6 @@
 # Final manuscript validation
 
-## Current introduction revision (14 September 2026)
+## Current manuscript revisions (14 September 2026)
 
 - Figure 1 on page 2 now outlines the method: synthetic supervision, a reusable
   scorer, candidate decoding, independent replay, and optional exact certification.
@@ -9,14 +9,24 @@
   RQ1--RQ3, consistently with their detailed treatment in Section 2. Its final
   paragraph begins "The rest of the paper is organized as follows" and describes
   Sections 2--9.
-- `make submission` succeeds and produces the updated 42-page `build/main.pdf`
+- Figure 4 on page 16 replaces the checkpoint-output table with the adapted
+  complete move-score figure from `paper/`: Petri net, highlighted branch choice,
+  decoded alignment, marking sequence, and full score arrays. Every score was
+  checked against `data/evidence.json` to three decimals.
+- Figures 9 and 10 on pages 29 and 30 show the Live Run and Trace Inspector.
+  The PNG files match the supplied originals byte for byte. Both screenshots
+  use the MDPI full-page figure width and are referenced in Section 6.
+- The manuscript now has 15 figures (13 vector figures and two screenshots)
+  and 17 tables. All use starred floats with `[!t]` or `[!b]` placement.
+- `make submission` succeeds and produces the updated 43-page `build/main.pdf`
   and `build/submission.zip`. All archived manuscript and figure sources match
   the working files, and the ZIP passes its integrity check.
-- Rendered pages 2--4 were reviewed for figure text, arrows, captions, the new
-  introductory material, and the transition into Section 2. There are no LaTeX
+- Rendered pages 2--4 were reviewed for the introduction revision; pages 16,
+  29, and 30 were reviewed for the score figure and screenshots. Labels, arrows,
+  captions, and images fit the layout. There are no LaTeX
   warnings, unresolved references, missing glyphs, or overfull/underfull boxes.
   pdfTeX reports the supplied MDPI logo's PDF version (1.7 versus output 1.5).
-- All 99 source labels remain unique and their references resolve. Numerical
+- All 101 source labels are unique and their references resolve. Numerical
   experiments were not rerun for this editorial change.
 - The acknowledgments use the author's requested two-sentence wording, verified
   in the extracted PDF text after rebuilding the PDF and submission archive.
@@ -24,12 +34,12 @@
 Current PDF SHA-256:
 
 ```
-992fe5fc1e82b4dfa1c0d63f98f3333fb5391e759fcbb37dabfe4ba03f8a364e
+3e6fde750fc5db6ddf8b730a55818d0b375dbdd42e9e16edd8c5c533c7b5a30d
 ```
 
 The remaining record describes the earlier 41-page manuscript. Its page
 positions, paper-outline description, PDF hash, and full-document visual review
-are historical; the introduction revision above supersedes those details.
+are historical; the revisions above supersede those details.
 
 Layout and editorial revision checked on 14 September 2026. Bibliography and
 numerical verification were completed on 11 September 2026; their source records

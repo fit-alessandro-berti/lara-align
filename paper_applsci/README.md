@@ -1,7 +1,8 @@
 # Applied Sciences submission source
 
-The journal manuscript contains nine main sections, 12 vector figures, 18 tables,
-and 34 verified references. Data generation and training are integrated into
+The journal manuscript contains nine main sections, 15 figures (13 vector
+figures and two tool screenshots), 17 tables, and 34 verified references.
+Data generation and training are integrated into
 Section 5; there is no appendix or separate data-generation document.
 
 The introduction includes a visual overview of the method, from synthetic
@@ -43,9 +44,9 @@ Ethics and consent statements identify the study's synthetic and public-data
 scope. Final author approval and the submission-system confirmations remain
 with the corresponding author.
 
-Implementation screenshots can be supplied later through
-`figures/implementation_screenshots.tex`; see `figures/README.md`. The current
-manuscript has no empty screenshot placeholders.
+The Implementation section includes the supplied Live Run and Trace Inspector
+screenshots through `figures/implementation_screenshots.tex`. Both original PNG
+files are included in the source archive; see `figures/README.md`.
 
 ## Bibliography verification
 

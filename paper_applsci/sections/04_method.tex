@@ -118,23 +118,14 @@ The matrix $S\in\R^{n\times|T|}$ ranks matching transitions for each event. The 
 
 A single forward pass calculates these arrays once per Petri net--trace pair. They depend on the complete input, including initial and final markings, but remain fixed as decoding proceeds. In particular, $M_j$ has no event position index, and neither $S$ nor $M$ is recomputed after a mistaken commitment. This saves repeated neural evaluation but limits adaptation to the decoder's current state. Scores rank alternatives; move costs remain those in Table~\ref{tab:moves}.
 
-For the running example, the reference checkpoint gives the scores in Table~\ref{tab:examplescores}. Once $t_a$ has fired, both $t_1$ and $t_2$ are enabled and compatible with event $b$. The score of $t_1$ is slightly higher, so the decoder takes the branch that can subsequently explain $c$. The magnitude difference is a preference, not an estimate of a cost saving or a confidence interval. When a unique matching transition is enabled, the synchronous score is not needed at all.
+For the running example, Figure~\ref{fig:examplescores} connects the reference checkpoint's complete move scores to the drawn Petri net and decoded alignment. Once $t_a$ has fired, both $t_1$ and $t_2$ are enabled and compatible with event $b$. The score of $t_1$ is slightly higher, so the decoder takes the branch that can subsequently explain $c$. The magnitude difference is a preference, not an estimate of a cost saving or a confidence interval. When a unique matching transition is enabled, the synchronous score is not needed at all.
 
-\begin{table*}[!t]
-\caption{Reference checkpoint outputs for Figure~\ref{fig:running}, rounded to three decimals. Columns follow the sorted transition identifiers. A dash represents the incompatible label sentinel $-10^9$. The unused log scores are $\ell=(-1.682,-1.618,-1.527)$.}
-\label{tab:examplescores}
+\begin{figure*}[!t]
 \centering
-\begin{tabular}{@{}lrrrrrr@{}}
-\toprule
-Output & $t_1$ & $t_2$ & $t_a$ & $t_c$ & $t_d$ & $t_\tau$\\
-\midrule
-$S_{1,:}$: event $a$ & -- & -- & .353 & -- & -- & --\\
-$S_{2,:}$: event $b$ & .067 & .039 & -- & -- & -- & --\\
-$S_{3,:}$: event $c$ & -- & -- & -- & .876 & -- & --\\
-$M$ & $-1.357$ & $-1.401$ & $-1.030$ & $-1.830$ & $-1.837$ & $2.519$\\
-\bottomrule
-\end{tabular}
-\end{table*}
+\input{figures/move_scores}
+\caption{Complete move scores for the drawn Petri net and trace, rounded to three decimals (reference epoch-49 checkpoint, dropout disabled). Columns follow sorted transition identifiers. The higher synchronous score selects $t_1$ for $b$, shown by the highlighted path and alignment cell. The decoder then explains $c$ and completes through $t_\tau$ at cost zero. All synchronous, model, and auxiliary log scores are included.}
+\label{fig:examplescores}
+\end{figure*}
 
 At fixed depth and embedding width, graph self attention has quadratic dependence on the node count $|P|+|T|$, trace self attention on $n$, and cross attention on $n|T|$. Typed messages additionally traverse the encoded arcs. Avoiding a reachability graph therefore does not make the scorer linear in Petri net size. The parameter count is fixed, but inference cost still grows with the input.
 
