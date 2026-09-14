@@ -1,14 +1,14 @@
 \section{Experimental Evaluation}
 \label{sec:evaluation}
 
-The evaluation asks whether the candidate is useful before exact repair and whether machine learning improves that candidate enough to justify its cost. We therefore measure the proposed explanation separately from the exact result. The experiments progress from controlled test families to larger synthetic nets, competing approximations, and real event logs. This order separates the effects of semantic constraints, learned ranking, representation, and input scale.
+The evaluation asks whether the candidate is useful before exact repair and whether machine learning improves that candidate enough to justify its cost. We therefore measure the proposed explanation separately from the exact result. The experiments progress from controlled test families to larger synthetic Petri nets, competing approximations, and real event logs. This order separates the effects of semantic constraints, learned ranking, representation, and input scale.
 
 \subsection{Protocol, Metrics, and Comparison Boundaries}
 \label{sec:protocol}
 
 The reference experiments use an Intel Core i7-1355U CPU and the approximately 1.7-million parameter checkpoint selected at epoch 49. Computation is CPU only, with PyTorch reporting ten intra operation and ten inter operation threads; trace calls are sequential. The checkpoint is loaded once before timing. The synthetic test set has 512 rows from 128 generated families, with 64 rows for each motif/representation cell. The scoring parameters stay fixed throughout the test, scaling, and real log experiments.
 
-The primary metrics are replay acceptance, exact cost agreement, and the cost gap in Equation~\eqref{eq:gap}. We also report full transition aware move sequence agreement with the teacher and agreement after replacing transition identities with labels. These sequence measures diagnose imitation of one witness; neither is required for an optimum when several witnesses share its cost. For representation pairs, cost agreement measures whether the same observation receives equal candidate costs on the two equivalent nets.
+The primary metrics are replay acceptance, exact cost agreement, and the cost gap in Equation~\eqref{eq:gap}. We also report full transition aware move sequence agreement with the teacher and agreement after replacing transition identities with labels. These sequence measures diagnose imitation of one witness; neither is required for an optimum when several witnesses share its cost. For representation pairs, cost agreement measures whether the same observation receives equal candidate costs on the two equivalent Petri nets.
 
 The guidance ablation preserves the decoder, costs, depth bounds, and test inputs. It disables the neural forward pass and uses deterministic orderings in place of learned rankings. This is a strong baseline because enabledness and bounded model path search already resolve many cases. It directly answers RQ2; comparison with exact search alone would not isolate the contribution of machine learning.
 
@@ -92,7 +92,7 @@ The duplicate prefix cell improves from 68.8\% to 95.3\%, a gain of 26.6 points,
 \subsection{Sensitivity to Equivalent Representations}
 \label{sec:representations}
 
-Equivalent models let us examine reuse without changing the visible alignment problem (RQ3). Table~\ref{tab:pairagreement} compares candidate costs across each representation pair for the same observation. The ordinary tree pair is particularly informative because the two nets differ only in identifiers.
+Equivalent models let us examine reuse without changing the visible alignment problem (RQ3). Table~\ref{tab:pairagreement} compares candidate costs across each representation pair for the same observation. The ordinary tree pair is particularly informative because the two Petri nets differ only in identifiers.
 
 \begin{table*}[!t]
 \caption{Candidate cost agreement across paired representations. Each row compares 64 observation pairs. Exact costs agree in every pair. Candidate cost equality may include two equally suboptimal results.}
@@ -119,7 +119,7 @@ Across all representation pairs, agreement rises from 90.2\% to 99.2\%. This is 
 \subsection{Scaling: Candidate Latency and Quality Together}
 \label{sec:scaling}
 
-The scaling experiment tests whether the candidate remains useful when inputs move beyond the small training distribution. A separate generator produces random block structured nets with sequence, choice, parallelism, loops, duplicate labels, and invisible routing. The nominal sizes are 5, 10, 20, and 40 visible leaf occurrences. An alphabet fraction of .7 permits repeated labels; loop playout uses redo probability .3 and at most two redos. Deviations are injected at rates .15 and .35, with ten inputs per configuration. These rates are parameters of the stress generator, not the clean/noisy mixture in Section~\ref{sec:corruption}. Table~\ref{tab:scaling} reports the sizes, quality measures, and timings for all eight configurations.
+The scaling experiment tests whether the candidate remains useful when inputs move beyond the small training distribution. A separate generator produces random block structured Petri nets with sequence, choice, parallelism, loops, duplicate labels, and invisible routing. The nominal sizes are 5, 10, 20, and 40 visible leaf occurrences. An alphabet fraction of .7 permits repeated labels; loop playout uses redo probability .3 and at most two redos. Deviations are injected at rates .15 and .35, with ten inputs per configuration. These rates are parameters of the stress generator, not the clean/noisy mixture in Section~\ref{sec:corruption}. Table~\ref{tab:scaling} reports the sizes, quality measures, and timings for all eight configurations.
 
 \begin{table*}[!t]
 \caption{Scaling results. Size is the requested visible leaf count and $\overline{|T|}$ the rounded mean total transition count. Every configuration has ten legal candidates. $n_\delta$ is the number with an exact reference; optimality and mean gap use that denominator. Time columns are median milliseconds per trace; exact timeouts are recorded at 30 seconds.}
@@ -153,7 +153,7 @@ Figure~\ref{fig:scalingtime} compares the median latencies across this grid. LAR
 \begin{figure*}[!t]
 \centering
 \includegraphics[width=\linewidth]{figures/scaling_quality.pdf}
-\caption{The quality cost of the latency advantage in Figure~\ref{fig:scalingtime}. Optimality declines on larger stress inputs. Each point uses ten exact references except size 40/deviation .35, which uses nine. Small cell sizes and changing random nets explain why the curves need not be monotone.}
+\caption{The quality cost of the latency advantage in Figure~\ref{fig:scalingtime}. Optimality declines on larger stress inputs. Each point uses ten exact references except size 40/deviation .35, which uses nine. Small cell sizes and changing random Petri nets explain why the curves need not be monotone.}
 \label{fig:scalingquality}
 \end{figure*}
 
@@ -212,15 +212,15 @@ The small and stress comparisons rule out a claim that the present learned greed
 
 Real log inputs test the use of one checkpoint with different vocabularies, model structures, and trace lengths. We use a building permit receipt log~\cite{ReceiptLog}, containing 1434 cases, 116 variants, and 27 activity labels, and the repository's 100-case sample of the road traffic fines log~\cite{RoadTrafficLog}, containing ten variants and ten labels. The road traffic results refer to that sample, not the complete public log. The longest variants have 25 and nine events, respectively.
 
-For each log, Inductive Miner~\cite{Leemans2013} discovers nets at noise thresholds .0 and .5. Models are discovered from the same log that is subsequently aligned, so this experiment evaluates algorithmic transfer, not independent normative compliance. The positive noise threshold removes infrequent behavior and creates additional deviations against the resulting model. The checkpoint is unchanged; new label strings enter through hashing without any language interpretation or fine tuning.
+For each log, Inductive Miner~\cite{Leemans2013} discovers Petri nets at noise thresholds .0 and .5. Models are discovered from the same log that is subsequently aligned, so this experiment evaluates algorithmic transfer, not independent normative compliance. The positive noise threshold removes infrequent behavior and creates additional deviations against the resulting model. The checkpoint is unchanged; new label strings enter through hashing without any language interpretation or fine tuning.
 
 \begin{table*}[!t]
-\caption{Real log candidate quality. All variants pass replay. Net size gives places and visible/invisible transitions. Guided and unguided decoding have identical quality values in all four configurations. Mean and maximum gaps are over variants.}
+\caption{Real log candidate quality. All variants pass replay. Petri net size gives places and visible/invisible transitions. Guided and unguided decoding have identical quality values in all four configurations. Mean and maximum gaps are over variants.}
 \label{tab:realquality}
 \centering
 \begin{tabular}{@{}llrrrr@{}}
 \toprule
-Log & Noise & Net size & \multicolumn{2}{c}{Optimal (\%)} & Gap\\
+Log & Noise & Petri net size & \multicolumn{2}{c}{Optimal (\%)} & Gap\\
  & & $|P|/|T_v|+|T_\tau|$ & Variants & Cases & Mean/max\\
 \midrule
 Road traffic & .0 & $15/10+10$ & 100.0\% & 100.0\% & 0/0\\
@@ -236,7 +236,7 @@ Table~\ref{tab:realquality} distinguishes variants from cases. If variant $v$ oc
  \frac{\sum_v f_v\ind[g_v=0]}{\sum_vf_v},
  \label{eq:weighted}
 \end{equation}
-whereas variant optimality weights each distinct sequence once. The higher case weighted values show that frequent variants are easier for this decoder; misses are concentrated in less frequent variants. For the fitting receipt net, all exact costs are zero, but only half of the candidate variants attain zero. A legal, positive cost candidate on a fitting trace is therefore a concrete example of why replay alone is insufficient to infer nonconformance.
+whereas variant optimality weights each distinct sequence once. The higher case weighted values show that frequent variants are easier for this decoder; misses are concentrated in less frequent variants. For the fitting receipt Petri net, all exact costs are zero, but only half of the candidate variants attain zero. A legal, positive cost candidate on a fitting trace is therefore a concrete example of why replay alone is insufficient to infer nonconformance.
 
 \begin{table*}[!t]
 \caption{Recorded median time per variant in milliseconds. These are candidate/exact timings, not full log wall clock speedups. Including the unguided decoder makes clear that the real log candidate advantage is not evidence of a learned quality benefit.}
@@ -254,7 +254,7 @@ Receipt & .5 & 6.65 & .61 & 12.72\\
 \end{tabularx}
 \end{table*}
 
-The guided candidate is slower than exact search on the small road traffic nets and faster on the tested receipt nets (Table~\ref{tab:realtime}). Unguided decoding is faster still and has the same candidate quality. These discovered nets have no duplicate visible labels, so they do not exercise the scorer's strongest demonstrated advantage. Model move ordering could still matter in principle, but no quality difference is observed here. The experiment supports interface transfer and verified execution under different inputs; it does not demonstrate that the neural scorer improves real log alignment quality.
+The guided candidate is slower than exact search on the small road traffic Petri nets and faster on the tested receipt Petri nets (Table~\ref{tab:realtime}). Unguided decoding is faster still and has the same candidate quality. These discovered Petri nets have no duplicate visible labels, so they do not exercise the scorer's strongest demonstrated advantage. Model move ordering could still matter in principle, but no quality difference is observed here. The experiment supports interface transfer and verified execution under different inputs; it does not demonstrate that the neural scorer improves real log alignment quality.
 
 \subsection{A Failure That Explains the Remaining Gaps}
 \label{sec:failure}

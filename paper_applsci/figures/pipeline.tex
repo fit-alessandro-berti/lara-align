@@ -1,7 +1,7 @@
 \begin{tikzpicture}[x=1cm,y=1cm]
 \node[paneltitle] at (-.1,1.1) {1. Read the problem and score possible moves};
-\node[box,text width=32mm] (input) at (1.8,0) {system net $SN$\\complete trace $\sigma$};
-\node[learnbox,text width=32mm] (encoder) at (6,0) {encode net + trace\\exchange context};
+\node[box,text width=32mm] (input) at (1.8,0) {Petri net $SN$\\complete trace $\sigma$};
+\node[learnbox,text width=32mm] (encoder) at (6,0) {encode Petri net\\and trace\\exchange context};
 \node[learnbox,text width=32mm] (scores) at (10.2,0) {score moves\\fixed $S$ and $M$};
 \draw[flow] (input) -- (encoder); \draw[flow] (encoder) -- (scores);
 \node[paneltitle] at (-.1,-1.25) {2. Construct an execution and check it independently};

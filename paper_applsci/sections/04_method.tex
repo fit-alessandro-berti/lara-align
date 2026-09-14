@@ -1,7 +1,7 @@
-\section{Method: From a Net and Trace to a Verified Alignment}
+\section{Method: From a Petri Net and Trace to a Verified Alignment}
 \label{sec:method}
 
-Given a labeled Petri net, its initial and final markings, and a complete event trace, LARA proposes an alignment and checks what can be claimed about it. The contribution is a reusable neural network embedded in a pipeline whose correctness comes from explicit process semantics. One checkpoint is trained on synthetic nets and traces with exact alignment targets, then reused across process models and activity vocabularies without training a new neural network for each target process. Section~\ref{sec:training} describes this offline preparation.
+Given a labeled Petri net, its initial and final markings, and a complete event trace, LARA proposes an alignment and checks what can be claimed about it. The contribution is a reusable neural network embedded in a pipeline whose correctness comes from explicit process semantics. One checkpoint is trained on synthetic Petri nets and traces with exact alignment targets, then reused across process models and activity vocabularies without training a new neural network for each target process. Section~\ref{sec:training} describes this offline preparation.
 
 At inference time, a graph encoder represents the places, transitions, and arcs, while a trace encoder reads the complete event sequence. Exchanging context between these representations allows later events to inform choices among transitions with the same label. A single forward pass assigns preferences to synchronous and model moves. A decoder then constructs a candidate by firing enabled transitions, using bounded searches for intervening model moves and maintaining the current marking. The scores guide these choices; label equality and token availability determine which moves are permitted.
 
@@ -10,14 +10,14 @@ Independent replay checks every firing, complete trace consumption, and the fina
 \begin{figure*}[!t]
 \centering
 \input{figures/pipeline}
-\caption{The inference pipeline and its sources of evidence. Blue components produce preferences and a candidate; green components check the candidate or establish an optimum. The upper bound output is available after replay. Exact search is an additional computation, and a timeout does not turn an unchecked optimum into a certificate. The trained checkpoint is reused across net--trace pairs.}
+\caption{The inference pipeline and its sources of evidence. Blue components produce preferences and a candidate; green components check the candidate or establish an optimum. The upper bound output is available after replay. Exact search is an additional computation, and a timeout does not turn an unchecked optimum into a certificate. The trained checkpoint is reused across Petri net--trace pairs.}
 \label{fig:pipeline}
 \end{figure*}
 
 \subsection{Input Representation}
 \label{sec:encoding}
 
-\textbf{Input.} The representation stage receives the system net $SN=(P,T,F,\lambda,m_0,m_f)$, the complete trace $\sigma$, and the move costs from Table~\ref{tab:moves}. The numbers of places, transitions, and events may vary between inputs.
+\textbf{Input.} The representation stage receives the labeled Petri net $SN=(P,T,F,\lambda,m_0,m_f)$, the complete trace $\sigma$, and the move costs from Table~\ref{tab:moves}. The numbers of places, transitions, and events may vary between inputs.
 
 \textbf{Processing.} The encoder converts this pair into numerical arrays while preserving the distinctions relevant to alignment:
 \begin{equation}
@@ -68,9 +68,9 @@ The compatibility matrix protects the exact label relation:
 \end{equation}
 It is computed from the original labels, not their hashes. A hash collision can affect a preference but cannot authorize a false synchronous match. Conversely, $C_{ij}=1$ does not imply that $t_j$ is enabled. Label compatibility is checked in the score matrix; token availability is checked in the decoder. Keeping these conditions separate prevents statistical encoding choices from changing the move vocabulary.
 
-The runtime can inspect integer arc weights, but the neural features above do not explicitly encode those weights. Our formal and empirical claims therefore concern the ordinary net setting used by the study. Passing a richer net object through a software interface would not by itself establish learned generalization to that setting.
+The runtime can inspect integer arc weights, but the neural features above do not explicitly encode those weights. Our formal and empirical claims therefore concern the ordinary Petri net setting used by the study. Passing a richer Petri net object through a software interface would not by itself establish learned generalization to that setting.
 
-\textbf{Output.} The stage returns the tuple $X$ in Equation~\eqref{eq:input}, together with the ordered identifiers that link tensor rows to concrete places and transitions. The neural network receives structural features and label encodings; the decoder retains the original labels and net semantics for exact checks.
+\textbf{Output.} The stage returns the tuple $X$ in Equation~\eqref{eq:input}, together with the ordered identifiers that link tensor rows to concrete places and transitions. The neural network receives structural features and label encodings; the decoder retains the original labels and Petri net semantics for exact checks.
 
 \subsection{Encoding the Graph and the Complete Trace}
 \label{sec:scorer}
@@ -83,7 +83,7 @@ The runtime can inspect integer arc weights, but the neural features above do no
  h_t^{(0)}=A_Tx_t+b_T+e_T+e_{h(\lambda(t))}.
  \label{eq:initialemb}
 \end{equation}
-The symbols $A_P,A_T,b_P,b_T,e_P,e_T$ and the label table $e$ are learned parameters. They are shared by all input nets. The model therefore learns transformations of structure and labels rather than a separate vector for each named transition in one process.
+The symbols $A_P,A_T,b_P,b_T,e_P,e_T$ and the label table $e$ are learned parameters. They are shared by all input Petri nets. The model therefore learns transformations of structure and labels rather than a separate vector for each named transition in one process.
 
 Two graph blocks combine global self attention with typed local messages. For a node $v$ with incoming typed edges $\mathcal N_v=\{(u,r):(u,v,r)\in E\}$, one block computes
 \begin{align}
@@ -100,9 +100,9 @@ Two cross attention operations then connect graph and trace. Let $G_T$ be the gr
  V&=\LN\bigl(H_E+\operatorname{MHA}(H_E,G_T,G_T)\bigr),\label{eq:cross1}\\
  U&=\LN\bigl(G_T+\operatorname{MHA}(G_T,H_E,H_E)\bigr).\label{eq:cross2}
 \end{align}
-The two contexts are calculated from the vectors before cross attention. An event can now reflect which transitions are relevant in this net, and a transition can reflect which events occur in this trace. These numerical associations explain how the neural network can use the suffix $c$ to prefer one $b$ transition; they do not guarantee that it learns the appropriate association on every input.
+The two contexts are calculated from the vectors before cross attention. An event can now reflect which transitions are relevant in this Petri net, and a transition can reflect which events occur in this trace. These numerical associations explain how the neural network can use the suffix $c$ to prefer one $b$ transition; they do not guarantee that it learns the appropriate association on every input.
 
-\textbf{Output.} The encoders return contextual event vectors $V\in\R^{n\times d}$ and transition vectors $U\in\R^{|T|\times d}$, whose rows are $v_i$ and $u_j$. These vectors summarize the supplied net and complete trace for the scoring stage; they do not represent the decoder's changing marking.
+\textbf{Output.} The encoders return contextual event vectors $V\in\R^{n\times d}$ and transition vectors $U\in\R^{|T|\times d}$, whose rows are $v_i$ and $u_j$. These vectors summarize the supplied Petri net and complete trace for the scoring stage; they do not represent the decoder's changing marking.
 
 \subsection{Move Scores and Their Limits}
 \label{sec:scores}
@@ -116,7 +116,7 @@ The two contexts are calculated from the vectors before cross attention. An even
 \end{align}
 The matrix $S\in\R^{n\times|T|}$ ranks matching transitions for each event. The vector $M\in\R^{|T|}$ ranks model moves. The auxiliary vector $\ell\in\R^n$ is trained to indicate log moves but is not used by the current decoder. The finite value $-10^9$ effectively excludes incompatible labels from softmax calculations.
 
-A single forward pass calculates these arrays once per net--trace pair. They depend on the complete input, including initial and final markings, but remain fixed as decoding proceeds. In particular, $M_j$ has no event position index, and neither $S$ nor $M$ is recomputed after a mistaken commitment. This saves repeated neural evaluation but limits adaptation to the decoder's current state. Scores rank alternatives; move costs remain those in Table~\ref{tab:moves}.
+A single forward pass calculates these arrays once per Petri net--trace pair. They depend on the complete input, including initial and final markings, but remain fixed as decoding proceeds. In particular, $M_j$ has no event position index, and neither $S$ nor $M$ is recomputed after a mistaken commitment. This saves repeated neural evaluation but limits adaptation to the decoder's current state. Scores rank alternatives; move costs remain those in Table~\ref{tab:moves}.
 
 For the running example, the reference checkpoint gives the scores in Table~\ref{tab:examplescores}. Once $t_a$ has fired, both $t_1$ and $t_2$ are enabled and compatible with event $b$. The score of $t_1$ is slightly higher, so the decoder takes the branch that can subsequently explain $c$. The magnitude difference is a preference, not an estimate of a cost saving or a confidence interval. When a unique matching transition is enabled, the synchronous score is not needed at all.
 
@@ -136,7 +136,7 @@ $M$ & $-1.357$ & $-1.401$ & $-1.030$ & $-1.830$ & $-1.837$ & $2.519$\\
 \end{tabular}
 \end{table*}
 
-At fixed depth and embedding width, graph self attention has quadratic dependence on the node count $|P|+|T|$, trace self attention on $n$, and cross attention on $n|T|$. Typed messages additionally traverse the encoded arcs. Avoiding a reachability graph therefore does not make the scorer linear in net size. The parameter count is fixed, but inference cost still grows with the input.
+At fixed depth and embedding width, graph self attention has quadratic dependence on the node count $|P|+|T|$, trace self attention on $n$, and cross attention on $n|T|$. Typed messages additionally traverse the encoded arcs. Avoiding a reachability graph therefore does not make the scorer linear in Petri net size. The parameter count is fixed, but inference cost still grows with the input.
 
 \textbf{Output.} The decoder receives the fixed arrays $S$ and $M$ as rankings of synchronous and model alternatives. The auxiliary log scores $\ell$ remain available for training and diagnostics. None of these arrays replaces the move costs or certifies a complete alignment.
 
@@ -187,7 +187,7 @@ In unguided mode, all learned rankings are removed and the forward pass is skipp
 \subsection{Replay Verification and Exact Certification}
 \label{sec:assurance}
 
-\textbf{Input.} The verification stage receives the proposed sequence $\widehat\gamma$, the original net and trace, the move costs, and the requested mode, \Fast{} or \Certified{}. Verification is needed even though decoding fires enabled transitions: bounded completion can fail, and independent checking also detects malformed candidates.
+\textbf{Input.} The verification stage receives the proposed sequence $\widehat\gamma$, the original Petri net and trace, the move costs, and the requested mode, \Fast{} or \Certified{}. Verification is needed even though decoding fires enabled transitions: bounded completion can fail, and independent checking also detects malformed candidates.
 
 \textbf{Processing.} Replay reconstructs the marking sequence from $m_0$, validates each transition identity and synchronous label, checks that the log projection is exactly $\sigma$, and requires the final marking to equal $m_f$. Only then is the summed cost advertised as an upper bound. A failed proposal can be retained for diagnostics, but it is not a verified alignment result.
 

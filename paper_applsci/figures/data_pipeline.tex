@@ -1,6 +1,6 @@
 \begin{tikzpicture}[x=1cm,y=1cm]
 \node[box,text width=30mm] (plan) at (1.6,0) {assign split\\choose motif};
-\node[box,text width=30mm] (nets) at (5.3,0) {build two nets\\$SN_1$ and $SN_2$};
+\node[box,text width=30mm] (nets) at (5.3,0) {build two Petri nets\\$SN_1$ and $SN_2$};
 \node[verifybox,text width=30mm] (check) at (9,0) {check languages\\and structure};
 \draw[flow] (plan) -- (nets); \draw[flow] (nets) -- (check);
 \node[box,text width=30mm] (pool) at (9,-1.9) {select two traces\\from clean pool};

@@ -1,22 +1,43 @@
-\begin{tikzpicture}[x=1cm,y=1cm]
-\node[box,text width=32mm,minimum height=18mm] (concepts) at (1.8,0)
-  {\textbf{Section~\ref{sec:preliminaries}}\\Concepts, questions,\\and contributions};
-\node[box,text width=32mm,minimum height=18mm] (related) at (6,0)
-  {\textbf{Section~\ref{sec:related}}\\Related work\\and positioning};
-\node[learnbox,text width=32mm,minimum height=18mm] (method) at (10.2,0)
-  {\textbf{Section~\ref{sec:method}}\\Neural proposals,\\replay, and certification};
-\draw[flow] (concepts) -- (related);
-\draw[flow] (related) -- (method);
-\node[learnbox,text width=32mm,minimum height=18mm] (training) at (10.2,-2.4)
-  {\textbf{Section~\ref{sec:training}}\\Synthetic data\\and exact supervision};
-\node[box,text width=32mm,minimum height=18mm] (software) at (6,-2.4)
-  {\textbf{Section~\ref{sec:implementation}}\\Implementation\\and workbench};
-\node[verifybox,text width=32mm,minimum height=18mm] (evaluation) at (1.8,-2.4)
-  {\textbf{Section~\ref{sec:evaluation}}\\Quality, ablations,\\and transfer};
-\draw[flow] (method) -- (training);
-\draw[flow] (training) -- (software);
-\draw[flow] (software) -- (evaluation);
-\node[box,text width=70mm,minimum height=13mm] (conclusions) at (7.4,-4.6)
-  {\textbf{Sections~\ref{sec:discussion} and~\ref{sec:conclusion}}\\Interpretation, limitations, and conclusions};
-\draw[flow] (evaluation.south) |- (conclusions.west);
+\begin{tikzpicture}[x=1cm,y=1cm,
+  stage/.style={text width=26mm,minimum height=19mm,inner sep=5pt},
+  result/.style={text width=53mm,minimum height=20mm,inner sep=5pt}]
+
+\node[paneltitle] at (0,3.6) {TRAIN ONCE};
+\node[box,stage] (data) at (1.5,2.35)
+  {\textbf{Synthetic data}\\Petri nets + traces\\exact alignments};
+\node[learnbox,stage] (training) at (5,2.35)
+  {\textbf{Train scorer}\\learn move\\preferences};
+\draw[flow] (data) -- (training);
+\node[annotation,anchor=west,text width=58mm] at (7.15,2.35)
+  {One checkpoint reused\\across process models\\and activity vocabularies.};
+
+\node[paneltitle] at (0,.85) {ALIGN EACH NEW INPUT};
+\node[box,stage] (input) at (1.5,-.3)
+  {\textbf{New input}\\Petri net + trace\\initial/final\\markings};
+\node[learnbox,stage] (scorer) at (5,-.3)
+  {\textbf{Score moves}\\encode graph\\and trace\\rank alternatives};
+\node[learnbox,stage] (decoder) at (8.5,-.3)
+  {\textbf{Build candidate}\\track tokens\\follow firing rules};
+\node[verifybox,stage] (replay) at (12,-.3)
+  {\textbf{Replay check}\\validate execution\\recompute cost};
+\draw[flow,dashed,draw=learnblue] (training) --
+  node[right,font=\small,text=learnblue] {fixed parameters} (scorer);
+\draw[flow] (input) -- (scorer);
+\draw[flow] (scorer) -- (decoder);
+\draw[flow] (decoder) -- (replay);
+
+\node[verifybox,result] (verified) at (10.5,-3.45)
+  {\textbf{Verified alignment}\\executable explanation\\cost upper bound};
+\draw[flow] (replay.south) -- (12,-2.25) -|
+  node[pos=.25,above,font=\small] {replay passes} (verified.north);
+
+\node[verifybox,result] (exact) at (3.25,-3.45)
+  {\textbf{Optional exact certification}\\solve the original input\\retain or replace the candidate};
+\draw[flow,dashed] (input.south) -- (1.5,-2.25) -| (exact.north);
+\draw[flow,dashed] (replay.south) -- (12,-1.75) -- (5.6,-1.75) --
+  node[right,font=\small,text=muted] {candidate} ([xshift=23.5mm]exact.north);
+\node[annotation,anchor=north,text width=59mm,align=center] at (3.25,-4.65)
+  {Optimality requires\\successful exact search.};
+\node[annotation,anchor=north,text width=57mm,align=center] at (10.5,-4.65)
+  {Replay failure: no verified\\candidate or cost bound.};
 \end{tikzpicture}

@@ -1,5 +1,36 @@
 # Final manuscript validation
 
+## Current introduction revision (14 September 2026)
+
+- Figure 1 on page 2 now outlines the method: synthetic supervision, a reusable
+  scorer, candidate decoding, independent replay, and optional exact certification.
+  It contains no paper-section labels or reading-order arrows.
+- The introduction explicitly states contributions C1--C4 and research questions
+  RQ1--RQ3, consistently with their detailed treatment in Section 2. Its final
+  paragraph begins "The rest of the paper is organized as follows" and describes
+  Sections 2--9.
+- `make submission` succeeds and produces the updated 42-page `build/main.pdf`
+  and `build/submission.zip`. All archived manuscript and figure sources match
+  the working files, and the ZIP passes its integrity check.
+- Rendered pages 2--4 were reviewed for figure text, arrows, captions, the new
+  introductory material, and the transition into Section 2. There are no LaTeX
+  warnings, unresolved references, missing glyphs, or overfull/underfull boxes.
+  pdfTeX reports the supplied MDPI logo's PDF version (1.7 versus output 1.5).
+- All 99 source labels remain unique and their references resolve. Numerical
+  experiments were not rerun for this editorial change.
+- The acknowledgments use the author's requested two-sentence wording, verified
+  in the extracted PDF text after rebuilding the PDF and submission archive.
+
+Current PDF SHA-256:
+
+```
+992fe5fc1e82b4dfa1c0d63f98f3333fb5391e759fcbb37dabfe4ba03f8a364e
+```
+
+The remaining record describes the earlier 41-page manuscript. Its page
+positions, paper-outline description, PDF hash, and full-document visual review
+are historical; the introduction revision above supersedes those details.
+
 Layout and editorial revision checked on 14 September 2026. Bibliography and
 numerical verification were completed on 11 September 2026; their source records
 and results are unchanged in this revision.

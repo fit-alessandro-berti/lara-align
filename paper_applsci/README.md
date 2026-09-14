@@ -4,8 +4,11 @@ The journal manuscript contains nine main sections, 12 vector figures, 18 tables
 and 34 verified references. Data generation and training are integrated into
 Section 5; there is no appendix or separate data-generation document.
 
-The introduction includes a visual outline of the paper. Section 4 begins with
-a three-paragraph overview, and each of its five subsections identifies its
+The introduction includes a visual overview of the method, from synthetic
+training to candidate construction, replay, and optional exact certification.
+It explicitly states the four contributions and three research questions and
+ends with a paragraph describing the organization of the paper. Section 4 begins
+with a three-paragraph overview, and each of its five subsections identifies its
 input, processing, and output. All numbered figures and tables use `figure*` or
 `table*` with `[!t]` or `[!b]` placement and are mentioned in the prose.
 

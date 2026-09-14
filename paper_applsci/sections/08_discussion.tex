@@ -9,7 +9,7 @@ For RQ1, the experiments show that the decoder and replay pipeline produced lega
 
 For RQ2, machine learning has a measurable but concentrated effect. The duplicate prefix improvement demonstrates that global trace context can help decide among equal labels before the decoder reaches their distinguishing continuation. The identifier renaming experiment shows more stable candidate costs than the name ordered baseline. The remaining motifs show no cost improvement. The evidence therefore supports using learned rankings for selected ambiguities, rather than attributing the overall success rate to the neural network.
 
-For RQ3, one checkpoint accepts new net sizes and label vocabularies without fine tuning. The candidate can arrive faster than the tested exact backend on larger receipt models and selected stress cells. However, guided inference imposes a substantial floor on small cases, quality degrades on larger stress inputs, and established approximations perform better overall. The real log quality is identical without machine learning. Reuse is demonstrated at the interface and candidate pipeline level, while broad learned generalization remains limited.
+For RQ3, one checkpoint accepts new Petri net sizes and label vocabularies without fine tuning. The candidate can arrive faster than the tested exact backend on larger receipt models and selected stress cells. However, guided inference imposes a substantial floor on small cases, quality degrades on larger stress inputs, and established approximations perform better overall. The real log quality is identical without machine learning. Reuse is demonstrated at the interface and candidate pipeline level, while broad learned generalization remains limited.
 
 \subsection{What a Verified Candidate Can and Cannot Tell an Analyst}
 
@@ -22,7 +22,7 @@ Progressive presentation is a practical application of these distinctions. A wor
 \subsection{Threats to Validity}
 \label{sec:validity}
 
-\textbf{Training distribution.} The corpus is small and intentionally structured. It contains four motif types, three of which use fixed controlled constructions. Family level splitting prevents separation of a generated family's views, but it does not exclude repeated visible languages or motifs across splits. Holding out whole motif classes, unseen compilation schemes, or larger and more varied net collections would provide stronger evidence of structural transfer. Training on abstract labels also leaves business semantics, resources, and time outside the study.
+\textbf{Training distribution.} The corpus is small and intentionally structured. It contains four motif types, three of which use fixed controlled constructions. Family level splitting prevents separation of a generated family's views, but it does not exclude repeated visible languages or motifs across splits. Holding out whole motif classes, unseen compilation schemes, or larger and more varied Petri net collections would provide stronger evidence of structural transfer. Training on abstract labels also leaves business semantics, resources, and time outside the study.
 
 \textbf{Teacher and objective.} Exact targets are verified for the supplied cost model, but only one optimal witness is retained. Sequence agreement therefore mixes candidate quality with witness choice. The masking rule for duplicate prefix targets is motif specific. Moreover, the loss supervises a log head that decoding ignores and auxiliary region heads whose contribution has not been isolated. These choices make the trained model a useful experimental prototype, but they do not establish that the objective is the best one for candidate cost.
 
@@ -32,7 +32,7 @@ Progressive presentation is a practical application of these distinctions. A wor
 
 \textbf{Real log interpretation.} Models are discovered from the same logs used for alignment. This is appropriate for testing the algorithm on different structures and labels, but it does not establish compliance with an independent organizational specification. Variant and case weighting answer different questions, and selecting a limited set of variants in an interactive run changes the covered population. The paper therefore reports both quality weightings and states the scope of the road traffic sample.
 
-\textbf{Semantic and computational scope.} The evaluated setting uses ordinary control flow nets and fixed unit visible deviation costs. Neural features omit explicit arc weights, current decoder markings, and data guards. The scorer uses dense attention, and the decoder's depth bounds do not bound the width of marking exploration. Neither component has a demonstrated constant latency guarantee. The guarantee that survives these implementation limits is the conditional replay/certification contract.
+\textbf{Semantic and computational scope.} The evaluated setting uses ordinary control flow Petri nets and fixed unit visible deviation costs. Neural features omit explicit arc weights, current decoder markings, and data guards. The scorer uses dense attention, and the decoder's depth bounds do not bound the width of marking exploration. Neither component has a demonstrated constant latency guarantee. The guarantee that survives these implementation limits is the conditional replay/certification contract.
 
 \subsection{Methodological Extensions Suggested by the Evidence}
 

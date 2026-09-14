@@ -1,12 +1,12 @@
 \section{Data Generation and Training}
 \label{sec:training}
 
-Training a reusable scorer requires examples that separate process behavior from the way a net happens to represent it. It also requires trustworthy targets: synthetic corruption tells us how an observation was produced, but not necessarily its cheapest explanation. This section describes the complete path from a generated behavior family to input tensors, exact alignment targets, and parameter updates. All generation and loss details needed to understand the reference model are integrated here.
+Training a reusable scorer requires examples that separate process behavior from the way a Petri net happens to represent it. It also requires trustworthy targets: synthetic corruption tells us how an observation was produced, but not necessarily its cheapest explanation. This section describes the complete path from a generated behavior family to input tensors, exact alignment targets, and parameter updates. All generation and loss details needed to understand the reference model are integrated here.
 
 \subsection{Why Generate Behavior Families?}
 \label{sec:families}
 
-An isolated pair of a random net and a noisy trace would teach the neural network about one representation at a time. It would give much less control over whether a performance change comes from different behavior or merely different routing. A \emph{behavior family} addresses this by grouping two nets with the same complete visible language and two shared observations:
+An isolated pair of a random Petri net and a noisy trace would teach the neural network about one representation at a time. It would give much less control over whether a performance change comes from different behavior or merely different routing. A \emph{behavior family} addresses this by grouping two Petri nets with the same complete visible language and two shared observations:
 \begin{equation}
  \mathcal B=(SN_1,SN_2,\sigma_1,\sigma_2),\qquad
  \mathcal L(SN_1)=\mathcal L(SN_2).
@@ -14,7 +14,7 @@ An isolated pair of a random net and a noisy trace would teach the neural networ
 \end{equation}
 Each family expands into four supervised inputs, $(SN_r,\sigma_k)$ for $r,k\in\{1,2\}$. Both representations see exactly the same observations. Figure~\ref{fig:family} shows this expansion and the checks that precede writing the rows.
 
-The entire family belongs to one split before expansion. This avoids placing two views of the same generated family in training and test. It does not make all visible languages, motifs, or net topologies disjoint across splits: independently generated families can repeat the controlled structures. The test split measures new family instances within this generator, not transfer to wholly unseen motif classes.
+The entire family belongs to one split before expansion. This avoids placing two views of the same generated family in training and test. It does not make all visible languages, motifs, or Petri net topologies disjoint across splits: independently generated families can repeat the controlled structures. The test split measures new family instances within this generator, not transfer to wholly unseen motif classes.
 
 \begin{figure*}[!t]
 \centering
@@ -23,7 +23,7 @@ The entire family belongs to one split before expansion. This avoids placing two
 \label{fig:family}
 \end{figure*}
 
-Before generating nets, a deterministic quota assigns the requested number of families to four equally weighted motifs. Minimum family counts are reserved per motif, remaining slots are distributed by the weights, and the plan is shuffled with a split specific seed. If a generation attempt fails, another family index is tried for the same planned motif. This prevents rejection from silently shifting the corpus toward easier model classes. The global reference seed is 13; separate seeds derived from the split and family index control structure, representation, and corruption.
+Before generating Petri nets, a deterministic quota assigns the requested number of families to four equally weighted motifs. Minimum family counts are reserved per motif, remaining slots are distributed by the weights, and the plan is shuffled with a split specific seed. If a generation attempt fails, another family index is tried for the same planned motif. This prevents rejection from silently shifting the corpus toward easier model classes. The global reference seed is 13; separate seeds derived from the split and family index control structure, representation, and corruption.
 
 \subsection{Four Motifs and Their Representation Pairs}
 \label{sec:motifs}
@@ -38,10 +38,10 @@ The motifs target distinct reasons why a label sequence may be difficult to alig
 \toprule
 Motif & Core behavior & Representation pair\\
 \midrule
-Ordinary tree & Sampled tree language & Canonical block net and isomorphic identifier renaming.\\
+Ordinary tree & Sampled tree language & Canonical block Petri net and isomorphic identifier renaming.\\
 Duplicate/silent & $AB$, $AC$ & Two $A$ transitions that select a branch; one $A$ followed by invisible routing.\\
 Concurrency & $AB$, $BA$ & True parallel execution; explicit choice between the two sequences.\\
-M pattern & $B$, $AC$, $CA$ & XOR of $B$ and parallel $A,C$; non-free-choice M net.\\
+M pattern & $B$, $AC$, $CA$ & XOR of $B$ and parallel $A,C$; non-free-choice M Petri net.\\
 \bottomrule
 \end{tabularx}
 \end{table*}
@@ -50,24 +50,24 @@ M pattern & $B$, $AC$, $CA$ & XOR of $B$ and parallel $A,C$; non-free-choice M n
 
 This pair tests whether a candidate depends on incidental naming. A random process tree has 4--12 visible leaf occurrences and depth at most six. Sequence, XOR, and AND have selection probabilities $0.4$, $0.3$, and $0.3$. The alphabet size is approximately 70\% of the visible leaf count, so different leaves can carry the same label. The compiler maps leaves to visible transitions, sequences to linked fragments, XOR branches to shared entry and exit places, and AND to invisible split/join routing.
 
-The second net is an isomorphic copy with renamed place and transition identifiers. Labels, arcs, markings, and weights remain unchanged under the corresponding bijections. Its firing possibilities and optimal costs are therefore unchanged. Sorting the new identifiers can, however, change how the unguided decoder breaks a tie. This pair distinguishes an improvement in handling identifiers from an improvement on a new process behavior.
+The second Petri net is an isomorphic copy with renamed place and transition identifiers. Labels, arcs, markings, and weights remain unchanged under the corresponding bijections. Its firing possibilities and optimal costs are therefore unchanged. Sorting the new identifiers can, however, change how the unguided decoder breaks a tie. This pair distinguishes an improvement in handling identifiers from an improvement on a new process behavior.
 
 \subsubsection{Duplicate Prefix and Silent Routing}
 
-This pair isolates a choice that may have to be made before its distinguishing event arrives. In the duplicate prefix net, two enabled transitions are both labeled $A$. One leads to $B$ and the other to $C$. Firing $A$ therefore commits to a branch. In the silent routing net, there is one shared $A$ transition followed by two invisible alternatives that enable $B$ or $C$. Both nets generate $AB$ or $AC$ before the common suffix, but the visible ambiguity occurs at a different point. Figure~\ref{fig:duplicatepair} draws both cores.
+This pair isolates a choice that may have to be made before its distinguishing event arrives. In the duplicate prefix Petri net, two enabled transitions are both labeled $A$. One leads to $B$ and the other to $C$. Firing $A$ therefore commits to a branch. In the silent routing Petri net, there is one shared $A$ transition followed by two invisible alternatives that enable $B$ or $C$. Both Petri nets generate $AB$ or $AC$ before the common suffix, but the visible ambiguity occurs at a different point. Figure~\ref{fig:duplicatepair} draws both cores.
 
-For an observation beginning with $A,C$, selecting the appropriate duplicate $A$ requires looking beyond the current event. The silent routing representation can postpone its branch selection until trying to enable $C$. If guidance helps mainly on the first net, that is evidence about early ambiguity, rather than a universal advantage over the same decoder.
+For an observation beginning with $A,C$, selecting the appropriate duplicate $A$ requires looking beyond the current event. The silent routing representation can postpone its branch selection until trying to enable $C$. If guidance helps mainly on the first Petri net, that is evidence about early ambiguity, rather than a universal advantage over the same decoder.
 
 \begin{figure*}[!t]
 \centering
 \input{figures/duplicate_pair}
-\caption{Equal visible languages with different decision points. Top: choosing a concrete $A$ transition commits to $B$ or $C$. Bottom: a shared $A$ precedes invisible branch routing. The appended suffix $D,E$ is identical in both nets. The visible language is $\{ABDE,ACDE\}$, although transition identities and silent moves differ.}
+\caption{Equal visible languages with different decision points. Top: choosing a concrete $A$ transition commits to $B$ or $C$. Bottom: a shared $A$ precedes invisible branch routing. The appended suffix $D,E$ is identical in both Petri nets. The visible language is $\{ABDE,ACDE\}$, although transition identities and silent moves differ.}
 \label{fig:duplicatepair}
 \end{figure*}
 
 \subsubsection{Parallelism and Explicit Interleaving}
 
-This pair tests a change in the representation of concurrency. One net uses an invisible split to enable $A$ and $B$ in parallel, followed by a join. The other uses an XOR between the sequences $AB$ and $BA$. Their complete visible traces coincide, but their causal structures differ: simultaneous availability in one representation becomes a choice between sequential executions in the other. The equivalence is therefore trace language equivalence, not equivalence of partial order behavior. This distinction matters when interpreting representation agreement as evidence of transfer.
+This pair tests a change in the representation of concurrency. One Petri net uses an invisible split to enable $A$ and $B$ in parallel, followed by a join. The other uses an XOR between the sequences $AB$ and $BA$. Their complete visible traces coincide, but their causal structures differ: simultaneous availability in one representation becomes a choice between sequential executions in the other. The equivalence is therefore trace language equivalence, not equivalence of partial order behavior. This distinction matters when interpreting representation agreement as evidence of transfer.
 
 \subsubsection{Block Structure and the Non-Free-Choice M Pattern}
 
@@ -83,16 +83,16 @@ This pair tests a conflict between transitions with different input places. The 
 \subsection{Checking Behavioral Equivalence and Usable Structure}
 \label{sec:equivalence}
 
-The representation checks protect the interpretation of a family. If the two nets admitted different visible traces, a cost difference could be semantically correct rather than a representation effect. The generator enumerates complete visible traces and records whether enumeration finishes. Default limits are 5000 explored states, 10,000 complete traces, and visible length 20, with an additional firing bound to prevent unbounded invisible exploration. A comparison is labeled \emph{exact} only if neither enumeration is truncated. A matching bounded prefix is not treated as proof of full language equality.
+The representation checks protect the interpretation of a family. If the two Petri nets admitted different visible traces, a cost difference could be semantically correct rather than a representation effect. The generator enumerates complete visible traces and records whether enumeration finishes. Default limits are 5000 explored states, 10,000 complete traces, and visible length 20, with an additional firing bound to prevent unbounded invisible exploration. A comparison is labeled \emph{exact} only if neither enumeration is truncated. A matching bounded prefix is not treated as proof of full language equality.
 
-Generation rejects mismatching languages, an empty complete language, an unreachable final marking, or a dead transition. Here dead means that the structural exploration finds no reachable firing of that transition. These checks are useful filters, but should not be read as a general proof of every workflow net soundness property for arbitrary inputs. The default training configuration also rejects families whose equivalence check is only bounded. All accepted rows in the reference training, validation, and test corpus have exact language certificates within the configured bounds.
+Generation rejects mismatching languages, an empty complete language, an unreachable final marking, or a dead transition. Here dead means that the structural exploration finds no reachable firing of that transition. These checks are useful filters, but do not constitute a general proof of soundness for arbitrary workflow Petri nets. The default training configuration also rejects families whose equivalence check is only bounded. All accepted rows in the reference training, validation, and test corpus have exact language certificates within the configured bounds.
 
 The cost comparison used later has a formal rationale. Let $d_{\mathrm{ID}}(\sigma,w)$ be insertion/deletion distance, with unit cost for each inserted or deleted visible activity. With the costs in Table~\ref{tab:moves},
 \begin{equation}
  \delta(\sigma,SN)=\min_{w\in\mathcal L(SN)}d_{\mathrm{ID}}(\sigma,w).
  \label{eq:languagecost}
 \end{equation}
-Every legal alignment selects a complete visible model word and a corresponding sequence of insertions, deletions, and matches. Conversely, such an edit sequence can be combined with a firing sequence for that word, inserting its zero cost invisible moves. Thus language equivalent nets have equal optimal visible deviation costs, even though their optimal transition sequences may differ. This equality would require reexamination if costs depended on transition identity or charged invisible routing.
+Every legal alignment selects a complete visible model word and a corresponding sequence of insertions, deletions, and matches. Conversely, such an edit sequence can be combined with a firing sequence for that word, inserting its zero cost invisible moves. Thus language equivalent Petri nets have equal optimal visible deviation costs, even though their optimal transition sequences may differ. This equality would require reexamination if costs depended on transition identity or charged invisible routing.
 
 \subsection{Producing Observations by Trace Corruption}
 \label{sec:corruption}
@@ -121,14 +121,14 @@ Outside insertion & .05 & Insert the special outside label $X$. & $ABXDE$\\
 \end{tabularx}
 \end{table*}
 
-The same corrupted observation is then paired with both nets. This is essential to the comparison: applying different noise to the two representations would confound behavior with observation quality. The corruption history is metadata, not a neural input and not the alignment target. An edit can produce another fitting trace; several edits can cancel or admit an explanation cheaper than undoing them. For example, substituting $C$ for $B$ in $ABDE$ produces $ACDE$, which still fits the duplicate/silent family. Exact alignment is therefore performed after corruption.
+The same corrupted observation is then paired with both Petri nets. This is essential to the comparison: applying different noise to the two representations would confound behavior with observation quality. The corruption history is metadata, not a neural input and not the alignment target. An edit can produce another fitting trace; several edits can cancel or admit an explanation cheaper than undoing them. For example, substituting $C$ for $B$ in $ABDE$ produces $ACDE$, which still fits the duplicate/silent family. Exact alignment is therefore performed after corruption.
 
 \subsection{Exact Supervision and Family Level Acceptance}
 \label{sec:teacher}
 
-Each expanded row is sent to the PM4Py state equation A* teacher with transition aware output. The reference generation imposes no per trace timeout. Results are cached within a split using a signature of the net, the observed sequence, and the cost model version. Caching reduces repeated teacher work without changing the targets. A different representation still requires its own concrete transition witness.
+Each expanded row is sent to the PM4Py state equation A* teacher with transition aware output. The reference generation imposes no per trace timeout. Results are cached within a split using a signature of the Petri net, the observed sequence, and the cost model version. Caching reduces repeated teacher work without changing the targets. A different representation still requires its own concrete transition witness.
 
-Every exact witness is replayed independently. The initializer requires an optimal result, checks all moves and both projections, and verifies that the paired nets give equal optimal costs for the same observation when their language equivalence was exact. Rows are buffered until the entire family passes; a failure replaces the family rather than writing only its successful rows. For the reference corpus, the manifest records 25 generation time \texttt{ValueError} attempts that were replaced. It records no exact alignment, replay, or paired cost rejection. These are observations about this run, not a guarantee that future configurations cannot fail those gates.
+Every exact witness is replayed independently. The initializer requires an optimal result, checks all moves and both projections, and verifies that the paired Petri nets give equal optimal costs for the same observation when their language equivalence was exact. Rows are buffered until the entire family passes; a failure replaces the family rather than writing only its successful rows. For the reference corpus, the manifest records 25 generation time \texttt{ValueError} attempts that were replaced. It records no exact alignment, replay, or paired cost rejection. These are observations about this run, not a guarantee that future configurations cannot fail those gates.
 
 From one optimal witness $\gamma^*$, the code derives three move targets. The synchronous target $y_i$ is the zero based index of the transition used for event $i$, or $-1$ when there is no active synchronous target. The binary target $q_i$ is one exactly when the event is a log move. The binary target $b_j$ is one when transition $t_j$ occurs at least once as a model move anywhere in $\gamma^*$. Invisible model moves are included in $b$. This last target does not record the position or multiplicity of model moves, matching the deliberately coarse vector $M$.
 
@@ -137,7 +137,7 @@ Teacher identity is not unique when several alignments are optimal. The generato
 \subsection{A Complete Worked Training Row}
 \label{sec:trainingrow}
 
-A concrete row helps separate input information from the answer supplied during training. Consider stored sample \texttt{train-000048}. Starting from $ABDE$, the generator swaps the final events and substitutes $C$ for $B$, yielding $\sigma=\langle A,C,E,D\rangle$. Its duplicate prefix net is the upper representation of Figure~\ref{fig:duplicatepair}, followed by the suffix. Write $A_L,A_R$ for its two $A$ transitions, with $A_L$ leading to $B$ and $A_R$ to $C$.
+A concrete row helps separate input information from the answer supplied during training. Consider stored sample \texttt{train-000048}. Starting from $ABDE$, the generator swaps the final events and substitutes $C$ for $B$, yielding $\sigma=\langle A,C,E,D\rangle$. Its duplicate prefix Petri net is the upper representation of Figure~\ref{fig:duplicatepair}, followed by the suffix. Write $A_L,A_R$ for its two $A$ transitions, with $A_L$ leading to $B$ and $A_R$ to $C$.
 
 The place order is $(p_D,p_E,p_0,p_f,p_L,p_R)$ and the transition order is $(D,E,A_L,A_R,B,C)$. The core ends at $p_f$, followed by $D$ to $p_D$ and $E$ to $p_E$; the final marking is $[p_E]$. In these orders, the numerical feature matrices are
 \begin{equation}
@@ -198,7 +198,7 @@ These arrays and $\delta$ are the supervision. In particular, target $y_1=3$ nam
 
 \subsection{Training Time Relabeling and Corpus Composition}
 
-Label relabeling discourages the scorer from solving controlled examples by memorizing a small set of synthetic IDs. On every training visit, probability $0.5$ triggers a consistent random remapping of distinct nonzero IDs in the net and trace to distinct values in $\{1,\ldots,8191\}$. The graph, exact compatibility mask, and targets remain unchanged. For example, mapping the IDs for $A,B,C,D,E$ to $101,205,309,413,517$ would give $z_T'=(413,517,101,101,205,309)$ and $z_\sigma'=(101,309,517,413)$. This example illustrates an augmentation, not a recorded random draw.
+Label relabeling discourages the scorer from solving controlled examples by memorizing a small set of synthetic IDs. On every training visit, probability $0.5$ triggers a consistent random remapping of distinct nonzero IDs in the Petri net and trace to distinct values in $\{1,\ldots,8191\}$. The graph, exact compatibility mask, and targets remain unchanged. For example, mapping the IDs for $A,B,C,D,E$ to $101,205,309,413,517$ would give $z_T'=(413,517,101,101,205,309)$ and $z_\sigma'=(101,309,517,413)$. This example illustrates an augmentation, not a recorded random draw.
 
 ID zero stays reserved for invisible transitions, and existing hash collisions remain collisions. Because embeddings differ across IDs, this augmentation encourages robustness but does not prove invariance under every label renaming. Validation and test use their original hashed IDs, and dropout is disabled there. The reference split sizes appear in Table~\ref{tab:splits}. The test traces average 3.6 events and their exact costs range from zero to seven, so this is a small controlled corpus rather than a comprehensive sample of industrial process complexity.
 
@@ -208,7 +208,7 @@ ID zero stays reserved for invisible transitions, and existing hash collisions r
 \centering
 \begin{tabular}{@{}lrrr@{}}
 \toprule
-Split & Families & Net--trace rows & Families per motif\\
+Split & Families & Petri net--trace rows & Families per motif\\
 \midrule
 Training & 512 & 2048 & 128\\
 Validation & 128 & 512 & 32\\
