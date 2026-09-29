@@ -16,7 +16,7 @@ Decomposition & Local analyses and recomposed results & Structural fragments and
 Search or compression approximation & Candidate alignment or approximation & Bounded context, repeated structure & Direct candidate generation competitors.\\
 Subset/edit distance & Conformance estimates and bounds & Representative model executions & Reuses behavior for a process.\\
 Predictive monitoring & Future event, time, or outcome & Learned event representations & Different target and information horizon.\\
-LARA & Candidate verified by replay; optional exact result & One pretrained Petri net--trace scorer & Machine learning ranks; semantics checks.\\
+LARA & Candidate verified by replay; optional exact result & One pretrained \begin{revised}Petri net and trace\end{revised} scorer & Machine learning ranks; semantics checks.\\
 \bottomrule
 \end{tabularx}
 \end{table*}
@@ -55,7 +55,7 @@ The survey and research agenda by Genga and Winter~\cite{Genga2025} examines art
 
 \subsection{Reusable Models and Search Guidance}
 
-The foundation model perspective encourages pretraining a shared representation for reuse. Bommasani et al.~\cite{Bommasani2021} discuss this perspective across tasks and modalities, while Rizk et al.~\cite{Rizk2024} argue for models tailored to business process data. The present study takes a limited step in that direction: one scorer is reused across alignment inputs. Its evidence concerns synthetic motifs and a small number of target logs, so it does not establish a general purpose foundation model for process mining. This qualification is necessary to align the terminology with the scale and tasks actually evaluated.
+\begin{revised}The foundation model literature studies pretraining for broad reuse. Bommasani et al.~\cite{Bommasani2021} discuss this across tasks and modalities, while Rizk et al.~\cite{Rizk2024} consider business process data. LARA addresses the narrower question of reusing one scorer across alignment inputs. Its evidence concerns one task, synthetic motifs, and two target logs. We therefore use ``reusable pretrained scorer'' for LARA and reserve ``foundation model'' for the broader research context.\end{revised}
 
 More broadly, machine learning for combinatorial optimization studies how learned decisions can complement established solvers~\cite{Bengio2021}. Neural A*~\cite{Yonetani2021}, for example, couples learned guidance with a differentiable search procedure in path planning. The common motivation is to learn useful preferences over expensive choices. LARA's current integration is simpler: it does not differentiate through A*, alter the exact objective, or establish admissibility of learned values. It learns a first candidate and checks it afterward. A future integration that uses a verified incumbent within exact search would be a different algorithm requiring its own evaluation.
 

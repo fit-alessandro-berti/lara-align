@@ -1,5 +1,9 @@
 # Final manuscript validation
 
+The current reviewer revision is documented in
+[`revision-validation.md`](revision-validation.md). The records below describe
+earlier manuscript versions and retain their original dates and hashes.
+
 ## Reference and citation-context audit (14 September 2026)
 
 All 40 works cited by the previous manuscript were located in primary records.

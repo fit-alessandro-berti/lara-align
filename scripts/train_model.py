@@ -63,6 +63,8 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--cost-beta", type=float, default=1.0)
     parser.add_argument("--bce-label-smoothing", type=float, default=0.03)
     parser.add_argument("--sync-label-smoothing", type=float, default=0.05)
+    parser.add_argument("--log-loss-weight", type=float, default=1.0,
+                        help="Weight of the log-head loss; zero disables this auxiliary supervision.")
     parser.add_argument(
         "--label-remap-probability",
         type=float,
@@ -137,6 +139,7 @@ def main() -> None:
         cost_beta=args.cost_beta,
         bce_label_smoothing=args.bce_label_smoothing,
         sync_label_smoothing=args.sync_label_smoothing,
+        log_loss_weight=args.log_loss_weight,
     )
     optimizer = torch.optim.AdamW(
         model.parameters(),

@@ -1,0 +1,158 @@
+{
+  "files": [
+    {
+      "id": 24061973,
+      "uuid": "a217f40c-d5c3-4205-a8ec-589d874e91bb",
+      "name": "DATA.xml",
+      "size": 7219,
+      "is_link_only": false,
+      "is_incomplete": false,
+      "download_url": "https://data.4tu.nl/file/33632f3c-5c48-40cf-8d8f-2db57f5a6ce7/a217f40c-d5c3-4205-a8ec-589d874e91bb",
+      "supplied_md5": "c0bf23210eb3c7c9e2d7f2b8837cd37d",
+      "computed_md5": "c0bf23210eb3c7c9e2d7f2b8837cd37d"
+    },
+    {
+      "id": 24061976,
+      "uuid": "643dccf2-985a-459e-835c-a82bce1c0339",
+      "name": "Sepsis Cases - Event Log.xes.gz",
+      "size": 202508,
+      "is_link_only": false,
+      "is_incomplete": false,
+      "download_url": "https://data.4tu.nl/file/33632f3c-5c48-40cf-8d8f-2db57f5a6ce7/643dccf2-985a-459e-835c-a82bce1c0339",
+      "supplied_md5": "b5671166ac71eb20680d3c74616c43d2",
+      "computed_md5": "b5671166ac71eb20680d3c74616c43d2"
+    },
+    {
+      "id": 24061979,
+      "uuid": "c3729698-8f67-4c12-8fda-20983a0c2a65",
+      "name": "readme.txt",
+      "size": 2059,
+      "is_link_only": false,
+      "is_incomplete": false,
+      "download_url": "https://data.4tu.nl/file/33632f3c-5c48-40cf-8d8f-2db57f5a6ce7/c3729698-8f67-4c12-8fda-20983a0c2a65",
+      "supplied_md5": "d990049d11124aeb5d68f2db6a2981d4",
+      "computed_md5": "d990049d11124aeb5d68f2db6a2981d4"
+    }
+  ],
+  "custom_fields": [
+    {
+      "name": "Time coverage",
+      "value": "2013-11-07T08:18:29+01:00/2015-06-05T12:25:11+02:00"
+    },
+    {
+      "name": "Publisher",
+      "value": "Eindhoven University of Technology"
+    },
+    {
+      "name": "Organizations",
+      "value": "Eindhoven University of Technology, Department of Mathematics and Computer Science"
+    },
+    {
+      "name": "Format",
+      "value": "media types: application/x-gzip, text/csv, text/plain, text/xml"
+    }
+  ],
+  "authors": [
+    {
+      "id": 9123631,
+      "uuid": "107ef468-5715-4576-8ad4-36a6bc5ee6d4",
+      "full_name": "Felix Mannhardt",
+      "is_active": true,
+      "url_name": "Felix_Mannhardt",
+      "orcid_id": "0000-0003-1733-777X"
+    }
+  ],
+  "figshare_url": "https://data.4tu.nl/articles/dataset/Sepsis_Cases_-_Event_Log/12707639",
+  "description": "This real-life event log contains events of sepsis cases from a hospital. Sepsis is a life threatening condition typically caused by an infection. One case represents the pathway through the hospital.\nThe events were recorded by the ERP (Enterprise Resource Planning) system of the hospital. There are about 1000 cases with in total 15,000 events that were recorded for 16 different activities. Moreover, 39 data attributes are recorded, e.g., the group responsible for the activity, the results of tests and information from checklists.\nEvents and attribute values have been anonymized. The time stamps of events have been randomized, but the time between events within a trace has not been altered.",
+  "funding": null,
+  "funding_list": [],
+  "version": 1,
+  "status": "public",
+  "size": 211786,
+  "created_date": "2016-12-07T00:00:00",
+  "modified_date": "2020-07-28T08:47:11",
+  "is_public": true,
+  "is_confidential": false,
+  "is_metadata_record": false,
+  "confidential_reason": "",
+  "metadata_reason": "",
+  "license": {
+    "value": 98,
+    "name": "4TU General Terms of Use",
+    "url": "https://doi.org/10.4121/resource:terms_of_use"
+  },
+  "tags": [
+    "Data mining",
+    "Event log",
+    "Hospital",
+    "IEEE Task Force on Process Mining",
+    "Patterns",
+    "Process mining",
+    "Systematic data processing",
+    "real life event logs"
+  ],
+  "categories": [
+    {
+      "id": 13503,
+      "uuid": "7b5382c2-d6f0-475d-aa6c-a044d808c686",
+      "title": "Business and Management",
+      "parent_id": 13500,
+      "parent_uuid": "0f682048-e983-45a9-ae74-7faeb7031169",
+      "path": "",
+      "source_id": null,
+      "taxonomy_id": null
+    },
+    {
+      "id": 13671,
+      "uuid": "e3cb9b17-bb3e-4b1f-959b-3ada1335cc13",
+      "title": "Management and Productivity",
+      "parent_id": 13667,
+      "parent_uuid": "82d7c00d-d033-4440-a6f1-f64e268fed77",
+      "path": "",
+      "source_id": null,
+      "taxonomy_id": null
+    }
+  ],
+  "references": [
+    "http://ceur-ws.org/Vol-1859/bpmds-08-paper.pdf"
+  ],
+  "has_linked_file": false,
+  "citation": "Mannhardt, Felix (2016): Sepsis Cases - Event Log. 4TU.ResearchData. Dataset. https://doi.org/10.4121/uuid:915d2bfb-7e84-49ad-a286-dc35f063a460",
+  "is_embargoed": false,
+  "embargo_date": null,
+  "embargo_type": null,
+  "embargo_title": "",
+  "embargo_reason": "",
+  "embargo_options": [],
+  "id": 12707639,
+  "uuid": "33632f3c-5c48-40cf-8d8f-2db57f5a6ce7",
+  "title": "Sepsis Cases - Event Log",
+  "doi": "10.4121/uuid:915d2bfb-7e84-49ad-a286-dc35f063a460",
+  "handle": "",
+  "url": "https://data.4tu.nl/v2/articles/33632f3c-5c48-40cf-8d8f-2db57f5a6ce7",
+  "published_date": "2016-12-07T00:00:00",
+  "thumb": "",
+  "defined_type": 3,
+  "defined_type_name": "dataset",
+  "group_id": 28589,
+  "url_private_api": "https://data.4tu.nl/v2/account/articles/33632f3c-5c48-40cf-8d8f-2db57f5a6ce7",
+  "url_public_api": "https://data.4tu.nl/v2/articles/33632f3c-5c48-40cf-8d8f-2db57f5a6ce7",
+  "url_private_html": "https://data.4tu.nl/my/datasets/33632f3c-5c48-40cf-8d8f-2db57f5a6ce7/edit",
+  "url_public_html": "https://data.4tu.nl/datasets/33632f3c-5c48-40cf-8d8f-2db57f5a6ce7/1",
+  "timeline": {
+    "posted": "2016-12-07T00:00:00",
+    "revision": null,
+    "submission": null,
+    "firstOnline": "2016-12-07T00:00:00",
+    "publisherPublication": "2016-12-07T00:00:00"
+  },
+  "resource_title": "",
+  "resource_doi": "",
+  "agreed_to_deposit_agreement": false,
+  "agreed_to_publish": false,
+  "retrieval": {
+    "url": "https://data.4tu.nl/file/33632f3c-5c48-40cf-8d8f-2db57f5a6ce7/643dccf2-985a-459e-835c-a82bce1c0339",
+    "sha256": "709c52340306415952811b9b9c5dc6bcc8f8d47d583eba39df9a538459dc543a",
+    "bytes": 202508
+  }
+}

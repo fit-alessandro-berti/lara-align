@@ -32,12 +32,15 @@ class LARALoss(nn.Module):
         cost_beta: float = 1.0,
         bce_label_smoothing: float = 0.0,
         sync_label_smoothing: float = 0.0,
+        log_loss_weight: float = 1.0,
     ) -> None:
         super().__init__()
         if not 0.0 <= bce_label_smoothing < 0.5:
             raise ValueError("bce_label_smoothing must be in [0, 0.5)")
         if not 0.0 <= sync_label_smoothing < 1.0:
             raise ValueError("sync_label_smoothing must be in [0, 1)")
+        if not 0.0 <= log_loss_weight < float("inf"):
+            raise ValueError("log_loss_weight must be finite and non-negative")
         self.move_weight = move_weight
         self.cost_weight = cost_weight
         self.router_boundary_weight = router_boundary_weight
@@ -46,6 +49,7 @@ class LARALoss(nn.Module):
         self.cost_beta = cost_beta
         self.bce_label_smoothing = bce_label_smoothing
         self.sync_label_smoothing = sync_label_smoothing
+        self.log_loss_weight = log_loss_weight
 
     def forward(
         self,
@@ -74,7 +78,8 @@ class LARALoss(nn.Module):
                 self.bce_label_smoothing,
             ),
         )
-        move_loss = losses["sync_move"] + losses["log_move"] + losses["model_move"]
+        move_loss = (losses["sync_move"] + self.log_loss_weight * losses["log_move"]
+                     + losses["model_move"])
 
         if targets.optimal_cost is not None:
             predicted_cost = output.local_upper_bounds.sum()

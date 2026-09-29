@@ -26,6 +26,9 @@
 \usepackage{longtable}
 \usetikzlibrary{arrows.meta,positioning,fit,calc,backgrounds,patterns}
 \input{figures/styles}
+% Scope revision color to the text or display enclosed by this environment.
+\definecolor{revisionblue}{RGB}{0,51,102}
+\newenvironment{revised}{\color{revisionblue}\ignorespaces}{}
 \newcommand{\skipmove}{\gg}
 \newcommand{\R}{\mathbb{R}}
 \newcommand{\N}{\mathbb{N}}
@@ -50,9 +53,9 @@
 $^{1}$ \quad Process and Data Science (PADS), RWTH Aachen University, Aachen, Germany; wvdaalst@pads.rwth-aachen.de\\
 $^{2}$ \quad Celonis, Munich, Germany}
 \corres{Correspondence: a.berti@pads.rwth-aachen.de}
-\abstract{Alignments explain deviations between an event trace and a process model, but difficult traces can make exact computation slow. This paper studies whether one pretrained neural scorer can be reused to propose alignments for different Petri nets and activity vocabularies. LARA (Learned Alignment with Replay Assurance) encodes the Petri net and the complete trace, scores possible moves, and constructs a candidate using a decoder that tracks the marking. Independent replay checks executability and computes the candidate cost. Optional exact search establishes optimality or supplies a replacement. We explain the neural machinery, synthetic training procedure, and verification contract. On 512 synthetic test inputs, all candidates are legal and 91.0\% have optimal cost, compared with 86.9\% for the same decoder without learned guidance. The largest improvement occurs when duplicate activity labels require a choice informed by the trace suffix. Experiments on larger synthetic models and two public event logs expose a tradeoff between candidate latency and quality. Established approximations generally produce better candidates, and certified mode still runs exact search on every trace. The results support a limited but useful role for reusable learned scoring, with guarantees supplied by process semantics.}
-\keyword{process mining; conformance checking; alignments; Petri nets; neural networks; foundation models; replay verification}
-\featuredapplication{A foundation model for alignments that provides approximate alignments with executability verified by replay and an upper bound on the optimal alignment cost.}
+\abstract{Alignments explain deviations between an event trace and a process model, but difficult traces can make exact computation slow. This paper studies whether one pretrained neural scorer can be reused to propose alignments for different Petri nets and activity vocabularies. LARA (Learned Alignment with Replay Assurance) encodes the Petri net and the complete trace, scores possible moves, and constructs a candidate using a decoder that tracks the marking. Independent replay checks executability and computes the candidate cost. Optional exact search establishes optimality or supplies a replacement. We explain the neural machinery, synthetic training procedure, and verification contract. \texorpdfstring{\begin{revised}Across three training seeds, greedy decoding produces 90.8\% optimal candidates on the 512-row synthetic test set (sample standard deviation .3 percentage points), compared with 86.9\% without guidance. All candidates pass replay. An optional single-log repair procedure raises the reference checkpoint's rate from 91.0\% to 97.3\%. The largest learned benefit concerns duplicate activity labels. Added tests exclude training-isomorphic graphs, include cyclic structures, and evaluate held-out cases from three public logs. They reveal inconsistent structural gains and no real-log quality advantage from learned rankings. Common-boundary timings compare per-trace methods, while established approximations remain stronger than the greedy candidate policy. Certified mode still runs exact search on every trace. The results support a limited role for reusable scoring, with guarantees supplied by process semantics.\end{revised}}{Across three training seeds, greedy decoding produces 90.8\% optimal candidates on the 512-row synthetic test set (sample standard deviation .3 percentage points), compared with 86.9\% without guidance. All candidates pass replay. An optional single-log repair procedure raises the reference checkpoint's rate from 91.0\% to 97.3\%. The largest learned benefit concerns duplicate activity labels. Added tests exclude training-isomorphic graphs, include cyclic structures, and evaluate held-out cases from three public logs. They reveal inconsistent structural gains and no real-log quality advantage from learned rankings. Common-boundary timings compare per-trace methods, while established approximations remain stronger than the greedy candidate policy. Certified mode still runs exact search on every trace. The results support a limited role for reusable scoring, with guarantees supplied by process semantics.}}
+\keyword{process mining; conformance checking; alignments; Petri nets; neural networks; \texorpdfstring{\begin{revised}reusable neural scoring\end{revised}}{reusable neural scoring}; replay verification}
+\featuredapplication{\begin{revised}A reusable neural scorer for candidate alignments, with executability checked by replay and a verified upper bound on the optimal alignment cost.\end{revised}}
 
 \begin{document}
 \raggedbottom
@@ -65,7 +68,7 @@ $^{2}$ \quad Celonis, Munich, Germany}
 \input{sections/07_evaluation}
 \input{sections/08_discussion}
 \input{sections/09_conclusion}
-\authorcontributions{Software, A.B.; writing---review and editing, A.B. and W.M.P.v.d.A.}
+\authorcontributions{Software, A.B.; \begin{revised}writing (review and editing)\end{revised}, A.B. and W.M.P.v.d.A.}
 \funding{Funded by the European Union. This work has received funding from the European High Performance Computing Joint Undertaking (JU) and from the German Federal Ministry of Research, Technology and Space (BMFTR), the Ministry of Culture and Science of North Rhine-Westphalia (MKW NRW), and the Hessian Ministry of Science and Research, Arts and Culture (HMWK) under grant agreement No.~101250682.}
 \institutionalreview{Not applicable. This study uses synthetic traces and previously published event logs.}
 \informedconsent{Not applicable.}
@@ -77,7 +80,6 @@ $^{2}$ \quad Celonis, Munich, Germany}
 A* & Heuristic shortest path search\\
 BFS & Breadth first search\\
 CPU & Central processing unit\\
-GNN & Graph neural network\\
 LARA & Learned Alignment with Replay Assurance\\
 PNML & Petri Net Markup Language\\
 RQ & Research question\\

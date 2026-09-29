@@ -1304,6 +1304,34 @@
         "assessment": "The JMLR abstract describes randomly dropping units during training and using an unthinned network at test time to limit overfitting.",
         "source": "https://jmlr.org/papers/v15/srivastava14a.html"
       }
+    },
+    "SepsisLog": {
+      "sources": [
+        "https://data.4tu.nl/v2/articles/12707639",
+        "https://data.4tu.nl/articles/dataset/Sepsis_Cases_-_Event_Log/12707639"
+      ],
+      "verified_metadata": {
+        "title": "Sepsis Cases - Event Log",
+        "authors": [
+          "Felix Mannhardt"
+        ],
+        "year": 2016,
+        "container": [
+          "4TU.ResearchData"
+        ],
+        "doi": "10.4121/uuid:915d2bfb-7e84-49ad-a286-dc35f063a460"
+      },
+      "notes": [
+        "Verified primary 4TU metadata and downloaded file checksum on 29 September 2026. Only activity sequences are used."
+      ],
+      "checked_on": "2026-09-29",
+      "citation_support": {
+        "cited_in": [
+          "sections/07_revision_experiments.tex"
+        ],
+        "assessment": "Primary dataset record establishes provenance of the additional public event log. Exact case/event counts are measured from the downloaded XES, not inferred from the approximate description.",
+        "source": "https://data.4tu.nl/v2/articles/12707639"
+      }
     }
   },
   "additional_checks": [

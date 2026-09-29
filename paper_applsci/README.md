@@ -1,9 +1,52 @@
 # Applied Sciences submission source
 
 The journal manuscript contains nine main sections, 15 figures (13 vector
-figures and two tool screenshots), 17 tables, and 41 verified references.
+figures and two tool screenshots), 22 tables, and 42 verified references.
 Data generation and training are integrated into
 Section 5; there is no appendix or separate data-generation document.
+
+## Reviewer revision (29 September 2026)
+
+Revised passages use `\begin{revised} ... \end{revised}` and print in dark
+blue. The revision addresses the six comments from Reviewer 1 and nine from
+Reviewer 2. The original checkpoint, default decoder, 35 equations, Tables 1 to 17, and
+historical benchmark records are preserved. Section 7.9 and Tables 18 to 22
+add two full-objective training seeds, two matched log-loss ablations, optional
+single-log candidate repair, 512 structural inputs, 652 held-out real-log
+variant/model inputs, and a common-boundary timing benchmark. The four new
+checkpoints stay in distinct local folders under `runs/reviewer_20260929`;
+no checkpoint is included in the submission archive or uploaded.
+
+`reviewer_response.txt` contains each reviewer comment after `>>` and its reply
+after `R:` on the next line. `reviewer_response.tex` is a standalone response
+with indented dark-red comments and black replies. The TXT file is the editable
+source; `scripts/render_responses.py` regenerates the matching TEX file.
+`make responses` builds `build/reviewer_response.pdf`.
+
+`make submission` builds both PDFs, the manuscript source ZIP, and
+`build/revision_evidence.zip`, which contains the experiment code, frozen
+control-flow inputs, numerical records, and verification instructions without
+checkpoint weights. The response
+PDF and TXT/TEX files are separate from that ZIP for submission as a response
+letter. `make evidence` now also writes `data/revision_analysis.json`, with the
+aggregate intervals, exact real-log counts, and input/checkpoint hashes. To
+recompute just this analysis from the included evidence snapshot, run:
+
+```bash
+python3 scripts/analyze_revision.py
+```
+
+`make verify-revision` independently replays all 12,756 packaged witnesses
+and audits 20,480 timing records without loading checkpoint weights.
+`make revision-tables` regenerates Tables 18 to 22 from the audited numerical
+summary. `make revision-evidence` rebuilds that summary from the completed
+local experiments and requires their local checkpoints. None of these targets
+starts training. See [the experiment guide](notes/reviewer-experiments.md)
+for the full commands and measurement protocol.
+
+See `notes/revision-validation.md` for the comment-by-comment coverage and
+verification of this revision. Older records in `notes/validation.md` describe
+earlier manuscript versions.
 
 The introduction includes a visual overview of the method, from synthetic
 training to candidate construction, replay, and optional exact certification.
@@ -55,7 +98,9 @@ and trained checkpoint downloads in a footnote.
 ## Bibliography verification
 
 `notes/reference-metadata.json` records primary sources and citation-support
-assessments for all 41 references, rechecked on 14 September 2026.
+assessments for all 42 references. The original 41 were rechecked on
+14 September 2026; the added Sepsis dataset was verified against its primary
+4TU record and downloaded checksum on 29 September 2026.
 Sources include publisher pages and metadata, DataCite dataset records, PMLR
 and NeurIPS proceedings, and author-posted arXiv papers. The bibliography
 preserves compound surnames and initials, identifies preprints explicitly,
@@ -107,8 +152,9 @@ intervals. It reproduces 466 guided and 445 unguided optimal candidates.
 
 Historical comparison results are read from the original files when present
 and otherwise from the included snapshot. Their original file hashes are
-preserved as provenance. Verification does not rerun those timing experiments
-or claim a new training run. The entire check was also run in an isolated copy
+preserved as provenance. This reference verification does not rerun historical timing experiments.
+The additional training and timing experiments have separate records and
+commands in the experiment guide. The entire check was also run in an isolated copy
 using only the packaged corpus, downloaded checkpoint, and included snapshot;
 its resulting evidence matched the supplied snapshot exactly.
 

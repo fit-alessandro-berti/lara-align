@@ -1,0 +1,82 @@
+Response to the editor and reviewers
+
+Manuscript: Reusable Neural Guidance for Petri Net Alignments with Replay Verification
+
+Revised manuscript passages are enclosed in the revised environment and printed in dark blue. The original 35 equations and Tables 1 to 17 retain their numbering. Section 7.9 and Tables 18 to 22 report the additional experiments. The reference checkpoint and default behavior are preserved; optional repair and the log-loss ablation are identified explicitly.
+
+EDITOR
+
+>> Dear Authors, Thank you for submitting your work and research to this special issue. The reviewers find the study interesting and relevant to the topic of the special issue, and have recommended minor revision before acceptance.
+R: Thank you for the opportunity to revise the manuscript. We have addressed all comments through presentation changes, two additional full-objective training runs, two matched log-loss ablations, an optional candidate-repair procedure, tests of unseen structures and a second compiler, held-out cases from three real logs, and a timing benchmark with common processing boundaries. The original reference results remain identifiable. New checkpoints are retained only in separate local folders, and the declarations are unchanged.
+
+REVIEWER #1
+
+General assessment
+>> This paper proposes LARA and employs independent replay verification to validate executability, as well as a precise methodology to determine optimality. The entire manuscript addresses three research questions candidate validity and quality, the contribution of machine learning, and reusability alongside practical efficiency and organizes its evidence accordingly. The technical content of the paper is robust, the evidence is hierarchically structured, and the numerical results are fully self-consistent. The main concerns are as follows:
+R: Thank you for the assessment. We have revised the presentation and tested the main empirical concerns with additional controlled experiments. The responses below identify both improvements and unfavorable findings. Revised manuscript text is marked in dark blue.
+
+Comment 1.1
+>> 1. Adjust the layout of the table header. For example, in Table 16, the three columns are tightly packed in the layout, making them difficult to read.
+R: Table 16 now uses the full text width, a two-level header, a separating rule below the grouped optimality heading, and more vertical space between rows. Variants, cases, and the mean/maximum cost gap have separate headings. Percentage units appear once in the grouped header. We also split the long headers in Tables 11 and 12 over two lines. The underlying results are unchanged.
+
+Comment 1.2
+>> 2. The core comparison lacks uncertainty quantification; it is recommended to incorporate multiple seed retraining or explicitly document the limitations of using a single checkpoint.
+R: Section 7.9.1 and Table 18 now evaluate three full-objective training seeds: the original seed 13 and new seeds 17 and 29. Their validation-selected checkpoints produce 466, 463, and 465 optimal candidates out of 512, respectively, versus 445 without guidance. Mean optimality is 90.76%, with sample standard deviation 0.30 percentage points. The new runs retain the corpus, architecture, optimizer settings, maximum epochs, and validation selection protocol; the changed hardware and thread configuration are disclosed. The guidance gains are 4.10, 3.52, and 3.91 points, with stratified paired family-bootstrap intervals [2.54, 5.66], [1.95, 5.08], and [2.54, 5.27]. Each interval uses 10,000 resamples of complete families within motifs and conditions on its fitted checkpoint. We distinguish those sampling intervals from the variation across the three training runs and retain the small-seed limitation in Section 8.3. The abstract, introduction, and conclusion now reflect the retraining evidence.
+
+Comment 1.3
+>> 3. The abbreviation GNN was defined but never used in the main text; the full name was consistently used throughout the manuscript.
+R: We removed GNN from the abbreviation list. The manuscript continues to use the full term graph neural network, so an unused abbreviation is no longer introduced.
+
+Comment 1.4
+>> 4. The density of formula cross-references is relatively low; it is recommended to explicitly cite each formula at its first occurrence.
+R: We checked all 35 numbered equations and added explicit equation references where each formula is introduced. We also added labels for the previously unlabeled graph feedforward update, synchronous probability definition, and region summaries, which remain Equations (14), (26), and (29). Equations, costs, and their numbering are unchanged.
+
+Comment 1.5
+>> 5. The external label names "the special outside label X" and "insertion of the outside label OOD" refer to the same concept.
+R: Section 5.4 now defines X as the notation for the single outside label whose literal implementation string is __OOD__. Both the fallback insertion in the prose and the outside-insertion row of Table 6 use X. The text states that this label is absent from the family alphabet. This is a notation clarification; the generator is unchanged.
+
+Comment 1.6
+>> 6. In Table 14, LARA ranks fifth among the six methods; however, the phrasing used to assert methodological contributions in the introduction requires slight revision.
+R: The introduction explicitly states that the reference greedy LARA policy ranks fifth among the six methods by optimal candidate rate in Table 14. The contributions concern a reusable scoring design, a verification contract, controlled supervision, and an empirical analysis of their limits. The added repair result is identified separately in Table 18, and neither it nor the additional seeds is presented as broad superiority over established approximations. The abstract, Sections 2.7 and 8.1, and the conclusion follow this restricted interpretation. The guidance gain compares the same decoder with and without learned rankings.
+
+REVIEWER #2
+
+General assessment
+>> The manuscript proposes LARA (Learned Alignment with Replay Assurance), a reusable neural-guidance framework for computing Petri-net alignments in process-mining conformance checking. Its central idea is to avoid training a separate neural model for every Petri net. Instead, one pretrained scorer is reused across different Petri-net structures and activity vocabularies. The neural network ranks candidate moves, while formal Petri-net semantics remain responsible for correctness: a marking-aware decoder constructs an alignment, independent replay verifies executability and cost, and optional exact search establishes optimality or replaces a suboptimal candidate. In my opinion, the manuscript is technically substantial and unusually careful about distinguishing neural prediction from formal guarantees. Therefore, I can accept this manuscript after the authors address a few issues.
+R: Thank you for the assessment and the distinction between prediction and formal guarantees. We have added experiments for the seed, real-log, structural-transfer, objective, decoder, and timing concerns. We also clarified the mathematical notation and narrowed the terminology. The original checkpoint and default decoding behavior remain available as the reference; new training runs and optional repair are reported separately.
+
+Comment 2.1
+>> Only one trained checkpoint/seed is evaluated.
+R: We trained two additional checkpoints with seeds 17 and 29 in distinct local folders, using the same full objective and selection protocol as the reference seed 13. Section 7.9.1 and Table 18 report all three selected epochs and test results: 466, 463, and 465 optimal candidates out of 512. Their mean is 90.76%, with sample standard deviation 0.30 percentage points; every seed exceeds the unguided count of 445. Section 7.9.1 also reports conditional paired family-bootstrap intervals for each gain. Three seeds provide a limited measurement of retraining variation, rather than a precise population estimate, and the changed execution environment is explicit. Two further runs support the matched log-loss ablation. All four new checkpoints remain local and are not publicly distributed; histories, hashes, and replayable outputs are included, without changing the declarations.
+
+Comment 2.2
+>> Real-world evidence is still weak.
+R: Section 7.9.3 adds the public Sepsis Cases log and a separate discovery/evaluation case split for all three logs. With split seed 37, 70% of cases are used for discovery and 30% for evaluation: road traffic 70/30, receipt 1003/431, and sepsis 735/315. Both discovery thresholds use only the discovery cases, and all 6, 48, and 272 held-out variants per log are evaluated, yielding 652 variant/model inputs. Table 21 reports exact optimal variant and case counts; all inputs have complete exact references and legal candidates. Every greedy cost for all three neural seeds equals the unguided cost. Repair improves some cases but also does so without learning, so we claim no real-log quality advantage from guidance. The case split is disjoint, while activity variants can overlap. These remain discovered models rather than independent organizational specifications, the road traffic sample is small, and none of the six nets has duplicate visible labels. The revised discussion retains those limits.
+
+Comment 2.3
+>> The training objective and the actual decoder are not fully aligned.
+R: We added both a matched training ablation and a decoder that uses the log head. For seeds 17 and 29, a second run removes only log-loss supervision; all other architecture, data, and training settings are retained, with each run selected by its corresponding validation objective. Table 19 reports 463 versus 465 optimal candidates for seed 17 and 465 versus 467 for seed 29, with full versus removed log loss. Full-minus-ablated gains are -0.39 points for both seeds, with paired intervals [-1.56, 0.78] and [-1.17, 0.00]. We therefore do not claim that log supervision helps the default decoder. The optional repair procedure in Section 4.4 uses log scores to prioritize forced-log alternatives and compares replayed complete candidate costs. Section 5.8 still states the residual mismatch: witness imitation does not optimize decoded cost, model preferences are global, and the continuation remains greedy. The repair comparison does not isolate log-head ranking from the other learned rankings.
+
+Comment 2.4
+>> Timing comparison is not completely apples-to-apples
+R: Section 7.9.4 and Table 22 add a new common-boundary benchmark for eight per-trace methods on the same 512 inputs. Timers run from in-memory Petri net and trace through method-specific preparation, inference or search, parsing where needed, and final independent replay. Loading and discovery are excluded uniformly, while existing internal checks remain included. The harness uses one CPU thread, three warmup inputs per method, five repetitions, shuffled input/method order, and a common five-second call budget. All 20,480 calls return legal outputs. We report the median and interquartile range across per-input five-call medians, with coverage and optimality over all calls. Guided greedy, guided repair, and exact A* medians are 2.060, 2.325, and 0.664 ms, respectively. Thus the learned candidate is slower than exact search on this test. The batch subset method is excluded from this per-trace benchmark. Historical timers remain explicitly qualified, and no certified-mode or deployment speedup is claimed.
+
+Comment 2.5
+>> “Foundation model” terminology remains questionable.
+R: We replaced the description of LARA as a foundation model with reusable pretrained scorer. The featured application, keywords, introduction, and Sections 2.5 and 3.5 now follow this wording. Foundation models remain only as related research context. The text explicitly states that one alignment task, a small synthetic corpus, and limited structural diversity do not support the broader foundation-model claim.
+
+Comment 2.6
+>> Generalization across Petri-net structures is not yet fully demonstrated
+R: Section 7.9.2 and Table 20 add 512 inputs from 64 acyclic trees and 64 trees with a loop at the root, each with two observations and two compilations. Before evaluation, both compilations are checked against training graphs by structural hashing and full graph isomorphism, preserving node types, arc weights, and initial/final tokens while ignoring identifiers and activity strings. Two training-isomorphic acyclic proposals are rejected. All training graphs are checked to be acyclic; both compilations of every loop test are cyclic. PM4Py supplies the second compiler. All 256 paired observations have equal exact costs across compilers, and all methods return legal candidates. The results limit the claim: guided greedy decoding falls below unguided optimality on the loop class for all three seeds and both compilers. Repair helps, but this is not evidence of broad learned superiority. The experiment excludes training structures, not repeated visible languages or validation structures, and both compilers still receive generated process trees. Those limitations are explicit.
+
+Comment 2.7
+>> Equation (26) and finite masking deserve clarification
+R: Equation (26) now has an explicit label and introduction. Section 5.8 clarifies that its denominator covers all transition columns after the finite -10^9 mask in Equation (17). The implementation evaluates log_softmax directly with a stable log-sum-exp calculation. Incompatible columns have positive probability in exact real arithmetic; they disappear numerically only when their stabilized exponential contributions underflow. We give the limitation explicitly: a compatible score below the finite mask can invalidate that numerical equivalence. Smoothing gives target mass only to compatible transitions, with teacher mass 1 - epsilon_s + epsilon_s/|J_i|. Rows without an active synchronous target, including events with no matching label, are skipped, and an empty active set gives zero loss. The decoder checks original label equality and enabledness independently of scores. We verified these cases against the implementation without changing the reference checkpoint or masking rule.
+
+Comment 2.8
+>> “Lower” and “upper” auxiliary bounds are not mathematical bounds
+R: Section 5.9 now calls these outputs ordered cost predictions and identifies local_lower_bounds and local_upper_bounds only as existing implementation names retained for checkpoint and interface compatibility. Neither the sum of the smaller endpoints nor the sum of the larger endpoints is a guaranteed bound on the true optimum, and no interval coverage is established. Only the sum of the larger endpoints has cost supervision; the smaller endpoint receives gradients through that sum without a separate target. None of these predictions prunes search, accepts a candidate, or certifies optimality. The revised text distinguishes them from the valid upper bound supplied by the replayed candidate cost and the exact search bounds.
+
+Comment 2.9
+>> Decoder greediness creates a structural source of suboptimality.
+R: We implemented and evaluated an optional single-log repair decoder, described in Section 4.4. It constructs the original greedy candidate, then tests up to eight alternatives, each forcing one previously synchronized event to be a log move and rerunning the greedy construction with the same forward-pass scores. Guided trials are ordered by the log head; unguided trials use event position. Only a legal, complete candidate with lower cost replaces a legal incumbent. The worked A,D,B,C,C,D failure is repaired from cost six to the optimum of two. On the original 512-row test set, guided repair raises optimal candidates from 466 to 498 (97.27%); unguided repair reaches 479 (93.55%). The guided improvement is 6.25 points with a paired family-bootstrap interval [3.52, 9.38]. Table 22 measures the extra computation. The original greedy limitation remains explicit, and the repair procedure still misses 14 optima: it explores only a finite set of single forced-log alternatives and provides no optimality guarantee. Section 8.4 discusses further search extensions without presenting them as implemented.

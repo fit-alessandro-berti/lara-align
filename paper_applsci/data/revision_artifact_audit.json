@@ -1,0 +1,18 @@
+{
+  "equations": 35,
+  "unique_labels": 111,
+  "reference_uses": 150,
+  "numbered_comments": 15,
+  "quoted_comments_and_assessments": 18,
+  "main_pdf_pages": 52,
+  "response_pdf_pages": 6,
+  "archive_files": 51,
+  "evidence_archive_files": 56,
+  "references": 42,
+  "replayed_witnesses": 12756,
+  "timed_calls": 20480,
+  "revised_color_spans": 2962,
+  "reviewer_red_spans": 792,
+  "pdf_sha256": "6da1283ca9355254a9f198e50e1339c9fc6f9dbb466657a4ca428dadb7106e0f",
+  "response_pdf_sha256": "834f21ff260f2d2368311b27d989c5769cacd43b3b50f016d99060d980e72222"
+}

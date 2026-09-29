@@ -74,7 +74,9 @@ def test_default_data_sizes_match_the_minimum_recommended_experiment():
 def test_presentation_headline_figures_match_the_current_paper():
     repo = Path(__file__).resolve().parents[1]
     talk = (repo / "presentation" / "main.tex").read_text()
-    paper = (repo / "paper" / "main.tex").read_text().replace("{,}", ",")
+    paper_dir = repo / "paper_applsci"
+    paper = "\n".join(path.read_text() for path in
+                      [paper_dir / "main.tex", *sorted((paper_dir / "sections").glob("*.tex"))])
 
     required_in_talk = [
         r"n = 512",
@@ -102,13 +104,16 @@ def test_presentation_headline_figures_match_the_current_paper():
 
     required_in_paper = [
         "91.0",
-        "+4.1",
-        "+26.6",
-        "1.7M",
-        "epoch 49 of 50",
-        "16.0 vs. 31.0 ms",
-        "6.7 vs. 12.7 ms",
-        "2,048/512/512",
+        "4.10",
+        "26.6",
+        "1.7 million",
+        "epoch 49",
+        "16.05",
+        "31.04",
+        "6.65",
+        "12.72",
+        "2048",
+        "512",
     ]
     missing_from_paper = [needle for needle in required_in_paper if needle not in paper]
     assert missing_from_paper == []
@@ -148,14 +153,15 @@ def test_presentation_headline_figures_match_the_current_paper():
 def test_presentation_appendix_covers_training_data_generation():
     repo = Path(__file__).resolve().parents[1]
     talk = (repo / "presentation" / "main.tex").read_text()
-    appendix = (repo / "paper" / "appendix.tex").read_text()
+    appendix = (repo / "paper_applsci" / "sections" / "05_training.tex").read_text()
 
-    assert r"\section{Training Data Generation}" in appendix
+    assert r"\section{Data Generation and Training}" in appendix
     assert "behavior family" in appendix
-    assert r"fig:ordinary-tree-pair" in appendix
-    assert r"fig:duplicate-silent-pair" in appendix
-    assert r"fig:concurrent-interleaved-pair" in appendix
-    assert r"fig:m-pattern-pair" in appendix
+    assert "Ordinary Trees and Identifier Renaming" in appendix
+    assert r"fig:duplicatepair" in appendix
+    assert "Parallelism and Explicit Interleaving" in appendix
+    assert "Block Structure and the Non-Free-Choice M Pattern" in appendix
+    assert r"fig:structuralpairs" in appendix
 
     eval_anchor = talk.rfind("Approximations Beat Current Candidate Quality")
     data_anchor = talk.find("Training Data Generation")

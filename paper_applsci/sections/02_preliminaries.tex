@@ -9,7 +9,7 @@ A trace records the order of activities observed for one case. Let $\mathcal A$ 
 
 We represent a labeled Petri net as $SN=(P,T,F,\lambda,m_0,m_f)$. Here $P$ is a finite set of places, $T$ is a disjoint finite set of transitions, and $F\subseteq(P\times T)\cup(T\times P)$ is the arc relation. We use ordinary arcs with weight one in the formal exposition. The labeling function $\lambda:T\to\mathcal A\cup\{\tau\}$ assigns a visible activity or the invisible label $\tau\notin\mathcal A$. A marking $m:P\to\N$ assigns tokens to places, with $\N$ including zero. The initial and final markings are $m_0$ and $m_f$; $[p]$ denotes the marking with one token at $p$ and zero elsewhere.
 
-For $t\in T$, its preset ${}^\bullet t=\{p:(p,t)\in F\}$ contains its input places, and its postset $t^\bullet=\{p:(t,p)\in F\}$ contains its output places. The transition is enabled at $m$ when $m(p)\geq1$ for every $p\in{}^\bullet t$. Firing it produces the marking
+For $t\in T$, its preset ${}^\bullet t=\{p:(p,t)\in F\}$ contains its input places, and its postset $t^\bullet=\{p:(t,p)\in F\}$ contains its output places. The transition is enabled at $m$ when $m(p)\geq1$ for every $p\in{}^\bullet t$. \begin{revised}Firing it produces the marking in Equation~\eqref{eq:firing}\end{revised}
 \begin{equation}
  m'(p)=m(p)-\ind[p\in{}^\bullet t]+\ind[p\in t^\bullet],
  \qquad p\in P,
@@ -51,7 +51,7 @@ Invisible model & $(\skipmove,t)$, $\lambda(t)=\tau$ & Unobserved routing advanc
 \end{tabularx}
 \end{table*}
 
-For a finite sequence $\gamma$ of permitted moves, its log projection $\pi_L(\gamma)$ removes the model components and skips; its model projection $\pi_T(\gamma)$ removes the log components and skips but retains all transition identities, including invisible transitions. The alignment is \emph{legal} when
+For a finite sequence $\gamma$ of permitted moves, its log projection $\pi_L(\gamma)$ removes the model components and skips; its model projection $\pi_T(\gamma)$ removes the log components and skips but retains all transition identities, including invisible transitions. \begin{revised}Equation~\eqref{eq:legal} states the projection conditions for a \emph{legal} alignment:\end{revised}
 \begin{equation}
  \pi_L(\gamma)=\sigma
  \quad\text{and}\quad
@@ -60,14 +60,14 @@ For a finite sequence $\gamma$ of permitted moves, its log projection $\pi_L(\ga
 \end{equation}
 and every synchronous move has matching labels. Thus a legal alignment reconstructs the observed sequence exactly and describes a complete executable model path. Merely firing enabled transitions is insufficient: a sequence can stop in the wrong marking.
 
-Let $c(\gamma)$ be the sum of move costs. The optimal alignment cost is
+Let $c(\gamma)$ be the sum of move costs. \begin{revised}Equation~\eqref{eq:optimum} defines the optimal alignment cost:\end{revised}
 \begin{equation}
  \delta(\sigma,SN)=\min_{\gamma\text{ legal for }(\sigma,SN)}c(\gamma).
  \label{eq:optimum}
 \end{equation}
 The feasible set is nonempty by the complete firing sequence assumption, and its costs are nonnegative integers, so the minimum is finite and attained even if there are infinitely many legal alignments. Under these costs, $\delta$ is the minimum number of visible insertions and deletions needed to explain the trace by a complete model execution. It does not measure a monetary or business loss. Replacing one visible activity by another is represented by one log move and one visible model move, giving cost two; the optimal alignment may instead use a different model execution. Other cost policies may be appropriate in an application, but the empirical results here concern the policy in Table~\ref{tab:moves}.
 
-An optimum need not be unique. Independent activities can be ordered differently, and invisible routes may differ without changing the visible cost. Consequently, matching the exact teacher's move sequence is a stricter diagnostic than achieving the same cost. We will report both, but use cost equality for optimality. For a candidate verified by replay $\widehat\gamma$, its \emph{gap} is
+An optimum need not be unique. Independent activities can be ordered differently, and invisible routes may differ without changing the visible cost. Consequently, matching the exact teacher's move sequence is a stricter diagnostic than achieving the same cost. We will report both, but use cost equality for optimality. \begin{revised}For a candidate verified by replay $\widehat\gamma$, Equation~\eqref{eq:gap} defines its \emph{gap}:\end{revised}
 \begin{equation}
  g=c(\widehat\gamma)-\delta(\sigma,SN)\geq0.
  \label{eq:gap}
@@ -88,7 +88,7 @@ There are therefore three distinct levels of evidence. A raw proposal may fail r
 \subsection{Machine Learning Preliminaries}
 \label{sec:mlprelim}
 
-The neural component learns recurring patterns from solved alignment problems. In \emph{supervised machine learning}, each input is paired with a desired output, or \emph{target}. Here the input is a Petri net--trace pair, and an exact aligner supplies the targets; this supervising algorithm is called the \emph{teacher}. A neural network is a numerical function $f_\theta$ whose parameters $\theta$ comprise adjustable weights and biases. Training changes them to reduce a \emph{loss}, a numerical penalty for disagreement with targets. LeCun et al.~\cite{LeCun2015} provide an overview of learned representations and their training. After training, \emph{inference} evaluates the function with fixed parameters. One evaluation is a \emph{forward pass}; a saved parameter set and its architecture settings form a \emph{checkpoint}.
+The neural component learns recurring patterns from solved alignment problems. In \emph{supervised machine learning}, each input is paired with a desired output, or \emph{target}. Here the input is a \begin{revised}Petri net and trace\end{revised} pair, and an exact aligner supplies the targets; this supervising algorithm is called the \emph{teacher}. A neural network is a numerical function $f_\theta$ whose parameters $\theta$ comprise adjustable weights and biases. Training changes them to reduce a \emph{loss}, a numerical penalty for disagreement with targets. LeCun et al.~\cite{LeCun2015} provide an overview of learned representations and their training. After training, \emph{inference} evaluates the function with fixed parameters. One evaluation is a \emph{forward pass}; a saved parameter set and its architecture settings form a \emph{checkpoint}.
 
 A \emph{feature} is a numerical description of an input property, such as the number of arcs incident to a place. A \emph{tensor} is a numerical array: a scalar, vector, and matrix have zero, one, and two indexing axes, respectively. Its \emph{shape} gives the size of each axis. An \emph{embedding} is a learned vector representation; an embedding table associates each discrete label ID with one such vector. An \emph{encoder} transforms input features and embeddings into representations that include context. Their coordinates need not have individually interpretable meanings. Sharing parameters across objects of each type permits variable size inputs while keeping the parameter count fixed.
 
@@ -96,7 +96,7 @@ Neural computations are arranged in \emph{layers}. An affine map $x\mapsto Ax+b$
 
 A \emph{graph neural network} updates representations using graph structure. In \emph{message passing}, a node aggregates information from its neighbors; typed messages use different transformations for different edge relations~\cite{Gilmer2017}. Thus a place feeding a transition can be distinguished from a place receiving its output. Aggregation by a sum or mean is also called \emph{pooling}. A weighted mean lets different objects contribute unequally. \emph{Concatenation}, used when combining graph and trace summaries, instead joins vectors end to end.
 
-\emph{Attention} combines information using weights computed from the input~\cite{Vaswani2017}:
+\begin{revised}Equation~\eqref{eq:attention} defines \emph{attention}, which combines information using weights computed from the input~\cite{Vaswani2017}:\end{revised}
 \begin{equation}
  \Att(Q,K,V)=\softmax\!\left(\frac{QK^\top}{\sqrt{d_k}}\right)V.
  \label{eq:attention}
@@ -123,9 +123,9 @@ An \emph{ablation} removes a component while retaining the surrounding procedure
 
 \subsection{Pretraining, Reuse, and Distribution Shift}
 
-Reusable models matter here because a new process should not require another exact labeled training campaign before candidate generation can begin. \emph{Pretraining} fits the scorer on many synthetic Petri net--trace pairs. \emph{Fine tuning} would subsequently update its weights on a target process. LARA's transfer experiments use the pretrained checkpoint without fine tuning, which we call zero shot application with respect to that target process. It still receives the target Petri net and trace as inputs.
+Reusable models matter here because a new process should not require another exact labeled training campaign before candidate generation can begin. \emph{Pretraining} fits the scorer on many synthetic \begin{revised}Petri net and trace\end{revised} pairs. \emph{Fine tuning} would subsequently update its weights on a target process. LARA's transfer experiments use the pretrained checkpoint without fine tuning, which we call zero shot application with respect to that target process. It still receives the target Petri net and trace as inputs.
 
-Foundation models are commonly associated with broad pretraining and adaptation to a range of downstream tasks~\cite{Bommasani2021}. Process specific proposals argue that event data and process representations warrant their own reusable models~\cite{Rizk2024}. LARA explores the reuse principle within one task. Its approximately 1.7 million parameters, small synthetic corpus, fixed costs, and limited training motifs do not demonstrate broad process mining competence. It is also not a language model: a label such as ``approve application'' is treated as an equality identifier, without tokenizing or interpreting its words.
+\begin{revised}Foundation models are commonly associated with broad pretraining and adaptation to a range of downstream tasks~\cite{Bommasani2021}. Process specific proposals consider reusable models for event data and process representations~\cite{Rizk2024}. LARA adopts parameter reuse within one alignment task; we do not classify it as a foundation model. Its approximately 1.7 million parameters, small synthetic corpus, fixed costs, and limited training motifs do not demonstrate broad process mining competence. It is also not a language model: a label such as ``approve application'' is treated as an equality identifier, without tokenizing or interpreting its words.\end{revised}
 
 \emph{Distribution shift} occurs when deployment inputs differ from training inputs. Relevant shifts include longer traces, larger Petri nets, new structural motifs, or different label vocabularies. An exact semantics check continues to have the same meaning under such shifts, but learned rankings may become worse. Evaluating reuse therefore requires separate measurements of candidate legality, optimality, and latency. Acceptance by replay demonstrates successful execution of the candidate, not statistical generalization of the scorer.
 
@@ -136,7 +136,7 @@ The definitions above make it possible to ask questions that distinguish the pre
 \begin{enumerate}[label=\textbf{RQ\arabic*.},leftmargin=*]
 \item \textbf{Candidate validity and quality.} How often does candidate generation produce a complete legal alignment, how often is its cost optimal, and how large are its remaining cost gaps? Replay acceptance, exact cost agreement, and gap distributions provide the evidence in Sections~\ref{sec:indist} and~\ref{sec:failure}.
 \item \textbf{Contribution of machine learning.} When do learned rankings improve the same decoder compared with deterministic structural choices? A paired ablation and representation specific analysis isolate effects on duplicate labels and identifier sensitivity in Sections~\ref{sec:ablation} and~\ref{sec:representations}.
-\item \textbf{Reuse and practical efficiency.} How do quality and running time change across representations, scales, real event logs, and established approximation methods? Sections~\ref{sec:representations}--\ref{sec:real} assess these changes while keeping the pretrained parameters fixed.
+\item \textbf{Reuse and practical efficiency.} How do quality and running time change across representations, scales, real event logs, and established approximation methods? Sections~\ref{sec:representations}\begin{revised} to \end{revised}\ref{sec:real} assess these changes while keeping the pretrained parameters fixed.
 \end{enumerate}
 These questions do not assume that a neural candidate is preferable to exact search. A useful answer may identify inputs for which its inference cost buys little or no improvement. Nor does a high retained candidate rate answer whether certification is faster: that requires measuring a solver that actually uses the candidate to reduce exact work.
 
@@ -145,7 +145,7 @@ These questions do not assume that a neural candidate is preferable to exact sea
 
 The contributions are organized around an implementable alignment pipeline and evidence about its limits:
 \begin{enumerate}[label=\textbf{C\arabic*.},leftmargin=*]
-\item \textbf{A reusable Petri net--trace scorer.} One neural network for graphs and sequences predicts transition aware move preferences for variable size inputs and previously unseen label vocabularies, without training a neural network per target Petri net (Section~\ref{sec:scorer}).
+\item \begin{revised}\textbf{A reusable scorer for Petri nets and traces.} One neural network for graphs and sequences predicts transition aware move preferences for variable size inputs and previously unseen label vocabularies, without training a neural network per target Petri net (Section~\ref{sec:scorer}). Accepting such inputs does not establish accurate rankings on unseen structural classes.\end{revised}
 \item \textbf{An explicit verification contract.} The scorer is integrated with decoding that tracks the marking, independent replay, and exact cost comparison. The resulting output states distinguish a proposal, a verified upper bound, a certified candidate, and an exact replacement (Section~\ref{sec:assurance}). This contract can also wrap candidates produced without a neural network.
 \item \textbf{A controlled synthetic supervision procedure.} Behavior families pair different representations of the same visible behavior, reuse corrupted observations across the pair, and obtain concrete transition targets from exact alignments (Section~\ref{sec:training}).
 \item \textbf{An empirical attribution and transfer study.} The evaluation compares guided and unguided decoding, representation pairs, larger synthetic inputs, existing approximations, and real event logs. It reports where machine learning helps, where it has no measured effect, and where competing methods perform better (Section~\ref{sec:evaluation}).

@@ -6,17 +6,17 @@ The evaluation asks whether the candidate is useful before exact repair and whet
 \subsection{Protocol, Metrics, and Comparison Boundaries}
 \label{sec:protocol}
 
-The reference experiments use an Intel Core i7-1355U CPU and the approximately 1.7-million parameter checkpoint selected at epoch 49. Computation is CPU only, with PyTorch reporting ten intra operation and ten inter operation threads; trace calls are sequential. The checkpoint is loaded once before timing. The synthetic test set has 512 rows from 128 generated families, with 64 rows for each motif/representation cell. The scoring parameters stay fixed throughout the test, scaling, and real log experiments.
+The reference experiments use an Intel Core i7-1355U CPU and the approximately 1.7-million parameter checkpoint selected at epoch 49. Computation is CPU only, with PyTorch reporting ten intra operation and ten inter operation threads; trace calls are sequential. The checkpoint is loaded once before timing. The synthetic test set has 512 rows from 128 generated families, with 64 rows for each motif/representation cell. The scoring parameters stay fixed throughout the \begin{revised}reference\end{revised} test, scaling, and real log experiments. \begin{revised}Section~\ref{sec:revision-experiments} adds separately identified training runs and controlled evaluations.\end{revised}
 
 The primary metrics are replay acceptance, exact cost agreement, and the cost gap in Equation~\eqref{eq:gap}. We also report full transition aware move sequence agreement with the teacher and agreement after replacing transition identities with labels. These sequence measures diagnose imitation of one witness; neither is required for an optimum when several witnesses share its cost. For representation pairs, cost agreement measures whether the same observation receives equal candidate costs on the two equivalent Petri nets.
 
 The guidance ablation preserves the decoder, costs, depth bounds, and test inputs. It disables the neural forward pass and uses deterministic orderings in place of learned rankings. This is a strong baseline because enabledness and bounded model path search already resolve many cases. It directly answers RQ2; comparison with exact search alone would not isolate the contribution of machine learning.
 
-For the LARA timing measurements, fast mode latency includes feature extraction, runtime construction, neural inference when enabled, decoding, and replay. Exact timings include the PM4Py heuristic initialization and search. In the approximation benchmark, the stored timing surrounds the PM4Py alignment call; independent parsing and replay occur afterward. These boundaries are not identical, so small timing differences should not be overinterpreted. All candidate costs are nevertheless compared after replay under the same unit visible deviation policy. Reported medians describe the recorded runs, not a universal hardware independent threshold.
+\begin{revised}The historical timers measure different operations. LARA fast mode includes feature extraction, runtime construction, neural inference when enabled, decoding, and replay. The exact timer includes cost parameter construction, heuristic initialization, search, witness parsing, and independent replay inside the exact wrapper. The approximation benchmark times the PM4Py alignment call and excludes independent parsing and replay. Checkpoint loading, log loading, and model discovery are outside these per trace timers. Thus the medians do not provide a common end to end comparison across all methods. LARA and exact search also return different guarantees: a verified candidate versus a proven optimum. We do not infer a general runtime ranking or a certified alignment speedup from these records. Section~\ref{sec:revision-experiments} adds a controlled timing comparison with common start and end points, warmup, and repeated measurements. Candidate costs and coverage remain comparable because they are checked afterward under the same unit visible deviation policy.\end{revised}
 
 The default test decoder uses catch up depth eight and completion depth 32. Scaling and real log scripts use completion depth 64 while keeping the catch up depth at eight. Exact timeouts in the stress benchmark are 30 seconds, and approximation calls receive five seconds. A timeout leaves the exact cost unknown; the corresponding candidate is included in coverage statistics but excluded from cost gap and optimality calculations that require the optimum. The tables state these denominators explicitly.
 
-For representation specific guidance differences, a family bootstrap constructs 10,000 resampled datasets by drawing whole families with replacement, using seed 13 to make the random draws reproducible. The 2.5th and 97.5th percentiles of the resampled differences define the reported 95\% intervals. A cell contains 32 families with two observations each. Resampling families respects the dependence between observations and representations. These intervals describe sampling within the fixed generator and checkpoint; they do not include variability from retraining with different seeds.
+For representation specific guidance differences, a family bootstrap constructs 10,000 resampled datasets by drawing whole families with replacement, using seed 13 to make the random draws reproducible. The 2.5th and 97.5th percentiles of the resampled differences define the reported 95\% intervals. A cell contains 32 families with two observations each. Resampling families respects the dependence between observations and representations. \begin{revised}For the aggregate guided versus unguided comparison, we additionally resample 32 whole families within each of the four motifs on every draw. Each family retains its two observations and both representations, preserving the balanced design and pairing. We again use 10,000 percentile resamples with seed 13. Both analyses condition on the single epoch-49 checkpoint trained with seed 13. They quantify sampling within this generator, not variability from initialization, training order, checkpoint selection, or deployment domains. The additional runs in Section~\ref{sec:revision-experiments} separately assess variation across three training seeds; bootstrap intervals still condition on the evaluated checkpoints.\end{revised}
 
 \subsection{Candidate Quality on the Synthetic Test Split}
 \label{sec:indist}
@@ -56,7 +56,7 @@ When certified mode is evaluated on these inputs, it invokes exact search on all
 \subsection{What Does Learned Guidance Add?}
 \label{sec:ablation}
 
-The ablation isolates learned ranking from the model semantics. Unguided decoding also returns 512 legal candidates and reaches optimal cost on 445 of them, or 86.9\%. Adding the learned scorer yields 21 more optimal candidates, an increase of 4.10 percentage points. Mean gap decreases from .258 to .180. Transition aware sequence agreement rises from 57.8\% to 61.1\%, and label level agreement from 58.8\% to 62.5\%.
+The ablation isolates learned ranking from the model semantics. Unguided decoding also returns 512 legal candidates and reaches optimal cost on 445 of them, or 86.9\%. \begin{revised}Adding the learned scorer yields 21 more optimal candidates, an increase of 4.10 percentage points, with a 95\% paired family-bootstrap interval of $[2.54,5.66]$ points. Mean gap decreases from .258 to .180, a reduction of .078 with interval $[.051,.105]$. These intervals concern the fixed checkpoint and the stratified generator sample, as specified in Section~\ref{sec:protocol}; they do not establish that retraining would reproduce the gain.\end{revised} Transition aware sequence agreement rises from 57.8\% to 61.1\%, and label level agreement from 58.8\% to 62.5\%.
 
 These aggregate gains are real for the fixed test set but do not imply that machine learning is responsible for most successful alignments. The unguided decoder already synchronizes uniquely enabled matches and searches for short model move paths. Many inputs offer little meaningful ranking choice. To answer where the improvement comes from, Table~\ref{tab:classes} separates the eight representation cells and Figure~\ref{fig:guidance} shows the corresponding differences.
 
@@ -66,7 +66,7 @@ These aggregate gains are real for the fixed test set but do not imply that mach
 \centering
 \begin{tabularx}{\linewidth}{@{}lYrrr@{}}
 \toprule
-Motif & Representation & G optimal & U optimal & G mean gap\\
+\begin{revised}Motif\end{revised} & \begin{revised}Representation\end{revised} & \begin{revised}\shortstack{G optimal\\count (\%)}\end{revised} & \begin{revised}\shortstack{U optimal\\count (\%)}\end{revised} & \begin{revised}\shortstack{G mean\\gap}\end{revised}\\
 \midrule
 Ordinary tree & Canonical block & 54/64 (84.4\%) & 55/64 (85.9\%) & .344\\
 Ordinary tree & Isomorphic rename & 54/64 (84.4\%) & 49/64 (76.6\%) & .344\\
@@ -100,7 +100,7 @@ Equivalent models let us examine reuse without changing the visible alignment pr
 \centering
 \begin{tabularx}{\linewidth}{@{}Yrr@{}}
 \toprule
-Equivalent representation pair & Guided agreement & Unguided agreement\\
+\begin{revised}Equivalent representation pair\end{revised} & \begin{revised}\shortstack{Guided\\agreement}\end{revised} & \begin{revised}\shortstack{Unguided\\agreement}\end{revised}\\
 \midrule
 Canonical tree / isomorphic rename & 100.0\% & 90.6\%\\
 Duplicate prefix / silent routing & 96.9\% & 70.3\%\\
@@ -114,7 +114,7 @@ All 256 observation pairs & 99.2\% & 90.2\%\\
 
 Guided decoding reaches 84.4\% optimality on both canonical and renamed trees, with identical paired costs. Unguided decoding falls from 85.9\% to 76.6\% after renaming. Guidance is thus slightly worse on canonical identifiers, by $-1.6$ points with interval $[-4.7,0.0]$, but better on the renamed identifiers by $+7.8$ points with interval $[1.6,15.6]$. These signs have a common explanation: deterministic name order happens to be favorable on one numbering and less favorable on the other. The learned scorer maintains the same quality across this tested renaming.
 
-Across all representation pairs, agreement rises from 90.2\% to 99.2\%. This is evidence of stability for the tested transformations, not proof of invariance under every isomorphism or activity relabeling. Ties, numerical behavior, and changed label embeddings can still affect choices. It also does not establish transfer to unseen compilation schemes: all four representation families occur during training.
+Across all representation pairs, agreement rises from 90.2\% to 99.2\%. This is evidence of stability for the tested transformations, not proof of invariance under every isomorphism or activity relabeling. Ties, numerical behavior, and changed label embeddings can still affect choices. \begin{revised}All four motif classes and both representations of each class occur during training. Family separation therefore tests new instances, and paired cost agreement tests stability under the listed transformations. Neither is a held-out motif or compiler experiment. The stress generator adds loops and larger nets, but the declining quality and small guidance effect do not establish broad learned structural generalization.\end{revised}
 
 \subsection{Scaling: Candidate Latency and Quality Together}
 \label{sec:scaling}
@@ -148,7 +148,7 @@ Size & Deviation & $\overline{|T|}$ & $n_\delta$ & Optimal & Mean gap & Fast ms 
 \label{fig:scalingtime}
 \end{figure*}
 
-Figure~\ref{fig:scalingtime} compares the median latencies across this grid. LARA's guided median ranges from 4.6 to 8.7 ms. Exact A* is faster on the small configurations. It becomes slower at size 20 with deviation .35, and at size 40 for both rates. At size 40 and deviation .15 the median ratio is approximately $63.9/8.7=7.34$ in favor of the fast candidate. One exact call times out at size 40 and deviation .35. These are candidate latency comparisons, not certified mode speedups.
+\begin{revised}Figure~\ref{fig:scalingtime} shows the recorded latencies across the grid. LARA's guided median ranges from 4.6 to 8.7 ms. The recorded exact median is lower on the small configurations and higher at size 20 with deviation .35 and at size 40 for both rates. One exact call times out at size 40 and deviation .35. Both timers include replay, but they compare candidate generation with exact optimization (Section~\ref{sec:protocol}). They do not establish a speedup for returning the same certified result. Certified mode still performs exact work in addition to candidate generation.\end{revised}
 
 \begin{figure*}[!t]
 \centering
@@ -157,7 +157,7 @@ Figure~\ref{fig:scalingtime} compares the median latencies across this grid. LAR
 \label{fig:scalingquality}
 \end{figure*}
 
-Figure~\ref{fig:scalingquality} shows the accompanying decline in quality: at size 40 only 30.0\% or 44.4\% of comparable candidates are optimal, and mean gaps reach 8.1 or 11.7. Replay remains successful on all 80 candidates, demonstrating executability despite this loss of quality. Unguided decoding takes approximately .2--1.2 ms across the grid and is faster than the exact medians throughout. Guidance contributes little on this stress distribution. The practical question is therefore whether better rankings justify the neural inference cost, not simply whether a neural forward pass is faster than a difficult exact search.
+Figure~\ref{fig:scalingquality} shows the accompanying decline in quality: at size 40 only 30.0\% or 44.4\% of comparable candidates are optimal, and mean gaps reach 8.1 or 11.7. Replay remains successful on all 80 candidates, demonstrating executability despite this loss of quality. Unguided decoding takes approximately \begin{revised}.2 to 1.2\end{revised} ms across the grid and is faster than the exact medians throughout. Guidance contributes little on this stress distribution. The practical question is therefore whether better rankings justify the neural inference cost, not simply whether a neural forward pass is faster than a difficult exact search.
 
 \subsection{Comparison with Established Approximations}
 \label{sec:approximations}
@@ -187,7 +187,7 @@ Subset/edit distance & 360/512 (70.3\%) & .637\\
 Every tested Petri net search/compression approximation exceeds LARA's optimality rate on the small corpus. LARA exceeds the particular subset/edit distance configuration. All test traces fit within one sliding window of 20 events, so the perfect result in that row does not exercise the approximation caused by crossing a window boundary. The comparison illustrates why a small benchmark can be useful for diagnosis without being a sufficient stress test.
 
 \begin{table*}[!t]
-\caption{Stress comparison over 80 inputs. Coverage counts legal outputs out of all 80; $n_\delta$ counts legal outputs with an exact reference. Optimality and mean gap are conditional on those $n_\delta$ inputs. Time is the median over all calls, including unsuccessful calls. Different coverage denominators limit direct quality comparisons.}
+\caption{Stress comparison over 80 inputs. Coverage counts legal outputs out of all 80; $n_\delta$ counts legal outputs with an exact reference. Optimality and mean gap are conditional on those $n_\delta$ inputs. \begin{revised}Time is the median over all calls, including unsuccessful calls. LARA includes replay; PM4Py timings exclude parsing and replay. These times are not a common end to end comparison. Different coverage denominators also limit direct quality comparisons.\end{revised}}
 \label{tab:approxstress}
 \centering
 \begin{tabularx}{\linewidth}{@{}Yrrrrr@{}}
@@ -203,7 +203,7 @@ Fixed horizon & 76/80 & 76 & 82.9\% & 2.263 & 82.37\\
 \end{tabularx}
 \end{table*}
 
-The stress comparison again favors established approximations in quality. Discounted A* has the same full legal coverage as LARA, a higher exact cost rate, a smaller mean gap, and a lower recorded median latency. Tandem repeats and sliding windows are even closer to optimal where they return comparable results. Their incomplete coverage must remain visible: a perfect conditional optimum rate is not a result on every attempted input. LARA's full coverage is useful, but it is not unique to the learned method on this grid.
+The stress comparison again favors established approximations in quality. \begin{revised}Discounted A* has the same full legal coverage as LARA, a higher exact cost rate, and a smaller mean gap. Its lower recorded median covers fewer processing stages, so it is not used to claim an end to end timing advantage.\end{revised} Tandem repeats and sliding windows are even closer to optimal where they return comparable results. Their incomplete coverage must remain visible: a perfect conditional optimum rate is not a result on every attempted input. LARA's full coverage is useful, but it is not unique to the learned method on this grid.
 
 The small and stress comparisons rule out a claim that the present learned greedy decoder is the best general approximation. They instead identify a reusable scoring mechanism with a measured local advantage over its own unguided baseline. Any later claim of competitive overall approximation quality requires a stronger decoder and renewed comparison using common timing boundaries and coverage accounting.
 
@@ -215,31 +215,35 @@ Real log inputs test the use of one checkpoint with different vocabularies, mode
 For each log, PM4Py discovers Petri nets using Inductive Miner~\cite{Leemans2013} at noise threshold .0 and its infrequent behavior variant~\cite{Leemans2014} at threshold .5. Models are discovered from the same log that is subsequently aligned, so this experiment evaluates algorithmic transfer, not independent normative compliance. The positive noise threshold removes infrequent behavior and creates additional deviations against the resulting model. The checkpoint is unchanged; new label strings enter through hashing without any language interpretation or fine tuning.
 
 \begin{table*}[!t]
+\begin{revised}
 \caption{Real log candidate quality. All variants pass replay. Petri net size gives places and visible/invisible transitions. Guided and unguided decoding have identical quality values in all four configurations. Mean and maximum gaps are over variants.}
 \label{tab:realquality}
 \centering
-\begin{tabular}{@{}llrrrr@{}}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabularx}{\linewidth}{@{}Y >{\centering\arraybackslash}p{.11\linewidth} >{\centering\arraybackslash}p{.21\linewidth} >{\centering\arraybackslash}p{.12\linewidth} >{\centering\arraybackslash}p{.12\linewidth} >{\centering\arraybackslash}p{.13\linewidth}@{}}
 \toprule
-Log & Noise & Petri net size & \multicolumn{2}{c}{Optimal (\%)} & Gap\\
+Log & \shortstack{Noise\\threshold} & \shortstack{Petri net\\size} & \multicolumn{2}{c}{Optimal (\%)} & \shortstack{Cost\\gap}\\
+\cmidrule(lr){4-5}
  & & $|P|/|T_v|+|T_\tau|$ & Variants & Cases & Mean/max\\
 \midrule
-Road traffic & .0 & $15/10+10$ & 100.0\% & 100.0\% & 0/0\\
-Road traffic & .5 & $13/10+7$ & 70.0\% & 94.0\% & .50/3\\
-Receipt & .0 & $45/27+47$ & 50.0\% & 82.6\% & .76/5\\
-Receipt & .5 & $25/24+19$ & 55.2\% & 74.6\% & .82/7\\
+Road traffic & .0 & $15/10+10$ & 100.0 & 100.0 & 0/0\\
+Road traffic & .5 & $13/10+7$ & 70.0 & 94.0 & .50/3\\
+Receipt & .0 & $45/27+47$ & 50.0 & 82.6 & .76/5\\
+Receipt & .5 & $25/24+19$ & 55.2 & 74.6 & .82/7\\
 \bottomrule
-\end{tabular}
+\end{tabularx}
+\end{revised}
 \end{table*}
 
-Table~\ref{tab:realquality} distinguishes variants from cases. If variant $v$ occurs $f_v$ times, case weighted optimality is
+Table~\ref{tab:realquality} distinguishes variants from cases. \begin{revised}If variant $v$ occurs $f_v$ times, Equation~\eqref{eq:weighted} defines case weighted optimality:\end{revised}
 \begin{equation}
  \frac{\sum_v f_v\ind[g_v=0]}{\sum_vf_v},
  \label{eq:weighted}
 \end{equation}
-whereas variant optimality weights each distinct sequence once. The higher case weighted values show that frequent variants are easier for this decoder; misses are concentrated in less frequent variants. For the fitting receipt Petri net, all exact costs are zero, but only half of the candidate variants attain zero. A legal, positive cost candidate on a fitting trace is therefore a concrete example of why replay alone is insufficient to infer nonconformance.
+whereas variant optimality weights each distinct sequence once. \begin{revised}The numerators make this distinction concrete. For road traffic, the optimal variant/case counts are $10/10$ and $100/100$ at noise .0, and $7/10$ and $94/100$ at .5. For receipt, they are $58/116$ and $1185/1434$ at .0, and $64/116$ and $1070/1434$ at .5. Frequent variants are easier for this decoder; misses are concentrated in less frequent variants.\end{revised} For the fitting receipt Petri net, all exact costs are zero, but only half of the candidate variants attain zero. A legal, positive cost candidate on a fitting trace is therefore a concrete example of why replay alone is insufficient to infer nonconformance.
 
 \begin{table*}[!t]
-\caption{Recorded median time per variant in milliseconds. These are candidate/exact timings, not full log wall clock speedups. Including the unguided decoder makes clear that the real log candidate advantage is not evidence of a learned quality benefit.}
+\caption{Recorded median time per variant in milliseconds. \begin{revised}Both candidate and exact timers include replay, but they return different guarantees (Section~\ref{sec:protocol}). These medians do not establish full log or certified alignment speedups.\end{revised} Including the unguided decoder makes clear that the real log candidate advantage is not evidence of a learned quality benefit.}
 \label{tab:realtime}
 \centering
 \begin{tabularx}{\linewidth}{@{}Yrrrr@{}}
@@ -254,7 +258,7 @@ Receipt & .5 & 6.65 & .61 & 12.72\\
 \end{tabularx}
 \end{table*}
 
-The guided candidate is slower than exact search on the small road traffic Petri nets and faster on the tested receipt Petri nets (Table~\ref{tab:realtime}). Unguided decoding is faster still and has the same candidate quality. These discovered Petri nets have no duplicate visible labels, so they do not exercise the scorer's strongest demonstrated advantage. Model move ordering could still matter in principle, but no quality difference is observed here. The experiment supports interface transfer and verified execution under different inputs; it does not demonstrate that the neural scorer improves real log alignment quality.
+\begin{revised}Table~\ref{tab:realtime} records higher guided candidate medians than exact search on road traffic and lower ones on receipt, for candidate generation and exact optimization, respectively (Section~\ref{sec:protocol}). Unguided decoding has lower recorded times and exactly the same cost on every tested variant. These discovered nets have no duplicate visible labels, so they do not test the ambiguity for which the synthetic study finds the clearest learned benefit. This is a limited test of applying the same checkpoint: two logs, two discovery thresholds, and no independent reference models. The four configurations are not four independent domains. They show executable outputs with new labels and model sizes, but no real log quality benefit from learning and no demonstrated operational speedup. Section~\ref{sec:revision-experiments} adds a third log and separates discovery cases from evaluated cases. Independent normative models and real logs with duplicate labels remain outside the evidence.\end{revised}
 
 \subsection{A Failure That Explains the Remaining Gaps}
 \label{sec:failure}
@@ -268,4 +272,6 @@ Aggregate rates show how often the decoder fails to be optimal; the worked failu
 \label{fig:failure}
 \end{figure*}
 
-The error is a decoder commitment, not a replay failure. The decoder tries a bounded model path before considering a log move and never compares that path with skipping the early $D$. The trained log score is unused, and earlier choices cannot be revised. Better duplicate label scoring cannot fix every instance of this mechanism. It motivates joint ranking of synchronous, log, and model alternatives and retaining several candidate continuations, as discussed next.
+The error is a decoder commitment, not a replay failure. The \begin{revised}default greedy\end{revised} decoder tries a bounded model path before considering a log move and never compares that path with skipping the early $D$. The trained log score is unused, and earlier choices cannot be revised. \begin{revised}At the early $D$, the bounded path through $B,C$ is available, so this policy cannot choose the optimal log move regardless of how high its trained log score is. The error can persist even with perfect synchronous rankings. The optional repair procedure explicitly tries a log move at such positions; the next experiment measures its effect.\end{revised}
+
+\input{sections/07_revision_experiments}

@@ -168,6 +168,8 @@ class GreedyCandidateDecoder:
         output: LARAForwardOutput | None = None,
         cost_model: CostModel | None = None,
         activity_key: str = "concept:name",
+        *,
+        forced_log_positions: frozenset[int] = frozenset(),
     ) -> Alignment:
         costs = cost_model or CostModel()
         labels = trace_labels(trace, activity_key=activity_key)
@@ -183,6 +185,9 @@ class GreedyCandidateDecoder:
         moves: list[AlignmentMove] = []
 
         for event_index, label in enumerate(labels):
+            if event_index in forced_log_positions:
+                moves.append(AlignmentMove(log_label=label, transition_name=None))
+                continue
             transition = runtime.best_enabled_sync_transition(label, event_index, marking)
             if transition is None:
                 prefix_path = self._find_path(
@@ -274,6 +279,54 @@ class GreedyCandidateDecoder:
                 visited.add(key)
                 queue.append((next_marking, next_path))
         return []
+
+
+@dataclass
+class SingleLogRepairDecoder(GreedyCandidateDecoder):
+    """Compare the greedy candidate with a bounded set of single-log alternatives.
+
+    A forward pass is reused. The log head orders up to ``max_alternatives``
+    event positions; each trial forces one log move and greedily completes the
+    trace. Only complete candidates accepted by replay can replace the original.
+    This is a bounded candidate heuristic, not an optimal alignment algorithm.
+    """
+
+    max_alternatives: int = 8
+
+    def decode(self, net, initial_marking, final_marking, trace, features,
+               output=None, cost_model=None, activity_key="concept:name") -> Alignment:
+        if self.max_alternatives < 0:
+            raise ValueError("max_alternatives must be non-negative")
+        base = super().decode(net, initial_marking, final_marking, trace, features,
+                              output, cost_model, activity_key)
+        best = base
+        # Forcing a position that the base already skips produces the same path.
+        positions = []
+        event_index = 0
+        for move in base.moves:
+            if move.log_label is not None:
+                if move.transition_name is not None:
+                    positions.append(event_index)
+                event_index += 1
+        if output is not None:
+            scores = output.log_move_logits.detach().cpu().tolist()
+            positions.sort(key=lambda i: (-scores[i], i))
+        tried = 0
+        for index in positions[:self.max_alternatives]:
+            candidate = super().decode(
+                net, initial_marking, final_marking, trace, features, output,
+                cost_model, activity_key, forced_log_positions=frozenset({index}),
+            )
+            tried += 1
+            if candidate.metadata["legal"] and (
+                not best.metadata["legal"] or candidate.cost < best.cost
+            ):
+                best = candidate
+        best.source = "guided_single_log_repair" if output is not None else "unguided_single_log_repair"
+        best.metadata["repair_alternatives"] = tried
+        best.metadata["base_legal"] = base.metadata["legal"]
+        best.metadata["base_cost"] = base.cost if base.metadata["legal"] else None
+        return best
 
 
 def _model_move(transition: PetriNet.Transition) -> AlignmentMove:

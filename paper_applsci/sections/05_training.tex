@@ -6,7 +6,7 @@ Training a reusable scorer requires examples that separate process behavior from
 \subsection{Why Generate Behavior Families?}
 \label{sec:families}
 
-An isolated pair of a random Petri net and a noisy trace would teach the neural network about one representation at a time. It would give much less control over whether a performance change comes from different behavior or merely different routing. A \emph{behavior family} addresses this by grouping two Petri nets with the same complete visible language and two shared observations:
+An isolated pair of a random Petri net and a noisy trace would teach the neural network about one representation at a time. It would give much less control over whether a performance change comes from different behavior or merely different routing. \begin{revised}A \emph{behavior family}, defined in Equation~\eqref{eq:family}, groups two Petri nets with the same complete visible language and two shared observations:\end{revised}
 \begin{equation}
  \mathcal B=(SN_1,SN_2,\sigma_1,\sigma_2),\qquad
  \mathcal L(SN_1)=\mathcal L(SN_2).
@@ -48,7 +48,7 @@ M pattern & $B$, $AC$, $CA$ & XOR of $B$ and parallel $A,C$; non-free-choice M P
 
 \subsubsection{Ordinary Trees and Identifier Renaming}
 
-This pair tests whether a candidate depends on incidental naming. A random process tree has 4--12 visible leaf occurrences and depth at most six. Sequence, XOR, and AND have selection probabilities $0.4$, $0.3$, and $0.3$. The alphabet size is approximately 70\% of the visible leaf count, so different leaves can carry the same label. The compiler maps leaves to visible transitions, sequences to linked fragments, XOR branches to shared entry and exit places, and AND to invisible split/join routing.
+This pair tests whether a candidate depends on incidental naming. A random process tree has \begin{revised}4 to 12\end{revised} visible leaf occurrences and depth at most six. Sequence, XOR, and AND have selection probabilities $0.4$, $0.3$, and $0.3$. The alphabet size is approximately 70\% of the visible leaf count, so different leaves can carry the same label. The compiler maps leaves to visible transitions, sequences to linked fragments, XOR branches to shared entry and exit places, and AND to invisible split/join routing.
 
 The second Petri net is an isomorphic copy with renamed place and transition identifiers. Labels, arcs, markings, and weights remain unchanged under the corresponding bijections. Its firing possibilities and optimal costs are therefore unchanged. Sorting the new identifiers can, however, change how the unguided decoder breaks a tie. This pair distinguishes an improvement in handling identifiers from an improvement on a new process behavior.
 
@@ -87,7 +87,7 @@ The representation checks protect the interpretation of a family. If the two Pet
 
 Generation rejects mismatching enumerated languages or an empty enumerated complete language. A separate bounded marking exploration must witness the final marking and at least one firing of every transition. A transition is dead if it can never fire from a reachable marking; failure to observe a firing in a truncated search does not prove deadness. These are conservative acceptance filters, and even witnessing the final marking and every transition does not establish that every reachable marking can complete, as workflow soundness requires. The default configuration additionally rejects bounded equivalence checks in the training split. All accepted rows in the reference training, validation, and test corpus have exact language certificates within the configured bounds.
 
-The cost comparison used later has a formal rationale. Let $d_{\mathrm{ID}}(\sigma,w)$ be insertion/deletion distance, with unit cost for each inserted or deleted visible activity. With the costs in Table~\ref{tab:moves},
+The cost comparison used later has a formal rationale. Let $d_{\mathrm{ID}}(\sigma,w)$ be insertion/deletion distance, with unit cost for each inserted or deleted visible activity. \begin{revised}Equation~\eqref{eq:languagecost} relates this distance to alignment cost under Table~\ref{tab:moves}:\end{revised}
 \begin{equation}
  \delta(\sigma,SN)=\min_{w\in\mathcal L(SN)}d_{\mathrm{ID}}(\sigma,w).
  \label{eq:languagecost}
@@ -99,7 +99,7 @@ Every legal alignment selects a complete visible model word and a corresponding 
 
 Corruption creates deviations without changing the reference process. For each accepted family, the enumerated language is sorted. If it contains more than 16 words, the family random generator selects 16 indices and restores them to language order. Otherwise the whole language is retained. The first two entries of this pool supply clean traces, wrapping around when only one entry is available. These choices and their corruption are deterministic given the configured seeds.
 
-Each observation is kept clean with probability $0.2$. Otherwise it receives one, two, or three edits with probabilities $0.5$, $0.3$, and $0.2$. Table~\ref{tab:noise} lists the operation weights. Operations are drawn again after each edit and act on the current trace. Inapplicable operations, such as a swap on a one event trace, fall back to insertion of the outside label \texttt{\_\_OOD\_\_}. Traces are capped at length 128. The realized frequencies can therefore differ from the nominal weights, especially for short observations.
+Each observation is kept clean with probability $0.2$. Otherwise it receives one, two, or three edits with probabilities $0.5$, $0.3$, and $0.2$. Table~\ref{tab:noise} lists the operation weights. Operations are drawn again after each edit and act on the current trace. \begin{revised}We write $X$ for the outside label whose literal implementation string is \texttt{\_\_OOD\_\_}; it is absent from the family alphabet. Inapplicable operations, such as a swap on a one event trace, fall back to insertion of this same $X$.\end{revised} Traces are capped at length 128. The realized frequencies can therefore differ from the nominal weights, especially for short observations.
 
 \begin{table*}[!t]
 \caption{Trace corruption operations. Examples start from $ABDE$ and illustrate individual edits; multi edit traces apply several operations in sequence. Weights are conditional on drawing an edit operation.}
@@ -116,7 +116,7 @@ Swap & .15 & Exchange neighboring events. & $BADE$\\
 Repeat & .15 & Duplicate one event. & $ABDEE$\\
 Prefix truncation & .10 & Remove a beginning segment. & $DE$\\
 Suffix truncation & .10 & Remove an ending segment. & $AB$\\
-Outside insertion & .05 & Insert the special outside label $X$. & $ABXDE$\\
+Outside insertion & .05 & \begin{revised}Insert the outside label $X$.\end{revised} & $ABXDE$\\
 \bottomrule
 \end{tabularx}
 \end{table*}
@@ -139,7 +139,7 @@ Teacher identity is not unique when several alignments are optimal. The generato
 
 A concrete row helps separate input information from the answer supplied during training. Consider stored sample \texttt{train-000048}. Starting from $ABDE$, the generator swaps the final events and substitutes $C$ for $B$, yielding $\sigma=\langle A,C,E,D\rangle$. Its duplicate prefix Petri net is the upper representation of Figure~\ref{fig:duplicatepair}, followed by the suffix. Write $A_L,A_R$ for its two $A$ transitions, with $A_L$ leading to $B$ and $A_R$ to $C$.
 
-The place order is $(p_D,p_E,p_0,p_f,p_L,p_R)$ and the transition order is $(D,E,A_L,A_R,B,C)$. The core ends at $p_f$, followed by $D$ to $p_D$ and $E$ to $p_E$; the final marking is $[p_E]$. In these orders, the numerical feature matrices are
+The place order is $(p_D,p_E,p_0,p_f,p_L,p_R)$ and the transition order is $(D,E,A_L,A_R,B,C)$. The core ends at $p_f$, followed by $D$ to $p_D$ and $E$ to $p_E$; the final marking is $[p_E]$. \begin{revised}Equation~\eqref{eq:concretefeatures} gives the numerical feature matrices in these orders:\end{revised}
 \begin{equation}
  X_P=\begin{bmatrix}
  0&0&1&1&2\\0&1&1&0&1\\1&0&0&2&2\\
@@ -173,7 +173,7 @@ $C$ & 5 & 11 & 3\\
 \end{tabular}
 \end{table*}
 
-The label IDs and exact compatibility matrix are
+\begin{revised}Equation~\eqref{eq:concreteids} gives the label IDs, and Equation~\eqref{eq:concretemask} gives the exact compatibility matrix:\end{revised}
 \begin{align}
  z_T&=(2587,4475,8075,8075,6408,5878),\nonumber\\
  z_\sigma&=(8075,5878,4475,2587),\label{eq:concreteids}\\
@@ -181,15 +181,15 @@ The label IDs and exact compatibility matrix are
  0&0&1&1&0&0\\0&0&0&0&0&1\\0&1&0&0&0&0\\1&0&0&0&0&0
  \end{bmatrix}.\label{eq:concretemask}
 \end{align}
-The first event can match either $A$ transition. The third event is compatible with $E$, even though $E$ is not enabled initially. The separate position indices $(0,1,2,3)$ are added by the trace encoder. Equations~\eqref{eq:concretefeatures}--\eqref{eq:concretemask} and Table~\ref{tab:concreteedges} specify every component of $X$; no clean trace or exact cost is among these inputs.
+The first event can match either $A$ transition. The third event is compatible with $E$, even though $E$ is not enabled initially. The separate position indices $(0,1,2,3)$ are added by the trace encoder. Equations~\begin{revised}\eqref{eq:concretefeatures}, \eqref{eq:concreteids}, and~\eqref{eq:concretemask}\end{revised} and Table~\ref{tab:concreteedges} specify every component of $X$; no clean trace or exact cost is among these inputs.
 
-The stored teacher witness is
+\begin{revised}Equation~\eqref{eq:concretewitness} gives the stored teacher witness:\end{revised}
 \begin{equation}
  \gamma^*=\langle(A,A_R),(C,C),(E,\skipmove),(D,D),(\skipmove,E)\rangle,
  \qquad\delta=2.
  \label{eq:concretewitness}
 \end{equation}
-It takes the branch consistent with $C$, skips the early $E$, synchronizes $D$, and finishes with a model move $E$. Another optimum could insert $D$ before synchronizing $E$ and then skip the final observed $D$. The chosen witness gives
+It takes the branch consistent with $C$, skips the early $E$, synchronizes $D$, and finishes with a model move $E$. Another optimum could insert $D$ before synchronizing $E$ and then skip the final observed $D$. \begin{revised}The chosen witness gives the targets in Equation~\eqref{eq:concretetargets}:\end{revised}
 \begin{equation}
  y=(3,5,-1,0),\qquad q=(0,0,1,0),\qquad b=(0,1,0,0,0,0).
  \label{eq:concretetargets}
@@ -208,7 +208,7 @@ ID zero stays reserved for invisible transitions, and existing hash collisions r
 \centering
 \begin{tabular}{@{}lrrr@{}}
 \toprule
-Split & Families & Petri net--trace rows & Families per motif\\
+Split & Families & \begin{revised}Petri net and trace\end{revised} rows & Families per motif\\
 \midrule
 Training & 512 & 2048 & 128\\
 Validation & 128 & 512 & 32\\
@@ -220,54 +220,54 @@ Test & 128 & 512 & 32\\
 \subsection{Training the Move Scorer}
 \label{sec:loss}
 
-The loss expresses which aspects of an exact witness the neural network should imitate. It does not differentiate through Petri net execution or prove the predicted sequence correct. The training objective assumes $|T|>0$, as in the generated families, while allowing $n=0$. Let $I=\{i:y_i\geq0\}$ and $J_i=\{j:C_{ij}=1\}$. When $y_i$ is used as a matrix column below, its stored zero based index is converted to the corresponding column. Each active teacher target belongs to $J_i$, so $J_i\ne\emptyset$ for $i\in I$. The implementation applies log-softmax to the full score row after the finite masking in Equation~\eqref{eq:syncscore}; the corresponding probabilities are
+The loss expresses which aspects of an exact witness the neural network should imitate. It does not differentiate through Petri net execution or prove the predicted sequence correct. The training objective assumes $|T|>0$, as in the generated families, while allowing $n=0$. Let $I=\{i:y_i\geq0\}$ and $J_i=\{j:C_{ij}=1\}$. When $y_i$ is used as a matrix column below, its stored zero based index is converted to the corresponding column. Each active teacher target belongs to $J_i$, so $J_i\ne\emptyset$ for $i\in I$. The implementation applies log-softmax to the full score row after the finite masking in Equation~\eqref{eq:syncscore}; \begin{revised}Equation~\eqref{eq:syncprob} states the corresponding probabilities over all transition columns:\end{revised}
 \begin{equation}
- p_{ij}=\frac{e^{S_{ij}}}{\sum_{k=1}^{|T|}e^{S_{ik}}},\qquad j\in\{1,\ldots,|T|\},\quad i\in I.
+ p_{ij}=\frac{e^{S_{ij}}}{\sum_{k=1}^{|T|}e^{S_{ik}}},\qquad j\in\{1,\ldots,|T|\},\quad i\in I.\label{eq:syncprob}
 \end{equation}
-Cross entropy penalizes putting little mass on the teacher transition. Smoothing allocates target mass only to compatible transitions. With $\epsilon_s=0.05$, the loss is
+Cross entropy penalizes putting little mass on the teacher transition. Smoothing allocates target mass only to compatible transitions. \begin{revised}With $\epsilon_s=0.05$, Equation~\eqref{eq:syncloss} defines the smoothed loss:\end{revised}
 \begin{equation}
  \mathcal L_{\mathrm{sync}}=-\frac1{|I|}\sum_{i\in I}
  \left[(1-\epsilon_s)\log p_{i,y_i}
  +\frac{\epsilon_s}{|J_i|}\sum_{j\in J_i}\log p_{ij}\right].
  \label{eq:syncloss}
 \end{equation}
-This assigns 95\% of the target mass to the teacher and spreads the remaining 5\% uniformly across compatible transitions. In the worked row, the two $A$ transitions receive target masses $.025$ and $.975$. When the masked entries underflow to zero after softmax stabilization, this is numerically equivalent to normalizing only over $J_i$, and an event with one compatible transition contributes zero synchronous loss. That equivalence is numerical, not an identity for arbitrary real scores with a finite mask. If $I$ is empty, the term is zero; log events and masked synchronous targets never require normalization of a row with no compatible transition.
+\begin{revised}Equation~\eqref{eq:syncloss} assigns the teacher mass $1-\epsilon_s+\epsilon_s/|J_i|$ and every other compatible transition mass $\epsilon_s/|J_i|$. Incompatible transitions receive no target mass. In the worked row, the two $A$ transitions receive $.025$ and $.975$. The implementation evaluates \texttt{log\_softmax} directly using a stable log-sum-exp calculation; it does not compute the raw exponentials in Equation~\eqref{eq:syncprob}. With a finite mask, incompatible columns still have positive probability in exact real arithmetic. When their stabilized exponential contributions underflow to zero, the computation is numerically equivalent to normalization over $J_i$; a single compatible transition then contributes zero synchronous loss. This is not an identity for arbitrary scores: a compatible logit below $-10^9$ could let masked columns dominate the denominator. If $I$ is empty, the loss is zero. Events with $J_i=\emptyset$, including $X$, have no active synchronous target and are excluded before normalization. The decoder separately checks original labels and enabledness, so finite masking is never the legality guarantee.\end{revised}
 
-For binary decisions, define the binary cross entropy $\BCE(z,u)=\log(1+e^z)-uz$, evaluated directly from logit $z$ with a numerically stable implementation. It compares the sigmoid probability with target $u$. A positive target encourages a high score and a negative target a low score. Binary smoothing maps target zero to $.03$ and target one to $.97$. The other move losses are
+For binary decisions, define the binary cross entropy $\BCE(z,u)=\log(1+e^z)-uz$, evaluated directly from logit $z$ with a numerically stable implementation. It compares the sigmoid probability with target $u$. A positive target encourages a high score and a negative target a low score. Binary smoothing maps target zero to $.03$ and target one to $.97$. \begin{revised}Equation~\eqref{eq:binaryloss} defines the other move losses:\end{revised}
 \begin{equation}
  \mathcal L_{\mathrm{log}}=\frac1n\sum_i\BCE(\ell_i,.94q_i+.03),\qquad
  \mathcal L_{\mathrm{model}}=\frac1{|T|}\sum_j\BCE(M_j,.94b_j+.03).
  \label{eq:binaryloss}
 \end{equation}
-An empty output contributes zero. The log head receives supervision even though decoding does not yet consult it. This mismatch between training and use is one reason to examine the decoder separately from the neural network.
+\begin{revised}An empty output contributes zero. This objective imitates one exact witness; it does not optimize the cost of the decoded candidate. Synchronous loss trains rankings among compatible transitions. Model loss trains whether a transition appears anywhere as a model move, without its position, multiplicity, or current marking. Log loss trains $\ell_i$, which the default greedy decoder ignores, although its gradients affect shared encoders. The optional repair procedure uses this head to order forced-log trials. To isolate the effect of log supervision on default decoding, Section~\ref{sec:revision-experiments} compares two matched training seeds with its loss coefficient set to one or zero; the remaining losses and architecture are unchanged. Greedy decoding still gives synchronization and enabling paths priority over log moves, so reducing the training losses need not reduce candidate cost. Neither the ablation nor repair constitutes direct optimization of decoded cost.\end{revised}
 
 \subsection{Auxiliary Cost and Region Objectives}
 \label{sec:auxiliary}
 
 The reference architecture also contains auxiliary region and cost heads. Their role must be explained because they contribute to the training objective, although they do not produce local executable alignments or participate in certification. A learned router applies dropout followed by separate affine maps for transitions and events, then a row-wise softmax over $R=6$ latent regions. The resulting assignments are denoted $Q^T_{jr}$ and $Q^E_{ir}$. ``Region'' means an internal grouping in representation space; it is not a verified subnet decomposition.
 
-For each region, normalized weighted means summarize transitions and events:
+\begin{revised}Equation~\eqref{eq:regionsummary} defines normalized weighted means for each region:\end{revised}
 \begin{equation}
  \bar u_r=\frac{\sum_jQ^T_{jr}u_j}{\max(10^{-6},\sum_jQ^T_{jr})},\qquad
- \bar v_r=\frac{\sum_iQ^E_{ir}v_i}{\max(10^{-6},\sum_iQ^E_{ir})}.
+ \bar v_r=\frac{\sum_iQ^E_{ir}v_i}{\max(10^{-6},\sum_iQ^E_{ir})}.\label{eq:regionsummary}
 \end{equation}
-A missing event collection gives $\bar v_r=0$. A feedforward neural network transforms the concatenated summaries through affine maps of widths $2d\to d\to d$, each followed by GELU and training-only dropout, to obtain $h_r$. Its weights are shared across regions. Two heads produce $\widehat l_r=\operatorname{softplus}(w_l^\top h_r+b_l)$ and $\widehat u_r=\widehat l_r+\operatorname{softplus}(w_u^\top h_r+b_u)$, where $\operatorname{softplus}(x)=\log(1+e^x)$. This enforces nonnegative ordered endpoints. It does not enforce that the true alignment cost lies between them. Only their aggregate upper endpoint is supervised:
+A missing event collection gives $\bar v_r=0$. A feedforward neural network transforms the concatenated summaries through affine maps of widths $2d\to d\to d$, each followed by GELU and training-only dropout, to obtain $h_r$. Its weights are shared across regions. Two heads produce $\widehat l_r=\operatorname{softplus}(w_l^\top h_r+b_l)$ and $\widehat u_r=\widehat l_r+\operatorname{softplus}(w_u^\top h_r+b_u)$, where $\operatorname{softplus}(x)=\log(1+e^x)$. This enforces nonnegative ordered endpoints. It does not enforce that the true alignment cost lies between them. \begin{revised}Equation~\eqref{eq:costloss} supervises only the sum of the larger predicted endpoints:\end{revised}
 \begin{equation}
  \widehat c=\sum_r\widehat u_r,\qquad
  \mathcal L_{\mathrm{cost}}=H_1(\widehat c-\delta),\qquad
  H_1(e)=\begin{cases}e^2/2,&|e|<1,\\|e|-1/2,&|e|\geq1.\end{cases}
  \label{eq:costloss}
 \end{equation}
-The smooth-L1 penalty is quadratic near the target and grows linearly for larger errors. The code names these endpoints ``lower bounds'' and ``upper bounds'', but they are predictions without admissibility guarantees. We therefore never use those names as formal claims. The architecture also exposes a vector of ``sketch'' logits and a nonnegative ``uncertainty'' scalar per region. These are reserved auxiliary outputs: no target gives the sketch entries an alignment meaning, and no calibration validates the uncertainty scalar. Neither has a direct supervised loss or enters the decoder.
+The smooth-L1 penalty is quadratic near the target and grows linearly for larger errors. \begin{revised}The identifiers \texttt{local\_lower\_bounds} and \texttt{local\_upper\_bounds} are retained for compatibility with the reference checkpoint and interface. In mathematical terms they are only ordered cost predictions. Neither $\sum_r\widehat l_r\leq\delta$ nor $\delta\leq\sum_r\widehat u_r$ is guaranteed, and the interval has no measured coverage. The smaller endpoint has no separate target, although it receives gradients through $\widehat u_r$. No endpoint is used to prune search, accept a candidate, or certify optimality. The valid upper bound is the replayed cost $c(\widehat\gamma)$; exact search supplies its own justified lower bounds.\end{revised} The architecture also exposes a vector of ``sketch'' logits and a nonnegative ``uncertainty'' scalar per region. These are reserved auxiliary outputs: no target gives the sketch entries an alignment meaning, and no calibration validates the uncertainty scalar. Neither has a direct supervised loss or enters the decoder.
 
-Three regularizers influence the latent grouping. Let $U_p=\{j:(p,t_j)\in F\text{ or }(t_j,p)\in F\}$ be the set of distinct transition indices incident to place $p$, ignoring arc direction. The boundary term averages over unordered pairs of distinct indices:
+Three regularizers influence the latent grouping. Let $U_p=\{j:(p,t_j)\in F\text{ or }(t_j,p)\in F\}$ be the set of distinct transition indices incident to place $p$, ignoring arc direction. \begin{revised}Equation~\eqref{eq:boundary} averages the boundary penalty over unordered pairs of distinct indices:\end{revised}
 \begin{equation}
  \mathcal L_{\mathrm{boundary}}=
  \frac{\sum_{p\in P}\sum_{\substack{j,k\in U_p\\j<k}}
  (1-\sum_rQ^T_{jr}Q^T_{kr})}{\sum_{p\in P}\binom{|U_p|}{2}},
  \label{eq:boundary}
 \end{equation}
-set to zero when the denominator is zero. It favors assigning transitions sharing a place to the same region. A pair sharing more than one place is counted for each shared place. Define the mean load $a_r=(\sum_jQ^T_{jr}+\sum_iQ^E_{ir})/(|T|+n)$ and the numerically stabilized entropy $H_\eta(q)=-\sum_rq_r\log\max(\eta,q_r)$ with $\eta=10^{-8}$. Then
+set to zero when the denominator is zero. It favors assigning transitions sharing a place to the same region. A pair sharing more than one place is counted for each shared place. Define the mean load $a_r=(\sum_jQ^T_{jr}+\sum_iQ^E_{ir})/(|T|+n)$ and the numerically stabilized entropy $H_\eta(q)=-\sum_rq_r\log\max(\eta,q_r)$ \begin{revised}with $\eta=10^{-8}$. Equations~\eqref{eq:balance} and~\eqref{eq:entropy} define the balance and entropy penalties:\end{revised}
 \begin{align}
  \mathcal L_{\mathrm{balance}}&=\frac1R\sum_r(a_r-1/R)^2,\label{eq:balance}\\
  \mathcal L_{\mathrm{entropy}}&=\begin{cases}
@@ -278,8 +278,9 @@ set to zero when the denominator is zero. It favors assigning transitions sharin
 For an empty trace, the load also uses transitions only. For a nonempty trace, balance weights every event and transition equally, whereas entropy averages the two collections separately and gives each collection half the weight. Minimizing the positive entropy term encourages concentrated assignments, while balance discourages using a single region for everything. These competing preferences shape representations, not verified process fragments. No ablation in this study isolates the benefit of these auxiliary terms.
 
 \subsection{Optimization and Checkpoint Selection}
+\label{sec:optimization}
 
-The full objective, with the weights used by the reference run, is
+\begin{revised}Equation~\eqref{eq:totalloss} combines the losses with the reference run weights:\end{revised}
 \begin{equation}
 \begin{split}
  \mathcal L={}&\mathcal L_{\mathrm{sync}}+\mathcal L_{\mathrm{log}}+\mathcal L_{\mathrm{model}}
@@ -291,7 +292,7 @@ The full objective, with the weights used by the reference run, is
 \end{equation}
 Each component is first reduced within one input pair; the resulting losses are averaged over 16 pairs per optimizer step. The implementation processes variable size pairs separately and accumulates gradients. AdamW~\cite{AdamW2019} updates the parameters with initial step size $5\times10^{-4}$ and weight decay $3\times10^{-3}$. Gradient norms are clipped at one. Dropout probability is $.30$.
 
-Validation loss controls step size reduction by factor $.5$ after two plateau epochs, with a minimum step size of $10^{-5}$. Early stopping has patience six and requires an improvement of at least $5\times10^{-4}$. The reference run executes 50 epochs and selects epoch 49. The mean epoch duration is approximately 41 seconds on the reported CPU setup. Figure~\ref{fig:trainingcurve} shows the full recorded loss curves. Lower validation than training loss is plausible because validation disables dropout and random label remapping; the two losses are evaluated under different perturbation conditions.
+Validation loss controls step size reduction by factor $.5$ after two plateau epochs, with a minimum step size of $10^{-5}$. Early stopping has patience six and requires an improvement of at least $5\times10^{-4}$. \begin{revised}The reference run uses training seed 13, executes 50 epochs, and selects epoch 49. Additional runs use seeds 17 and 29 with the same corpus, architecture, optimizer settings, validation selection, and maximum of 50 epochs. Each seed also has a matched run without the log loss. Each run selects its own checkpoint using its corresponding validation objective; test costs are never used for selection. The new runs use a different CPU and thread configuration, documented in Section~\ref{sec:revision-experiments}.\end{revised} The mean epoch duration \begin{revised}of the reference run\end{revised} is approximately 41 seconds on the reported CPU setup. Figure~\ref{fig:trainingcurve} shows the full recorded loss curves. Lower validation than training loss is plausible because validation disables dropout and random label remapping; the two losses are evaluated under different perturbation conditions.
 
 \begin{figure*}[!t]
 \centering
