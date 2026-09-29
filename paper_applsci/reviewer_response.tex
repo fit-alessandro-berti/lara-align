@@ -25,11 +25,21 @@ Manuscript: Reusable Neural Guidance for Petri Net Alignments with Replay Verifi
 
 Revised manuscript passages are enclosed in the revised environment and printed in dark blue. The original 35 equations and Tables 1 to 17 retain their numbering. Section 7.9 and Tables 18 to 22 report the additional experiments. The reference checkpoint and default behavior are preserved; optional repair and the log-loss ablation are identified explicitly.\par
 
+\Needspace{18\baselineskip}
+
 \section*{EDITOR}
 
 \begin{reviewercomment}Dear Authors, Thank you for submitting your work and research to this special issue. The reviewers find the study interesting and relevant to the topic of the special issue, and have recommended minor revision before acceptance.\end{reviewercomment}
 
 {\color{black}\textbf{R:} Thank you for the opportunity to revise the manuscript. We have addressed all comments through presentation changes, two additional full-objective training runs, two matched log-loss ablations, an optional candidate-repair procedure, tests of unseen structures and a second compiler, held-out cases from three real logs, and a timing benchmark with common processing boundaries. The original reference results remain identifiable. New checkpoints are retained only in separate local folders, and the declarations are unchanged.\par}
+
+\Needspace{14\baselineskip}\subsection*{Comment E.1 (self-citations; request relayed by the authors)}
+
+\begin{reviewercomment}Significantly reduce the number of self-citations, including publications authored by the manuscript's authors or members of the PADS research group.\end{reviewercomment}
+
+{\color{black}\textbf{R:} Thank you for this request. We audited the entire bibliography using this definition, including PADS publications without either manuscript author. We reduced the number of distinct author/PADS references from 14 of 42 references (33.3\%) to 5 of 33 (15.2\%), a reduction of 64.3\% in their number. Their in-text citation occurrences fell from 17 to 6 (64.7\% fewer), counting each cited work once per citation location. Sections 1, 2.3, and 3.1 to 3.3 now use existing independent sources for general background and omit peripheral discussions of our group's work. In particular, the introduction and shortest-path explanation cite Carmona et al.'s conformance-checking textbook, and the decomposition overview draws on Genga and Winter's survey. We removed nine bibliography entries without adding references to increase the denominator. The five retained references provide direct attribution for the original cost-based alignment formulation (Adriansyah et al., 2011), PM4Py (Berti et al., 2023), the original and infrequent-behavior Inductive Miner variants used for discovery (Leemans et al., 2013 and 2014), and the evaluated subset-selection/edit-distance baseline (Fani Sani et al., 2020). Revised passages are marked in dark blue. The methods and experimental results are unchanged.\par}
+
+\Needspace{18\baselineskip}
 
 \section*{REVIEWER \#1}
 
@@ -74,6 +84,8 @@ Revised manuscript passages are enclosed in the revised environment and printed 
 \begin{reviewercomment}6. In Table 14, LARA ranks fifth among the six methods; however, the phrasing used to assert methodological contributions in the introduction requires slight revision.\end{reviewercomment}
 
 {\color{black}\textbf{R:} The introduction explicitly states that the reference greedy LARA policy ranks fifth among the six methods by optimal candidate rate in Table 14. The contributions concern a reusable scoring design, a verification contract, controlled supervision, and an empirical analysis of their limits. The added repair result is identified separately in Table 18, and neither it nor the additional seeds is presented as broad superiority over established approximations. The abstract, Sections 2.7 and 8.1, and the conclusion follow this restricted interpretation. The guidance gain compares the same decoder with and without learned rankings.\par}
+
+\Needspace{18\baselineskip}
 
 \section*{REVIEWER \#2}
 

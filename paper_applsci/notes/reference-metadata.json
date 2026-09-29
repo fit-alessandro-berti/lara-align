@@ -24,12 +24,21 @@
       },
       "notes": [],
       "checked_on": "2026-09-14",
-      "citation_support": {
+      "manuscript_status": {
+        "status": "removed",
+        "checked_on": "2026-09-29",
+        "reason": "General introduction now cites the existing independent conformance-checking textbook."
+      },
+      "previous_citation_support": {
         "cited_in": [
           "sections/01_introduction.tex"
         ],
         "assessment": "Book overview and conformance-checking chapter in the table of contents support the introduction to event logs, models, and alignments.",
         "source": "https://link.springer.com/book/10.1007/978-3-662-49851-4"
+      },
+      "citation_support": {
+        "cited_in": [],
+        "assessment": "Removed from the current manuscript and bibliography; previous support assessment is retained separately."
       }
     },
     "Adriansyah2011": {
@@ -57,11 +66,11 @@
       "checked_on": "2026-09-14",
       "citation_support": {
         "cited_in": [
-          "sections/01_introduction.tex",
           "sections/03_related_work.tex"
         ],
-        "assessment": "The author-posted paper describes cost-based replay with skipped and inserted activities, supporting the origin of cost-based alignment and deviation diagnosis.",
-        "source": "https://www.vdaalst.com/publications/p630.pdf"
+        "assessment": "The author-posted paper describes cost-based replay with skipped and inserted activities, supporting the origin of cost-based alignment and deviation diagnosis. The redundant introductory citation was removed; the original formulation remains explicitly credited in Section 3.1.",
+        "source": "https://www.vdaalst.com/publications/p630.pdf",
+        "checked_on": "2026-09-29"
       }
     },
     "Zelst2018": {
@@ -91,13 +100,22 @@
         "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
       ],
       "checked_on": "2026-09-14",
-      "citation_support": {
+      "manuscript_status": {
+        "status": "removed",
+        "checked_on": "2026-09-29",
+        "reason": "Shortest-path and synchronous-product background now cites Chapter 7 of Carmona2018; the related-work repetition is replaced by an internal section reference. Counted as a PADS reference through Sebastiaan van Zelst despite containing neither manuscript author."
+      },
+      "previous_citation_support": {
         "cited_in": [
           "sections/02_preliminaries.tex",
           "sections/03_related_work.tex"
         ],
         "assessment": "The abstract explicitly formulates optimal alignment as shortest-path search in the synchronous product state space.",
         "source": "https://link.springer.com/chapter/10.1007/978-3-662-58381-4_1"
+      },
+      "citation_support": {
+        "cited_in": [],
+        "assessment": "Removed from the current manuscript and bibliography; previous support assessment is retained separately."
       }
     },
     "Dongen2018": {
@@ -150,12 +168,21 @@
       },
       "notes": [],
       "checked_on": "2026-09-14",
-      "citation_support": {
+      "manuscript_status": {
+        "status": "removed",
+        "checked_on": "2026-09-29",
+        "reason": "Removed the peripheral complexity-preprint discussion and its hardness claims; the replacement discusses the manuscript's own timing evidence."
+      },
+      "previous_citation_support": {
         "cited_in": [
           "sections/03_related_work.tex"
         ],
         "assessment": "The arXiv abstract states PSPACE-completeness for safe nets and safe sound workflow nets, and NP-completeness for restricted classes including process trees. The manuscript makes only a qualitative hardness claim and explicitly calls this work a preprint.",
         "source": "https://arxiv.org/abs/2603.05331"
+      },
+      "citation_support": {
+        "cited_in": [],
+        "assessment": "Removed from the current manuscript and bibliography; previous support assessment is retained separately."
       }
     },
     "Aalst2013": {
@@ -178,12 +205,21 @@
       },
       "notes": [],
       "checked_on": "2026-09-14",
-      "citation_support": {
+      "manuscript_status": {
+        "status": "removed",
+        "checked_on": "2026-09-29",
+        "reason": "Removed the specific decomposition-method discussion; the shorter taxonomy is attributed explicitly to the existing independent Genga2025 survey."
+      },
+      "previous_citation_support": {
         "cited_in": [
           "sections/03_related_work.tex"
         ],
         "assessment": "The abstract describes splitting process-mining problems into smaller problems whose results can be combined; it supports generic semantic decomposition.",
         "source": "https://link.springer.com/article/10.1007/s10619-013-7127-5"
+      },
+      "citation_support": {
+        "cited_in": [],
+        "assessment": "Removed from the current manuscript and bibliography; previous support assessment is retained separately."
       }
     },
     "Lee2018": {
@@ -213,12 +249,21 @@
         "Spaces separate initials in the BibTeX author field to prevent BibTeX from dropping initials."
       ],
       "checked_on": "2026-09-14",
-      "citation_support": {
+      "manuscript_status": {
+        "status": "removed",
+        "checked_on": "2026-09-29",
+        "reason": "Removed the specific recomposition-method discussion; the shorter taxonomy is attributed explicitly to the existing independent Genga2025 survey."
+      },
+      "previous_citation_support": {
         "cited_in": [
           "sections/03_related_work.tex"
         ],
         "assessment": "The authors' institutional abstract describes iterative recomposition for exact fitness, or an interval containing it under a time bound. This supports local/global conformance consistency, not a claim that every local alignment can simply be concatenated.",
         "source": "https://research.tue.nl/en/publications/recomposing-conformance-closing-the-circle-on-decomposed-alignmen/"
+      },
+      "citation_support": {
+        "cited_in": [],
+        "assessment": "Removed from the current manuscript and bibliography; previous support assessment is retained separately."
       }
     },
     "Berti2023": {
@@ -407,8 +452,9 @@
         "cited_in": [
           "sections/03_related_work.tex"
         ],
-        "assessment": "The publisher abstract describes a systematic review and research agenda connecting AI and conformance checking; it supports the related-work framing.",
-        "source": "https://link.springer.com/article/10.1007/s44311-025-00015-7"
+        "assessment": "The publisher full text supports both the AI/conformance-checking research agenda and the shorter decomposition taxonomy in Section 3.2. The paragraph beginning \"The third category focuses on decomposing the process model\" distinguishes partial alignments from global alignments obtained by recomposition. Both authors are affiliated with Eindhoven University of Technology in the publisher record.",
+        "source": "https://link.springer.com/article/10.1007/s44311-025-00015-7",
+        "checked_on": "2026-09-29"
       }
     },
     "ReceiptLog": {
@@ -628,7 +674,9 @@
     "Carmona2018": {
       "sources": [
         "https://api.crossref.org/works/10.1007/978-3-319-99414-7",
-        "https://link.springer.com/book/10.1007/978-3-319-99414-7"
+        "https://link.springer.com/book/10.1007/978-3-319-99414-7",
+        "https://link.springer.com/chapter/10.1007/978-3-319-99414-7_4",
+        "https://link.springer.com/chapter/10.1007/978-3-319-99414-7_7"
       ],
       "verified_metadata": {
         "title": "Conformance Checking: Relating Processes and Models",
@@ -650,10 +698,17 @@
       "citation_support": {
         "cited_in": [
           "sections/01_introduction.tex",
+          "sections/02_preliminaries.tex",
           "sections/03_related_work.tex"
         ],
-        "assessment": "The book overview covers formal correspondence between modeled and recorded behavior, conformance algorithms, and interpretation of their diagnostic results.",
-        "source": "https://link.springer.com/book/10.1007/978-3-319-99414-7"
+        "assessment": "Publisher book overview supports the introduction and diagnostic role of conformance checking. Chapter 4 explicitly introduces token replay and alignments; Chapter 7 explicitly formulates alignment as shortest-path search in the synchronous product. Chapter-specific citations identify these supports in Sections 2.3 and 3.1.",
+        "source": "https://link.springer.com/book/10.1007/978-3-319-99414-7",
+        "checked_on": "2026-09-29",
+        "sources": [
+          "https://link.springer.com/book/10.1007/978-3-319-99414-7",
+          "https://link.springer.com/chapter/10.1007/978-3-319-99414-7_4",
+          "https://link.springer.com/chapter/10.1007/978-3-319-99414-7_7"
+        ]
       }
     },
     "Rozinat2008": {
@@ -680,12 +735,21 @@
         "Spaces separate initials in the BibTeX author field to prevent BibTeX from dropping initials."
       ],
       "checked_on": "2026-09-14",
-      "citation_support": {
+      "manuscript_status": {
+        "status": "removed",
+        "checked_on": "2026-09-29",
+        "reason": "Replaced the historical token-replay discussion with a general comparison supported by Chapter 4 of Carmona2018."
+      },
+      "previous_citation_support": {
         "cited_in": [
           "sections/03_related_work.tex"
         ],
         "assessment": "The authors' institutional abstract describes log/model fitness and diagnostic conformance checking. Berti2021 also documents the token-replay lineage cited alongside it.",
         "source": "https://research.tue.nl/en/publications/conformance-checking-of-processes-based-on-monitoring-real-behavi/"
+      },
+      "citation_support": {
+        "cited_in": [],
+        "assessment": "Removed from the current manuscript and bibliography; previous support assessment is retained separately."
       }
     },
     "Berti2021": {
@@ -714,12 +778,21 @@
         "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
       ],
       "checked_on": "2026-09-14",
-      "citation_support": {
+      "manuscript_status": {
+        "status": "removed",
+        "checked_on": "2026-09-29",
+        "reason": "Removed the peripheral discussion of the authors' token-replay implementation."
+      },
+      "previous_citation_support": {
         "cited_in": [
           "sections/03_related_work.tex"
         ],
         "assessment": "The publisher abstract describes scalable token-based replay and improved diagnostics, including avoidance of token flooding; it supports the token-replay discussion.",
         "source": "https://link.springer.com/chapter/10.1007/978-3-662-63079-2_1"
+      },
+      "citation_support": {
+        "cited_in": [],
+        "assessment": "Removed from the current manuscript and bibliography; previous support assessment is retained separately."
       }
     },
     "Casas2024": {
@@ -811,12 +884,21 @@
         "Cited as a chapter in its proceedings or edited volume; series volume checked against the publisher record."
       ],
       "checked_on": "2026-09-14",
-      "citation_support": {
+      "manuscript_status": {
+        "status": "removed",
+        "checked_on": "2026-09-29",
+        "reason": "Removed the peripheral process-tree approximation discussion; the evaluated tandem-repeat method retains its independent citation."
+      },
+      "previous_citation_support": {
         "cited_in": [
           "sections/03_related_work.tex"
         ],
         "assessment": "The publisher abstract explicitly describes hierarchical process-tree decomposition into alignment subproblems followed by composition.",
         "source": "https://link.springer.com/chapter/10.1007/978-3-030-72693-5_19"
+      },
+      "citation_support": {
+        "cited_in": [],
+        "assessment": "Removed from the current manuscript and bibliography; previous support assessment is retained separately."
       }
     },
     "Munoz2014": {
@@ -844,12 +926,21 @@
         "Spaces separate initials in the BibTeX author field to prevent BibTeX from dropping initials."
       ],
       "checked_on": "2026-09-14",
-      "citation_support": {
+      "manuscript_status": {
+        "status": "removed",
+        "checked_on": "2026-09-29",
+        "reason": "Removed the specific SESE decomposition discussion; the shorter taxonomy is attributed explicitly to the existing independent Genga2025 survey."
+      },
+      "previous_citation_support": {
         "cited_in": [
           "sections/03_related_work.tex"
         ],
         "assessment": "The author-posted abstract describes SESE decomposition into independently analyzed model/log fragments and improved diagnostics.",
         "source": "https://www.vdaalst.com/publications/p805.pdf"
+      },
+      "citation_support": {
+        "cited_in": [],
+        "assessment": "Removed from the current manuscript and bibliography; previous support assessment is retained separately."
       }
     },
     "Sommers2021": {
@@ -1412,7 +1503,62 @@
         "SepsisLog"
       ],
       "scope": "Fresh audit of every bibliography entry added or modified in the last commit: one addition, zero modifications, zero deletions. Citation occurrence comparison likewise identifies only SepsisLog as added. Confirmed existence and core metadata against primary repository, DOI registry, DOI content-negotiation, and university records. Made publisher/repository distinction explicit and added dataset version 1; all other bibliography entries are unchanged."
+    },
+    {
+      "checked_on": "2026-09-29",
+      "entries": [
+        "Carmona2018",
+        "Genga2025",
+        "Adriansyah2011"
+      ],
+      "scope": "Editorial self-citation revision: rechecked primary publisher support for rewritten independent-source background and updated current citation contexts. Nine author/PADS entries removed; original method, software, and evaluated-baseline attributions retained. Historical metadata for removed entries is marked explicitly; no new bibliography entries added."
     }
   ],
-  "initial_checked_on": "2026-09-11"
+  "initial_checked_on": "2026-09-11",
+  "self_citation_revision": {
+    "checked_on": "2026-09-29",
+    "baseline_commit": "c1baccfea585dc38005409f2fd6471df519877f1",
+    "definition": "A reference with either manuscript author (Alessandro Berti or Wil M. P. van der Aalst), or another identified PADS researcher, anywhere in the author list. Zelst2018 is counted through Sebastiaan van Zelst even though neither manuscript author appears. Shared field, coauthorship with a manuscript author on another work, or TU/e affiliation alone is not treated as PADS membership.",
+    "group_membership_source": {
+      "url": "https://rwthcontacts.rwth-aachen.de/organization/ORG-95GKM",
+      "evidence": "Official RWTH PADS directory lists Sebastiaan van Zelst, Daniel Schuster, Sander Leemans, and Wil van der Aalst."
+    },
+    "counting_unit": "Distinct cited bibliography entries; in-text occurrences count each key once at each citation location, including grouped citations. Counts cover the manuscript and its included sections/figures, excluding the response letter and historical notes.",
+    "before": {
+      "references": 42,
+      "author_or_pads_references": 14,
+      "direct_author_references": 13,
+      "pads_only_references": 1,
+      "all_citation_occurrences": 59,
+      "author_or_pads_citation_occurrences": 17
+    },
+    "after": {
+      "references": 33,
+      "author_or_pads_references": 5,
+      "direct_author_references": 5,
+      "pads_only_references": 0,
+      "all_citation_occurrences": 51,
+      "author_or_pads_citation_occurrences": 6
+    },
+    "removed": {
+      "Aalst2016": "General introduction now cites the existing independent conformance-checking textbook.",
+      "Zelst2018": "Shortest-path and synchronous-product background now cites Chapter 7 of Carmona2018; the related-work repetition is replaced by an internal section reference. Counted as a PADS reference through Sebastiaan van Zelst despite containing neither manuscript author.",
+      "Schwanen2026": "Removed the peripheral complexity-preprint discussion and its hardness claims; the replacement discusses the manuscript's own timing evidence.",
+      "Aalst2013": "Removed the specific decomposition-method discussion; the shorter taxonomy is attributed explicitly to the existing independent Genga2025 survey.",
+      "Lee2018": "Removed the specific recomposition-method discussion; the shorter taxonomy is attributed explicitly to the existing independent Genga2025 survey.",
+      "Rozinat2008": "Replaced the historical token-replay discussion with a general comparison supported by Chapter 4 of Carmona2018.",
+      "Berti2021": "Removed the peripheral discussion of the authors' token-replay implementation.",
+      "Schuster2021": "Removed the peripheral process-tree approximation discussion; the evaluated tandem-repeat method retains its independent citation.",
+      "Munoz2014": "Removed the specific SESE decomposition discussion; the shorter taxonomy is attributed explicitly to the existing independent Genga2025 survey."
+    },
+    "retained": {
+      "Adriansyah2011": "Original cost-based alignment formulation, credited once in Section 3.1.",
+      "Berti2023": "PM4Py software used for data objects, discovery, exact search, and comparison methods, credited in Section 6.1.",
+      "Leemans2013": "Original Inductive Miner used at zero noise threshold, credited in Section 7.7.",
+      "Leemans2014": "Infrequent-behavior Inductive Miner used at positive noise threshold, credited separately in Section 7.7.",
+      "FaniSani2020": "Subset-selection/edit-distance baseline actually evaluated, credited in Sections 3.3 and 7.6."
+    },
+    "added_references": [],
+    "audit_note": "notes/self-citation-audit.md"
+  }
 }

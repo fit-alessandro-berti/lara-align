@@ -1,15 +1,19 @@
 # Applied Sciences submission source
 
 The journal manuscript contains nine main sections, 15 figures (13 vector
-figures and two tool screenshots), 22 tables, and 42 verified references.
+figures and two tool screenshots), 22 tables, and 33 verified references.
 Data generation and training are integrated into
 Section 5; there is no appendix or separate data-generation document.
 
 ## Reviewer revision (29 September 2026)
 
 Revised passages use `\begin{revised} ... \end{revised}` and print in dark
-blue. The revision addresses the six comments from Reviewer 1 and nine from
-Reviewer 2. The original checkpoint, default decoder, 35 equations, Tables 1 to 17, and
+blue. The revision addresses the six comments from Reviewer 1, nine from
+Reviewer 2, and the editor's request to reduce self-citations. Author/PADS
+references were reduced from 14 of 42 to 5 of 33 (64.3% fewer), with direct
+attribution retained for methods and software used in the study. See the
+[citation audit](notes/self-citation-audit.md) for the counts and decisions.
+The original checkpoint, default decoder, 35 equations, Tables 1 to 17, and
 historical benchmark records are preserved. Section 7.9 and Tables 18 to 22
 add two full-objective training seeds, two matched log-loss ablations, optional
 single-log candidate repair, 512 structural inputs, 652 held-out real-log
@@ -98,9 +102,13 @@ and trained checkpoint downloads in a footnote.
 ## Bibliography verification
 
 `notes/reference-metadata.json` records primary sources and citation-support
-assessments for all 42 references. The original 41 were rechecked on
+assessments for all 33 current references and preserves the earlier records
+for nine removed entries, explicitly marked as removed. The original 41 were rechecked on
 14 September 2026; the added Sepsis dataset was verified against its primary
-4TU record and downloaded checksum on 29 September 2026.
+4TU record and downloaded checksum on 29 September 2026. The same day's
+self-citation revision rechecked the independent sources supporting rewritten
+background passages and retained the original and infrequent-behavior Inductive
+Miner references for their respective experimental configurations.
 Sources include publisher pages and metadata, DataCite dataset records, PMLR
 and NeurIPS proceedings, and author-posted arXiv papers. The bibliography
 preserves compound surnames and initials, identifies preprints explicitly,

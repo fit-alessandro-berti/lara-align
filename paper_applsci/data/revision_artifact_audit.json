@@ -1,18 +1,27 @@
 {
   "equations": 35,
   "unique_labels": 111,
-  "reference_uses": 150,
-  "numbered_comments": 15,
-  "quoted_comments_and_assessments": 18,
+  "reference_uses": 153,
+  "numbered_comments": 16,
+  "quoted_comments_and_assessments": 19,
   "main_pdf_pages": 52,
-  "response_pdf_pages": 6,
+  "response_pdf_pages": 7,
   "archive_files": 51,
   "evidence_archive_files": 56,
-  "references": 42,
+  "references": 33,
   "replayed_witnesses": 12756,
   "timed_calls": 20480,
-  "revised_color_spans": 3143,
-  "reviewer_red_spans": 792,
-  "pdf_sha256": "d1bceb4b7c798f44d416dac361b3f50dcc41bda37d3cce895ed42b583f1c8b98",
-  "response_pdf_sha256": "834f21ff260f2d2368311b27d989c5769cacd43b3b50f016d99060d980e72222"
+  "revised_color_spans": 3274,
+  "reviewer_red_spans": 830,
+  "pdf_sha256": "83cf57cd9a5be50bb730f8427b664f9fe190032ec78ef95a97a4e6b35e7537cb",
+  "response_pdf_sha256": "a3e31edb5ff2ed8b0aafa05959e162f5bbf54067c99b714c030b87d12bac908a",
+  "numbered_reviewer_comments": 15,
+  "additional_editorial_comments": 1,
+  "author_or_pads_references": 5,
+  "author_or_pads_citation_occurrences": 6,
+  "self_citation_revision_date": "2026-09-29",
+  "self_citation_baseline_commit": "c1baccfea585dc38005409f2fd6471df519877f1",
+  "build_warnings": [
+    "Supplied MDPI logo PDF 1.7 included in output configured for PDF 1.5. No LaTeX/BibTeX warnings, undefined references, missing glyphs, or overfull/underfull boxes."
+  ]
 }

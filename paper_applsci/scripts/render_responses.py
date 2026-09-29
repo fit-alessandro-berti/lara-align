@@ -46,6 +46,8 @@ def main():
         elif line.startswith("R: "):
             content.append(r"{\color{black}\textbf{R:} " + escape(line[3:]) + r"\par}")
         elif line in {"EDITOR", "REVIEWER #1", "REVIEWER #2"} or i == 0:
+            if line in {"EDITOR", "REVIEWER #1", "REVIEWER #2"}:
+                content.append(r"\Needspace{18\baselineskip}")
             content.append(r"\section*{" + escape(line) + "}")
         elif line == "General assessment" or line.startswith("Comment "):
             content.append(r"\Needspace{14\baselineskip}\subsection*{" + escape(line) + "}")
