@@ -1,8 +1,40 @@
 # Final manuscript validation
 
 The current reviewer revision is documented in
-[`revision-validation.md`](revision-validation.md). The records below describe
-earlier manuscript versions and retain their original dates and hashes.
+[`revision-validation.md`](revision-validation.md). The records below retain
+their original dates and hashes.
+
+## Reference audit of commit 6b36f4b (29 September 2026)
+
+Comparing the commit with its parent identifies one added bibliography entry,
+`SepsisLog`, no modified entries, and no deleted entries. The only added
+citation occurrence is `SepsisLog` in Section 7.9.3.
+
+Fresh checks of the [4TU dataset record](https://data.4tu.nl/articles/_/12707639/1),
+its public metadata API, the
+[DataCite DOI registration](https://api.datacite.org/dois/10.4121/uuid:915d2bfb-7e84-49ad-a286-dc35f063a460),
+DOI content-negotiated metadata, and the
+[TU/e research portal](https://research.tue.nl/en/datasets/sepsis-cases-event-log/)
+confirm Felix Mannhardt, *Sepsis Cases - Event Log*, publication on
+7 December 2016, the cited DOI, and dataset version 1. The stored primary
+metadata snapshot still agrees with the live record.
+
+The original entry correctly named 4TU.ResearchData as the repository.
+DataCite and the repository's Publisher field identify Eindhoven University
+of Technology as the registered publisher, while the repository's suggested
+citation names 4TU.ResearchData. The bibliography now makes both roles
+explicit and includes version 1. The `publisher` field is also present for
+metadata consumers; MDPI's `misc` style prints `howpublished` instead, so
+the publisher is included there as well. Author, title, year, and DOI did
+not need correction. The refreshed evidence and scope are recorded in
+`reference-metadata.json`; no other bibliography entry was changed.
+
+`make -C paper_applsci submission` succeeded. The LaTeX and BibTeX logs have
+no warnings or unresolved citations; all 42 bibliography entries are cited.
+Reference 42 in the rebuilt 52-page manuscript displays the publisher,
+repository, version, and DOI correctly. Both submission archives match
+their current sources, and the manuscript hash in
+`data/revision_artifact_audit.json` has been refreshed.
 
 ## Reference and citation-context audit (14 September 2026)
 

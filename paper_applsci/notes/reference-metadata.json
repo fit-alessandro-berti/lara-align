@@ -1308,7 +1308,10 @@
     "SepsisLog": {
       "sources": [
         "https://data.4tu.nl/v2/articles/12707639",
-        "https://data.4tu.nl/articles/dataset/Sepsis_Cases_-_Event_Log/12707639"
+        "https://data.4tu.nl/articles/_/12707639/1",
+        "https://api.datacite.org/dois/10.4121/uuid:915d2bfb-7e84-49ad-a286-dc35f063a460",
+        "https://doi.org/10.4121/uuid:915d2bfb-7e84-49ad-a286-dc35f063a460",
+        "https://research.tue.nl/en/datasets/sepsis-cases-event-log/"
       ],
       "verified_metadata": {
         "title": "Sepsis Cases - Event Log",
@@ -1319,10 +1322,18 @@
         "container": [
           "4TU.ResearchData"
         ],
-        "doi": "10.4121/uuid:915d2bfb-7e84-49ad-a286-dc35f063a460"
+        "doi": "10.4121/uuid:915d2bfb-7e84-49ad-a286-dc35f063a460",
+        "publisher": "Eindhoven University of Technology",
+        "repository": "4TU.ResearchData",
+        "resource_type": "Dataset",
+        "publication_date": "2016-12-07",
+        "version": "1"
       },
       "notes": [
-        "Verified primary 4TU metadata and downloaded file checksum on 29 September 2026. Only activity sequences are used."
+        "Verified primary 4TU metadata and downloaded file checksum on 29 September 2026. Only activity sequences are used.",
+        "Double-checked against fresh 4TU, DataCite, DOI content-negotiation, and TU/e records for commit 6b36f4bd92b869d4381f3dbe374d3a43806f4234. Author, title, year, DOI, dataset type, and version agree.",
+        "DataCite and the 4TU Publisher field name Eindhoven University of Technology. The repository citation names 4TU.ResearchData; the TU/e portal uses the older 4TU.Centre for Research Data name. The bibliography now names the registered publisher and repository separately and includes version 1.",
+        "MDPI misc entries do not render the publisher field, so the registered publisher is also included in howpublished. No journal, volume, or page range applies to this dataset."
       ],
       "checked_on": "2026-09-29",
       "citation_support": {
@@ -1393,6 +1404,14 @@
         "Srivastava2014"
       ],
       "scope": "Fresh existence and citation-support audit of all 40 original works and the added infrequent-behavior reference. Replaced Rizk2022 with the published Rizk2024 chapter; added Leemans2014 and the Nature issue number; clarified fixed-horizon, sliding-window, and subset/edit-distance descriptions. Crossref rate-limit responses were retried successfully; OpenReview was corroborated using the author-posted ICLR paper."
+    },
+    {
+      "checked_on": "2026-09-29",
+      "commit": "6b36f4bd92b869d4381f3dbe374d3a43806f4234",
+      "entries": [
+        "SepsisLog"
+      ],
+      "scope": "Fresh audit of every bibliography entry added or modified in the last commit: one addition, zero modifications, zero deletions. Citation occurrence comparison likewise identifies only SepsisLog as added. Confirmed existence and core metadata against primary repository, DOI registry, DOI content-negotiation, and university records. Made publisher/repository distinction explicit and added dataset version 1; all other bibliography entries are unchanged."
     }
   ],
   "initial_checked_on": "2026-09-11"

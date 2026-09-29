@@ -11,8 +11,8 @@
   "references": 42,
   "replayed_witnesses": 12756,
   "timed_calls": 20480,
-  "revised_color_spans": 2962,
+  "revised_color_spans": 3143,
   "reviewer_red_spans": 792,
-  "pdf_sha256": "6da1283ca9355254a9f198e50e1339c9fc6f9dbb466657a4ca428dadb7106e0f",
+  "pdf_sha256": "d1bceb4b7c798f44d416dac361b3f50dcc41bda37d3cce895ed42b583f1c8b98",
   "response_pdf_sha256": "834f21ff260f2d2368311b27d989c5769cacd43b3b50f016d99060d980e72222"
 }

@@ -35,7 +35,7 @@ def main():
         rows.append([title, model[4:] if model else "n/a",
                      data["models"][model]["epoch"] if model else "n/a",
                      s["optimal"], f'{s["optimal_percent"]:.2f}', f'{s["mean_gap"]:.3f}'])
-    table("seeds", "Original test set, additional training seeds, and optional repair. "
+    table("seeds", "Training seed variation and optional repair on the 512-row synthetic test set. "
           "Every condition returns 512 legal candidates; all 512 exact references are available. "
           "Epoch denotes the validation-selected checkpoint.", "tab:revision-seeds", "Yrrrrr",
           ["Decoder", "Seed", "Epoch", r"\shortstack{Optimal\\count}",
@@ -56,8 +56,8 @@ def main():
            r"\shortstack{Difference\\(points)}"], rows)
 
     rows = []
-    for group, title in [("acyclic/custom", "Acyclic, original"), ("acyclic/pm4py", "Acyclic, PM4Py"),
-                         ("loop/custom", "Loop, original"), ("loop/pm4py", "Loop, PM4Py")]:
+    for group, title in [("acyclic/custom", "Acyclic, LARA"), ("acyclic/pm4py", "Acyclic, PM4Py"),
+                         ("loop/custom", "Loop, LARA"), ("loop/pm4py", "Loop, PM4Py")]:
         values = data["groups"][group]
         assert all(v["legal"] == v["compared"] == 128 for v in values.values())
         rows.append([title] + [f'{values[key]["optimal_percent"]:.1f}' for key in

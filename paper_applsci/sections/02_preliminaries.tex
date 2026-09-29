@@ -83,7 +83,7 @@ A* prioritizes states by the sum of the cost already incurred and an estimate of
 
 Replay solves a simpler task: given a proposed sequence, check each move in order. It confirms the labels, enabledness, complete trace consumption, and final marking, then sums the stated costs. It does not search for an alternative. The amount of work follows the supplied sequence and its incident arcs rather than the full space of alternative executions. This makes replay a practical check even when finding the best sequence is difficult.
 
-There are therefore three distinct levels of evidence. A raw proposal may fail replay. A proposal that passes replay is an executable explanation with a verified upper bound. Finally, if an exact backend proves that its cost equals $\delta$, it is an optimal explanation. Nonnegative costs also imply that any legal zero cost alignment is mathematically optimal; the present certification implementation nevertheless calls the exact backend in certified mode. We keep this implementation fact separate from the mathematical observation.
+There are therefore three distinct levels of evidence. A raw proposal may fail replay. A proposal that passes replay is an executable explanation with a verified upper bound. Finally, if an exact backend proves that its cost equals $\delta$, it is an optimal explanation. Nonnegative costs also imply that any legal zero cost alignment is mathematically optimal; the certification implementation nevertheless calls the exact backend in certified mode. We keep this implementation fact separate from the mathematical observation.
 
 \subsection{Machine Learning Preliminaries}
 \label{sec:mlprelim}
